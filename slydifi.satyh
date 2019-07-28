@@ -1,10 +1,19 @@
+% vim: foldmethod=marker
 @require: math
 
 module Slydifi : sig
 
   val document: 'a -> block-text -> document
+    constraint 'a :: (|
+      fonts: 'b
+    |)
+    constraint 'b :: (|
+      title : string;
+      text  : string;
+    |)
 
   direct +p : [inline-text] block-cmd
+  direct +frame : [inline-text; block-text] block-cmd
 
 end = struct
 
@@ -83,4 +92,11 @@ end = struct
   let-block ctx +p it =
     line-break true true ctx
       (read-inline ctx it ++ inline-fil)
+
+  let-block ctx +frame title inner =
+    let bb-title = block-nil in
+    let bb-inner =
+      read-block ctx inner in
+      bb-title +++ bb-inner
+
 end
