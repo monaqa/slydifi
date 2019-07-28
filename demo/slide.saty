@@ -1,7 +1,9 @@
 % -*- coding: utf-8 -*-
 % vim:foldmethod=marker:
 
+@require: code
 @import: ../slydifi
+
 
 let-inline \jugem = {
   寿限無寿限無，五劫の擦り切れ，
@@ -17,17 +19,45 @@ in
 
 Slydifi.document(|
   fonts = (|
-    title = `Noto Sans`;
-    text  = `Noto Sans`;
+    frame-title-cjk = `mplus-sans-b`;
+    normal-text-cjk  = `mplus-sans-r`;
+    frame-title-latin = `mplus-sans-b`;
+    normal-text-latin  = `mplus-sans-r`;
+    font-ratio-cjk = 1.0;
   |);
 |)'<
-  +frame{適当なタイトル}<
-    +p{ミニマルなスライドを作成することに成功した．}
-    +p{まだタイトルを打つことも出来ない．決まった箇所で行分割することも出来ない．}
+
+   +title-frame<
+     +title{
+       |\SLyDiFi; でらくらくスライド作成
+       |}
+     +author{
+       |monaqa
+       |}
+      +date{|2019年8月3日|}
+   >
+
+  +frame{\SLyDiFi;}<
+    +listing{
+      * \SLyDiFi;: \SATySFi; で書かれたスライド作成パッケージ
+        ** \code(`+p{}`); や \code(`+listing{}`);などのコマンドはそのままに，
+           \code(`+frame{}<>`); などのコマンドを追加
+    }
     +p{
       \jugem;
-      \jugem;
-      \jugem;
     }
+  >
+
+  +frame{画像はりテスト
+  \fig-abs-pos
+  ((Slydifi.paper-width *' 0.9, Slydifi.paper-height *' 0.9))
+  (PDF(30pt, `./logo.pdf`, 1));
+  }<
+    +p{
+      いろんな画像が貼れる．
+      \insert-image(PDF(100pt, `./logo.pdf`, 1)); や
+      \insert-image(JPEG(100pt, `./logo.jpg`)); など．
+    }
+    +centered-image(PDF(200pt, `./logo.pdf`, 1));
   >
 >

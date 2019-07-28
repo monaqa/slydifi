@@ -1,57 +1,117 @@
 % vim: foldmethod=marker
+@require: gr
+@require: color
 @require: math
+@require: list
+@import: slydifi-color
+
+
+type imginfo =
+  | JPEG of length * string       % width * filepath
+  | PDF of length * string * int  % width * filepath * page-number
+
+let-inline ctx \SLyDiFi =
+  let size = get-font-size ctx in
+  let f = read-inline ctx in
+  let fd = ctx |> set-manual-rising (0pt -' (size *' 0.25)) |> read-inline in
+  let fI = ctx |> set-font-size (size *' 0.72)
+               |> set-manual-rising (size *' 0.2)
+               |> read-inline
+  in
+  let ib = 
+    f {SL} ++ kern(size *' 0.05) ++ fd{Y} ++ kern(size *' 0.03) ++ f{DIF}
+      ++ kern(size *' 0.05) ++ fd{I}
+  in
+  script-guard Latin (no-break ib)
 
 module Slydifi : sig
 
   val document: 'a -> block-text -> document
     constraint 'a :: (|
-      fonts: 'b
+      fonts: (|
+        frame-title-cjk : string;
+        normal-text-cjk : string;
+        frame-title-latin : string;
+        normal-text-latin : string;
+        font-ratio-cjk : float;
+      |);
     |)
-    constraint 'b :: (|
-      title : string;
-      text  : string;
-    |)
+
+  val paper-width : length
+  val paper-height : length
 
   direct +p : [inline-text] block-cmd
   direct +frame : [inline-text; block-text] block-cmd
+  direct +frame-nt : [block-text] block-cmd
+  direct \emph : [inline-text] inline-cmd
+  direct +listing : [itemize] block-cmd
+  direct +title-frame : [block-text] block-cmd
+  direct +title: [inline-text list] block-cmd
+  direct +author: [inline-text list] block-cmd
+  direct +date: [inline-text list] block-cmd
+  direct +centered-image : [imginfo] block-cmd
+  direct \insert-image : [imginfo] inline-cmd
+  direct \fig-abs-pos : [(length * length); imginfo] inline-cmd
+  direct +fig-abs-pos : [(length * length); imginfo] block-cmd
 
 end = struct
 
   % 文書設定 {{{1
-  let font-size-normal  = 12pt
-  let font-size-frame-title = 20pt
-  let font-size-header-footer = 8pt
-  let font-size-title   = 18pt
-  let font-size-author  = 14pt
-  let font-size-date  = 14pt
-  let font-size-institute  = 10pt
-  let font-size-section = 18pt
+  let font-size-normal  = 20pt
+  let font-size-frame-title = 28pt
+  let font-size-header-footer = 12pt
+  let font-size-title   = 32pt
+  let font-size-author  = 20pt
+  let font-size-date  = 18pt
+  let font-size-institute  = 20pt
+  let font-size-section = 28pt
 
-  let paper-width  = 12.8cm
-  let paper-height = 9.6cm
-  let header-height = 12pt
-  let footer-height = 12pt
-  let text-horizontal-margin = 1cm
-  let text-vertical-margin = font-size-normal *' .5
+  % PowerPoint の文書サイズに合わせる
+  % let paper-width  = 12.8cm
+  % let paper-height = 9.6cm
+  let paper-width = 25.4cm
+  let paper-height = 14.29cm
+    % let header-height = 12pt
+  let header-height = 24pt
+  let footer-height = 24pt
+  let text-horizontal-margin = 1.5cm
+  let text-vertical-margin = font-size-normal *' 1.0
   let text-height = paper-height -' text-vertical-margin *' 2. -' footer-height -' header-height
   let text-width  = paper-width -' text-horizontal-margin *' 2.
   let text-origin = (text-horizontal-margin, header-height)
 
+  let relwid relx = paper-width *' relx
+  let relht rely = paper-height *' rely
+  let relpt relx rely = (relwid relx, relht rely)
+
   let font-ratio-latin = 1.
-  let font-ratio-cjk = 0.88
 
   let font-latin-roman  = (`Junicode`   , font-ratio-latin, 0.)
   let font-latin-italic = (`Junicode-it`, font-ratio-latin, 0.)
   let font-latin-sans   = (`lmsans`    , font-ratio-latin, 0.)
-  let font-cjk-mincho   = (`ipaexm`    , font-ratio-cjk  , 0.)
-  let font-cjk-gothic   = (`ipaexg`    , font-ratio-cjk  , 0.)
+  let font-cjk-mincho   = (`ipaexm`    , 1.0  , 0.)
+  let font-cjk-gothic   = (`ipaexg`    , 1.0  , 0.)
 
   let set-cjk-font font ctx =
     ctx |> set-font HanIdeographic font
         |> set-font Kana           font
+
+  % 色
+  let blue = SlydifiColor.html-color 0x076678
+  let cream = SlydifiColor.html-color 0xFBF1C7
+  let red = SlydifiColor.html-color 0xCC241D
+
+
+  % options {{{
+  let-mutable fonts-frame-title-cjk   <- ` `
+  let-mutable fonts-frame-title-latin <- ` `
+  let-mutable fonts-normal-text-cjk   <- ` `
+  let-mutable fonts-normal-text-latin <- ` `
+  let-mutable fonts-font-ratio-cjk    <- 1.0
+  % }}}
   % }}}
 
-
+  % document command {{{
   let get-standard-context wid =
     get-initial-context wid (command \math)
       |> set-dominant-wide-script Kana
@@ -62,14 +122,27 @@ end = struct
       |> set-font Kana           font-cjk-mincho
       |> set-font HanIdeographic font-cjk-mincho
       |> set-font Latin          font-latin-roman
+      |> set-font-size font-size-normal
       |> set-math-font `lmodern`
       |> set-hyphen-penalty 100
+      |> set-leading (font-size-normal *' 1.4)
+      |> set-paragraph-margin (font-size-normal *' 0.6) (font-size-normal *' 0.6)
 
   let document record inner =
 
     let page = UserDefinedPaper  (paper-width, paper-height) in
 
-    let ctx-doc = get-standard-context text-width in
+    let () = fonts-frame-title-cjk   <- record#fonts#frame-title-cjk in
+    let () = fonts-frame-title-latin <- record#fonts#frame-title-latin in
+    let () = fonts-normal-text-cjk   <- record#fonts#normal-text-cjk in
+    let () = fonts-normal-text-latin <- record#fonts#normal-text-latin in
+    let () = fonts-font-ratio-cjk    <- record#fonts#font-ratio-cjk in
+
+    let ctx-doc = (get-standard-context text-width)
+      |> set-font Kana (record#fonts#normal-text-cjk, !fonts-font-ratio-cjk, 0.)
+      |> set-font HanIdeographic (record#fonts#normal-text-cjk, !fonts-font-ratio-cjk, 0.)
+      |> set-font Latin (record#fonts#normal-text-latin, font-ratio-latin, 0.)
+    in
 
     let bb-main = read-block ctx-doc inner in
 
@@ -89,14 +162,303 @@ end = struct
 
     page-break page pagecontf pagepartsf bb-main
 
+  % }}}
+
+  % +title-frame{} command {{{
+
+  % title config
+  let title-xmin = relwid 0.18
+  let title-xmax = title-xmin +' 8pt
+  let title-ymin = relht 0.42
+  let title-ymax = title-ymin +' 8pt
+  let title-width = text-width *' 0.8
+  let author-width = text-width *' 0.8
+  let date-ymin = relht 0.2
+  let title-mgn = 16pt
+
+  let put-text point align ib =
+    let (w, h, d) = get-natural-metrics ib in
+    % xalgin: 0. で左揃え，0.5 で中央揃え，1. で右揃え
+    % yalgin: 0. で下揃え，0.5 で中央揃え，1. で上揃え
+    let (xalign, yalign) = align in
+    let (pointx, pointy) = point in
+    let xpos = pointx -' w *' xalign in
+    let ypos = pointy +' d -' (h +' d) *' yalign in
+    draw-text (xpos, ypos) ib  % x, y に関わらず point の絶対座標で決める
+  % inline-graphics wid ht 0pt (fn)
+
+  % +title-frame の中で使う
+  let-block ctx +title its-title =
+    let ctx-title = ctx |> set-font-size font-size-title
+                        |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
+                        |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
+                        |> set-text-color blue
+    in
+    let l = get-font-size ctx-title *' 0.25 in
+    let bbs-title ctx =
+      its-title |> List.map (fun it ->
+        line-break true true (ctx |> set-paragraph-margin l l)
+          (read-inline ctx it ++ inline-fil))
+    in
+    let ib-title = embed-block-top ctx-title title-width
+      (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
+    in
+    let draw-title =
+      [(put-text (title-xmax +' title-mgn, title-ymax +' title-mgn)
+        (0., 0.) ib-title);]
+    in
+    let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-title) in
+    (line-break true false ctx (ib ++ inline-fil))
+
+  % +title-frame の中で使う
+  let-block ctx +author its-author =
+    let ctx-author = ctx |> set-font-size font-size-author
+                        |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
+                        |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
+                        |> set-text-color blue
+    in
+    let l = get-font-size ctx-author *' 0.25 in
+    let bbs-author ctx =
+      its-author |> List.map (fun it ->
+        line-break true true (ctx |> set-paragraph-margin l l)
+          (read-inline ctx it ++ inline-fil))
+    in
+    let ib-author = embed-block-top ctx-author author-width
+      (fun ctx -> (bbs-author ctx |> List.fold-left (+++) block-nil))
+    in
+    let draw-author =
+      [(put-text (title-xmax +' title-mgn, title-ymin -' title-mgn)
+        (0., 1.) ib-author);]
+    in
+    let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-author) in
+    (line-break true false ctx (ib ++ inline-fil))
+
+  % +title-frame の中で使う
+  let-block ctx +date its-date =
+    let ctx-date = ctx |> set-font-size font-size-date
+                        |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
+                        |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
+                        |> set-text-color blue
+    in
+    let l = get-font-size ctx-date *' 0.25 in
+    let bbs-date ctx =
+      its-date |> List.map (fun it ->
+        line-break true true (ctx |> set-paragraph-margin l l)
+          (read-inline ctx it ++ inline-fil))
+    in
+    let ib-date = embed-block-top ctx-date author-width
+      (fun ctx -> (bbs-date ctx |> List.fold-left (+++) block-nil))
+    in
+    let draw-date =
+      [(put-text (title-xmax +' title-mgn, date-ymin -' title-mgn)
+        (0., 1.) ib-date);]
+    in
+    let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-date) in
+    (line-break true false ctx (ib ++ inline-fil))
+
+  let-block ctx +title-frame bt-inner =
+    let north-rect = Gr.rectangle (title-xmin, title-ymax) (title-xmax, relht 1.00) in
+    let south-rect = Gr.rectangle (title-xmin, title-ymin) (title-xmax, relht 0.00) in
+    let east-rect  = Gr.rectangle (title-xmax, title-ymin) (relwid 1.00, title-ymax) in
+    let west-rect  = Gr.rectangle (title-xmin, title-ymin) (relwid 0.00, title-ymax) in
+
+    let draw-titleframe =
+      [
+        (fill blue north-rect);
+        (fill blue south-rect);
+        (fill blue east-rect);
+        (fill blue west-rect);
+      ]
+    in
+    let ib =
+      inline-graphics 0pt 0pt 0pt (fun _ -> draw-titleframe)
+    in
+    (line-break true false ctx (ib ++ inline-fil))
+      +++ (read-block ctx bt-inner)
+      +++ clear-page
+
+  % }}}
+
+  % +frame{}<> command {{{
+
+  let placeholder height (origX, origY) =
+    [fill Color.white (Gr.rectangle (origX, origY) (origX, origY +' height))]
+
+  let make-frame-title ctx =
+
+    ctx |> set-font-size font-size-frame-title
+        |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
+        |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
+        |> set-text-color blue
+
+  let make-placeholder ctx glue-height =
+    let ht = length-max 0pt glue-height in
+    let ctx2 = ctx |> set-paragraph-margin 0pt 0pt in
+    line-break true false ctx2 (inline-graphics 0pt ht 0pt (placeholder ht) ++ inline-fil)
+
+  let-block ctx +frame title inner =
+    let ctx-title = make-frame-title ctx in
+    let title-padding = 12pt in
+    let deco (x, y) wid hgt dpt =
+      let path1 =
+        let xL = x -' text-horizontal-margin +' title-padding in
+        let yT = y +' text-vertical-margin in
+        let xR = xL +' paper-width -' title-padding *' 2.0 in
+        let yB = yT -' 3pt in
+        Gr.rectangle (xL, yT) (xR, yB)
+      in
+      [
+        (fill blue path1);
+      ]
+    in
+    let bb-title =
+      let ib-title = read-inline ctx-title title in
+      block-frame-breakable
+        (ctx |> set-paragraph-margin 0pt 0pt)
+          (title-padding -' text-horizontal-margin, title-padding,
+          title-padding -' text-vertical-margin, title-padding +' text-vertical-margin)
+            (deco, deco, deco, deco)
+              (fun ctx ->
+                form-paragraph (make-frame-title ctx) (ib-title ++ inline-fil)
+              )
+    in
+    let bb-inner = read-block ctx inner in
+    let glue-height = (text-height -' get-natural-length bb-inner -' get-natural-length bb-title) *' .5 in
+    let bb-glue = make-placeholder ctx glue-height in
+    bb-title % +++ bb-glue
+      +++ bb-inner +++ clear-page
+      % bb-title +++ bb-inner +++ clear-page
+
+  let-block ctx +frame-nt inner =
+    let bb-inner = read-block ctx inner in
+    let glue-height = (text-height -' get-natural-length bb-inner) *' .5 in
+    let bb-glue = make-placeholder ctx glue-height in
+    % bb-glue +++ bb-inner +++ clear-page
+    bb-inner +++ clear-page
+
+      % }}}
+
+  % 文書構造 {{{
+
   let-block ctx +p it =
     line-break true true ctx
       (read-inline ctx it ++ inline-fil)
 
-  let-block ctx +frame title inner =
-    let bb-title = block-nil in
-    let bb-inner =
-      read-block ctx inner in
-      bb-title +++ bb-inner
+  % }}}
+
+  % インラインテキスト装飾 {{{
+
+  let-inline ctx \emph it =
+    let ctx2 = ctx |> set-text-color red in
+    (read-inline ctx2 it)
+
+  % }}}
+
+  % 画像追加 {{{
+
+  let-block ctx +centered-image img-info =
+    match img-info with
+    | JPEG(wid, srcpath) ->
+        let img = load-image srcpath in
+        line-break true true ctx (inline-fil ++ use-image-by-width img wid ++ inline-fil)
+    | PDF(wid, srcpath, num) ->
+        let img = load-pdf-image srcpath num in
+        line-break true true ctx (inline-fil ++ use-image-by-width img wid ++ inline-fil)
+
+  let-inline ctx \insert-image img-info =
+    match img-info with
+    | JPEG(wid, srcpath) ->
+        let img = load-image srcpath in use-image-by-width img wid
+    | PDF(wid, srcpath, num) ->
+        let img = load-pdf-image srcpath num in use-image-by-width img wid
+
+  let-inline ctx \fig-abs-pos pt img-info =
+    let ib = match img-info with
+      | JPEG(wid, srcpath) ->
+          let img = load-image srcpath in
+          use-image-by-width img wid
+      | PDF(wid, srcpath, num) ->
+          let img = load-pdf-image srcpath num in
+          use-image-by-width img wid
+    in
+    inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
+
+  let-block ctx +fig-abs-pos pt img-info =
+    let ib = match img-info with
+      | JPEG(wid, srcpath) ->
+          let img = load-image srcpath in
+          use-image-by-width img wid
+      | PDF(wid, srcpath, num) ->
+          let img = load-pdf-image srcpath num in
+          use-image-by-width img wid
+    in
+    let it-gr = inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib]) in
+    line-break true true ctx (it-gr ++ inline-fil)
+
+  % }}}
+
+  % +listing{} command {{{
+  let (+++>) = List.fold-left (+++)
+
+  let item-indent = 20pt
+
+  let bullet depth color (x, y) =
+    let yc = y +' font-size-normal *' 0.3 in
+    let xl = x in
+    let xr = x +' font-size-normal *' 0.4 in
+    let yu = yc +' font-size-normal *' 0.2 in
+    let yd = yc -' font-size-normal *' 0.2 in
+    let tria = start-path (xl, yu)
+      |> line-to (xr, yc)
+      |> line-to (xl, yd)
+      |> close-with-line in
+    let north = yc +' font-size-normal *' 0.25 in
+    let east  = x  +' font-size-normal *' 0.25 in
+    let south = yc -' font-size-normal *' 0.25 in
+    let west  = x  -' font-size-normal *' 0.25 in
+    let dia = start-path (x, north)
+      |> line-to (east, yc)
+      |> line-to (x, south)
+      |> line-to (west, yc)
+      |> close-with-line in
+    let circ =
+      let cx = x +' font-size-normal *' 0.3 in
+      let cy = y +' font-size-normal *' 0.3 in
+      let r = font-size-normal *' 0.15 in
+      Gr.circle (cx, cy) r in
+      let path =
+        match depth with
+        | 0 -> dia
+        | 1 -> tria
+        | _ -> circ
+      in [ fill color path; ]
+
+  let-rec item : context -> int -> itemize -> block-boxes
+    | ctx depth (Item(parent, children)) =
+        let color = blue in
+        let br-bullet = (inline-graphics (font-size-normal *' 0.8) font-size-normal 0pt (bullet depth color)) in
+        let bullet-width = get-natural-width br-bullet in
+        let parent-indent = item-indent *' (float depth) in
+        let ctx2 = ctx |> set-paragraph-margin (font-size-normal *' 0.6) (font-size-normal *' 0.6) in
+        let br-parent =
+          embed-block-top ctx2 ((get-text-width ctx2) -' parent-indent -' bullet-width) (fun ctx2 ->
+            form-paragraph ctx2 ((read-inline ctx2 parent) ++ inline-fil)
+          )
+        in
+        let bc-parent =
+          form-paragraph ctx2
+            ((inline-skip parent-indent) ++ br-bullet ++ br-parent)
+        in
+        let bclst-children = List.map (item ctx2 (depth + 1)) children in
+        bc-parent +++> bclst-children
+
+  let-block ctx +listing (Item(_, itmzlst)) =
+    let bclst = List.map (item ctx 0) itmzlst in
+    block-nil +++> bclst
+
+      % }}}
 
 end
+
+
+
