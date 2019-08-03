@@ -3,6 +3,7 @@
 @require: color
 @require: math
 @require: list
+@require: annot
 @import: slydifi-color
 
 
@@ -33,6 +34,7 @@ module Slydifi : sig
         normal-text-cjk : string;
         frame-title-latin : string;
         normal-text-latin : string;
+        mono-text-latin : string;
         font-ratio-cjk : float;
       |);
     |)
@@ -44,8 +46,9 @@ module Slydifi : sig
   direct +frame : [inline-text; block-text] block-cmd
   direct +frame-nt : [block-text] block-cmd
   direct \emph : [inline-text] inline-cmd
+  direct \link : [inline-text?; string] inline-cmd
   direct +listing : [itemize] block-cmd
-  direct +title-frame : [block-text] block-cmd
+  direct +make-title : [block-text] block-cmd
   direct +title: [inline-text list] block-cmd
   direct +author: [inline-text list] block-cmd
   direct +date: [inline-text list] block-cmd
@@ -89,6 +92,7 @@ end = struct
   let font-latin-roman  = (`Junicode`   , font-ratio-latin, 0.)
   let font-latin-italic = (`Junicode-it`, font-ratio-latin, 0.)
   let font-latin-sans   = (`lmsans`    , font-ratio-latin, 0.)
+  let font-latin-mono   = (`lmmono`    , font-ratio-latin, 0.)
   let font-cjk-mincho   = (`ipaexm`    , 1.0  , 0.)
   let font-cjk-gothic   = (`ipaexg`    , 1.0  , 0.)
 
@@ -96,10 +100,13 @@ end = struct
     ctx |> set-font HanIdeographic font
         |> set-font Kana           font
 
-  % 色
-  let blue = SlydifiColor.html-color 0x076678
-  let cream = SlydifiColor.html-color 0xFBF1C7
-  let red = SlydifiColor.html-color 0xCC241D
+  % colors
+
+  let color-title = SlydifiColor.html-color 0x076678
+  let color-bg = SlydifiColor.html-color 0xF9F5D7
+  let color-fg = SlydifiColor.html-color 0x282828
+  let color-emph = SlydifiColor.html-color 0xCC241D
+  let color-link = SlydifiColor.html-color 0x8F3F71
 
 
   % options {{{
@@ -107,6 +114,7 @@ end = struct
   let-mutable fonts-frame-title-latin <- ` `
   let-mutable fonts-normal-text-cjk   <- ` `
   let-mutable fonts-normal-text-latin <- ` `
+  let-mutable fonts-mono-text-latin   <- ` `
   let-mutable fonts-font-ratio-cjk    <- 1.0
   % }}}
   % }}}
@@ -127,6 +135,7 @@ end = struct
       |> set-hyphen-penalty 100
       |> set-leading (font-size-normal *' 1.4)
       |> set-paragraph-margin (font-size-normal *' 0.6) (font-size-normal *' 0.6)
+      |> set-text-color color-fg
 
   let document record inner =
 
@@ -137,6 +146,7 @@ end = struct
     let () = fonts-normal-text-cjk   <- record#fonts#normal-text-cjk in
     let () = fonts-normal-text-latin <- record#fonts#normal-text-latin in
     let () = fonts-font-ratio-cjk    <- record#fonts#font-ratio-cjk in
+    let () = fonts-mono-text-latin   <- record#fonts#mono-text-latin in
 
     let ctx-doc = (get-standard-context text-width)
       |> set-font Kana (record#fonts#normal-text-cjk, !fonts-font-ratio-cjk, 0.)
@@ -164,7 +174,18 @@ end = struct
 
   % }}}
 
-  % +title-frame{} command {{{
+  % +make-title{} command {{{
+
+  let bb-bg ctx =
+    let rect-bg =
+      fill color-bg (Gr.rectangle (0pt, 0pt) (paper-width, paper-height))
+    in
+    let ib = inline-graphics 0pt 0pt 0pt (fun _ -> [rect-bg]) in
+    let ctx-phantom =
+      ctx |> set-font-size 0pt
+          |> set-paragraph-margin 0pt 0pt
+    in
+    line-break true true ctx-phantom (ib ++ inline-fil)
 
   % title config
   let title-xmin = relwid 0.18
@@ -187,12 +208,12 @@ end = struct
     draw-text (xpos, ypos) ib  % x, y に関わらず point の絶対座標で決める
   % inline-graphics wid ht 0pt (fn)
 
-  % +title-frame の中で使う
+  % +make-title の中で使う
   let-block ctx +title its-title =
     let ctx-title = ctx |> set-font-size font-size-title
                         |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
                         |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
-                        |> set-text-color blue
+                        |> set-text-color color-title
     in
     let l = get-font-size ctx-title *' 0.25 in
     let bbs-title ctx =
@@ -210,12 +231,12 @@ end = struct
     let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-title) in
     (line-break true false ctx (ib ++ inline-fil))
 
-  % +title-frame の中で使う
+  % +make-title の中で使う
   let-block ctx +author its-author =
     let ctx-author = ctx |> set-font-size font-size-author
                         |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
                         |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
-                        |> set-text-color blue
+                        |> set-text-color color-title
     in
     let l = get-font-size ctx-author *' 0.25 in
     let bbs-author ctx =
@@ -233,12 +254,12 @@ end = struct
     let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-author) in
     (line-break true false ctx (ib ++ inline-fil))
 
-  % +title-frame の中で使う
+  % +make-title の中で使う
   let-block ctx +date its-date =
     let ctx-date = ctx |> set-font-size font-size-date
                         |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
                         |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
-                        |> set-text-color blue
+                        |> set-text-color color-title
     in
     let l = get-font-size ctx-date *' 0.25 in
     let bbs-date ctx =
@@ -256,7 +277,7 @@ end = struct
     let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-date) in
     (line-break true false ctx (ib ++ inline-fil))
 
-  let-block ctx +title-frame bt-inner =
+  let-block ctx +make-title bt-inner =
     let north-rect = Gr.rectangle (title-xmin, title-ymax) (title-xmax, relht 1.00) in
     let south-rect = Gr.rectangle (title-xmin, title-ymin) (title-xmax, relht 0.00) in
     let east-rect  = Gr.rectangle (title-xmax, title-ymin) (relwid 1.00, title-ymax) in
@@ -264,16 +285,16 @@ end = struct
 
     let draw-titleframe =
       [
-        (fill blue north-rect);
-        (fill blue south-rect);
-        (fill blue east-rect);
-        (fill blue west-rect);
+        (fill color-title north-rect);
+        (fill color-title south-rect);
+        (fill color-title east-rect);
+        (fill color-title west-rect);
       ]
     in
     let ib =
       inline-graphics 0pt 0pt 0pt (fun _ -> draw-titleframe)
     in
-    (line-break true false ctx (ib ++ inline-fil))
+    (bb-bg ctx) +++ (line-break true false ctx (ib ++ inline-fil))
       +++ (read-block ctx bt-inner)
       +++ clear-page
 
@@ -289,7 +310,7 @@ end = struct
     ctx |> set-font-size font-size-frame-title
         |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
         |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
-        |> set-text-color blue
+        |> set-text-color color-title
 
   let make-placeholder ctx glue-height =
     let ht = length-max 0pt glue-height in
@@ -308,7 +329,7 @@ end = struct
         Gr.rectangle (xL, yT) (xR, yB)
       in
       [
-        (fill blue path1);
+        (fill color-title path1);
       ]
     in
     let bb-title =
@@ -325,16 +346,16 @@ end = struct
     let bb-inner = read-block ctx inner in
     let glue-height = (text-height -' get-natural-length bb-inner -' get-natural-length bb-title) *' .5 in
     let bb-glue = make-placeholder ctx glue-height in
-    bb-title % +++ bb-glue
-      +++ bb-inner +++ clear-page
-      % bb-title +++ bb-inner +++ clear-page
+    (bb-bg ctx) +++ bb-title % +++ bb-glue
+        +++ bb-inner +++ clear-page
+          % bb-title +++ bb-inner +++ clear-page
 
   let-block ctx +frame-nt inner =
     let bb-inner = read-block ctx inner in
     let glue-height = (text-height -' get-natural-length bb-inner) *' .5 in
     let bb-glue = make-placeholder ctx glue-height in
     % bb-glue +++ bb-inner +++ clear-page
-    bb-inner +++ clear-page
+    (bb-bg ctx) +++ bb-inner +++ clear-page
 
       % }}}
 
@@ -349,12 +370,26 @@ end = struct
   % インラインテキスト装飾 {{{
 
   let-inline ctx \emph it =
-    let ctx2 = ctx |> set-text-color red in
+    let ctx2 = ctx |> set-text-color color-emph
+                   |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
+                   |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
+    in
     (read-inline ctx2 it)
 
-  % }}}
+  let-inline ctx \link ?:it url =
+    let ctx2 = ctx |> set-text-color color-link in
+    let ctx-link = match it with
+      | None    -> ctx2 |> set-font Latin (!fonts-mono-text-latin, 1.0, 0.)
+      | Some(v) -> ctx2
+    in
+    let text = match it with
+      | None    -> (embed-string url)
+      | Some(v) -> v
+    in
+    read-inline ctx-link {\href(url){#text;}}
+      % }}}
 
-  % 画像追加 {{{
+    % 画像追加 {{{
 
   let-block ctx +centered-image img-info =
     match img-info with
@@ -395,9 +430,9 @@ end = struct
     let it-gr = inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib]) in
     line-break true true ctx (it-gr ++ inline-fil)
 
-  % }}}
+      % }}}
 
-  % +listing{} command {{{
+      % +listing{} command {{{
   let (+++>) = List.fold-left (+++)
 
   let item-indent = 20pt
@@ -412,30 +447,30 @@ end = struct
       |> line-to (xr, yc)
       |> line-to (xl, yd)
       |> close-with-line in
-    let north = yc +' font-size-normal *' 0.25 in
-    let east  = x  +' font-size-normal *' 0.25 in
-    let south = yc -' font-size-normal *' 0.25 in
-    let west  = x  -' font-size-normal *' 0.25 in
-    let dia = start-path (x, north)
-      |> line-to (east, yc)
-      |> line-to (x, south)
-      |> line-to (west, yc)
-      |> close-with-line in
-    let circ =
-      let cx = x +' font-size-normal *' 0.3 in
-      let cy = y +' font-size-normal *' 0.3 in
-      let r = font-size-normal *' 0.15 in
-      Gr.circle (cx, cy) r in
-      let path =
-        match depth with
-        | 0 -> dia
-        | 1 -> tria
-        | _ -> circ
-      in [ fill color path; ]
+  let north = yc +' font-size-normal *' 0.25 in
+  let east  = x  +' font-size-normal *' 0.25 in
+  let south = yc -' font-size-normal *' 0.25 in
+  let west  = x  -' font-size-normal *' 0.25 in
+  let dia = start-path (x, north)
+    |> line-to (east, yc)
+    |> line-to (x, south)
+    |> line-to (west, yc)
+    |> close-with-line in
+  let circ =
+    let cx = x +' font-size-normal *' 0.3 in
+    let cy = y +' font-size-normal *' 0.3 in
+    let r = font-size-normal *' 0.15 in
+    Gr.circle (cx, cy) r in
+    let path =
+      match depth with
+      | 0 -> dia
+      | 1 -> tria
+      | _ -> circ
+    in [ fill color path; ]
 
   let-rec item : context -> int -> itemize -> block-boxes
     | ctx depth (Item(parent, children)) =
-        let color = blue in
+        let color = color-title in
         let br-bullet = (inline-graphics (font-size-normal *' 0.8) font-size-normal 0pt (bullet depth color)) in
         let bullet-width = get-natural-width br-bullet in
         let parent-indent = item-indent *' (float depth) in

@@ -2,6 +2,7 @@
 % vim:foldmethod=marker:
 
 @require: code
+@require: annot
 @import: ../slydifi
 
 
@@ -23,11 +24,12 @@ Slydifi.document(|
     normal-text-cjk  = `mplus-sans-r`;
     frame-title-latin = `mplus-sans-b`;
     normal-text-latin  = `mplus-sans-r`;
+    mono-text-latin  = `mplus-mono-r`;
     font-ratio-cjk = 1.0;
   |);
 |)'<
 
-   +title-frame<
+   +make-title<
      +title{
        |\SLyDiFi; でらくらくスライド作成
        |}
@@ -37,15 +39,20 @@ Slydifi.document(|
       +date{|2019年8月3日|}
    >
 
-  +frame{\SLyDiFi;}<
+  +frame{\SLyDiFi;: \SATySFi; のスライド作成用パッケージ}<
     +listing{
-      * \SLyDiFi;: \SATySFi; で書かれたスライド作成パッケージ
-        ** \code(`+p{}`); や \code(`+listing{}`);などのコマンドはそのままに，
-           \code(`+frame{}<>`); などのコマンドを追加
+      * \emph{\SATySFi;} (\link(`https://github.com/gfngfn/SATySFi`);)
+        ** 静的型付き関数型言語ベースの新たな組版処理システム
+        ** 普通の文書作成時にはそこまで関数型言語を意識しなくてよい
+        ** パッケージをカスタマイズする際の構文は OCaml 風
+
+      * \emph{\SLyDiFi;} (\link(`https://github.com/monaqa/slydifi`);)
+        ** \SATySFi; でスライドを作成することができる
+        ** 実は既に先駆者がいる（\link?:({Steamer})(`https://github.com/konn/satysfi-steamer`);）
     }
-    +p{
-      \jugem;
-    }
+    % +p{
+    %   \jugem;
+    % }
   >
 
   +frame{画像はりテスト
