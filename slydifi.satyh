@@ -46,6 +46,7 @@ module Slydifi : sig
   direct +frame : [inline-text; block-text] block-cmd
   direct +frame-nt : [block-text] block-cmd
   direct \emph : [inline-text] inline-cmd
+  direct \br : [] inline-cmd
   direct \link : [inline-text?; string] inline-cmd
   direct +listing : [itemize] block-cmd
   direct +make-title : [block-text] block-cmd
@@ -56,6 +57,7 @@ module Slydifi : sig
   direct \insert-image : [imginfo] inline-cmd
   direct \fig-abs-pos : [(length * length); imginfo] inline-cmd
   direct +fig-abs-pos : [(length * length); imginfo] block-cmd
+  direct \fig-right : [imginfo] inline-cmd
 
 end = struct
 
@@ -387,7 +389,11 @@ end = struct
       | Some(v) -> v
     in
     read-inline ctx-link {\href(url){#text;}}
-      % }}}
+
+  let-inline ctx \br
+    = discretionary (- 1000) inline-nil inline-fil inline-nil
+
+  % }}}
 
     % 画像追加 {{{
 
@@ -430,9 +436,26 @@ end = struct
     let it-gr = inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib]) in
     line-break true true ctx (it-gr ++ inline-fil)
 
-      % }}}
+  let-inline ctx \fig-right img-info =
+    let ib = match img-info with
+      | JPEG(wid, srcpath) ->
+          let img = load-image srcpath in
+          use-image-by-width img wid
+      | PDF(wid, srcpath, num) ->
+          let img = load-pdf-image srcpath num in
+          use-image-by-width img wid
+    in
+    let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
+    inline-graphics 0pt 0pt 0pt (fun (x, y) ->
+      [
+        draw-text
+          (paper-width -' text-horizontal-margin -' ib-w,
+          y +' (ctx |> get-font-size) -' ib-h) ib
+      ])
 
-      % +listing{} command {{{
+    % }}}
+
+    % +listing{} command {{{
   let (+++>) = List.fold-left (+++)
 
   let item-indent = 20pt
