@@ -100,6 +100,9 @@ end = struct
     ctx |> set-font HanIdeographic font
         |> set-font Kana           font
 
+  % page number
+  let-mutable is-first-page <- true
+
   % colors
 
   let color-title = SlydifiColor.html-color 0x076678
@@ -120,6 +123,14 @@ end = struct
   % }}}
 
   % document command {{{
+
+  let clear-page-or-nil is-first-page =
+    match !is-first-page with
+    | true ->
+        let () = is-first-page <- false in
+        block-nil
+    | false -> clear-page
+
   let get-standard-context wid =
     get-initial-context wid (command \math)
       |> set-dominant-wide-script Kana
@@ -294,9 +305,9 @@ end = struct
     let ib =
       inline-graphics 0pt 0pt 0pt (fun _ -> draw-titleframe)
     in
+    (clear-page-or-nil is-first-page) +++
     (bb-bg ctx) +++ (line-break true false ctx (ib ++ inline-fil))
       +++ (read-block ctx bt-inner)
-      +++ clear-page
 
   % }}}
 
@@ -346,8 +357,9 @@ end = struct
     let bb-inner = read-block ctx inner in
     let glue-height = (text-height -' get-natural-length bb-inner -' get-natural-length bb-title) *' .5 in
     let bb-glue = make-placeholder ctx glue-height in
+    (clear-page-or-nil is-first-page) +++
     (bb-bg ctx) +++ bb-title % +++ bb-glue
-        +++ bb-inner +++ clear-page
+        +++ bb-inner
           % bb-title +++ bb-inner +++ clear-page
 
   let-block ctx +frame-nt inner =
@@ -355,7 +367,8 @@ end = struct
     let glue-height = (text-height -' get-natural-length bb-inner) *' .5 in
     let bb-glue = make-placeholder ctx glue-height in
     % bb-glue +++ bb-inner +++ clear-page
-    (bb-bg ctx) +++ bb-inner +++ clear-page
+    (clear-page-or-nil is-first-page) +++
+    (bb-bg ctx) +++ bb-inner
 
       % }}}
 
