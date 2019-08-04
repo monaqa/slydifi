@@ -10,6 +10,8 @@
 type imginfo =
   | JPEG of length * string       % width * filepath
   | PDF of length * string * int  % width * filepath * page-number
+  | DummyBox of length * length   % width * height
+  % | Text of length * inline-text  % width * content: not implemented
 
 let-inline ctx \SLyDiFi =
   let size = get-font-size ctx in
@@ -79,7 +81,7 @@ end = struct
     % let header-height = 12pt
   let header-height = 24pt
   let footer-height = 24pt
-  let text-horizontal-margin = 1.5cm
+  let text-horizontal-margin = 30pt
   let text-vertical-margin = font-size-normal *' 1.0
   let text-height = paper-height -' text-vertical-margin *' 2. -' footer-height -' header-height
   let text-width  = paper-width -' text-horizontal-margin *' 2.
@@ -410,6 +412,10 @@ end = struct
 
     % 画像追加 {{{
 
+  let draw-dummy-box wid ht (x, y) =
+    let rect-path = Gr.rectangle (x, y) (x +' wid, y +' ht) in
+    [(stroke 1pt color-fg rect-path)]
+
   let-block ctx +centered-image img-info =
     match img-info with
     | JPEG(wid, srcpath) ->
@@ -418,6 +424,8 @@ end = struct
     | PDF(wid, srcpath, num) ->
         let img = load-pdf-image srcpath num in
         line-break true true ctx (inline-fil ++ use-image-by-width img wid ++ inline-fil)
+    | DummyBox(wid, ht) ->
+        line-break true true ctx (inline-fil ++ (inline-graphics wid ht 0pt (draw-dummy-box wid ht)) ++ inline-fil)
 
   let-inline ctx \insert-image img-info =
     match img-info with
@@ -425,46 +433,58 @@ end = struct
         let img = load-image srcpath in use-image-by-width img wid
     | PDF(wid, srcpath, num) ->
         let img = load-pdf-image srcpath num in use-image-by-width img wid
+    | DummyBox(wid, ht) ->
+        inline-graphics wid ht 0pt (draw-dummy-box wid ht)
+
+
+  let fig-abs-pos pt img-info =
+    match img-info with
+      | JPEG(wid, srcpath) ->
+          let img = load-image srcpath in
+          let ib = use-image-by-width img wid in
+          inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
+      | PDF(wid, srcpath, num) ->
+          let img = load-pdf-image srcpath num in
+          let ib = use-image-by-width img wid in
+          inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
+      | DummyBox(wid, ht) ->
+          inline-graphics 0pt 0pt 0pt (fun _ -> draw-dummy-box wid ht pt)
+
 
   let-inline ctx \fig-abs-pos pt img-info =
-    let ib = match img-info with
-      | JPEG(wid, srcpath) ->
-          let img = load-image srcpath in
-          use-image-by-width img wid
-      | PDF(wid, srcpath, num) ->
-          let img = load-pdf-image srcpath num in
-          use-image-by-width img wid
-    in
-    inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
+    fig-abs-pos pt img-info
 
   let-block ctx +fig-abs-pos pt img-info =
-    let ib = match img-info with
-      | JPEG(wid, srcpath) ->
-          let img = load-image srcpath in
-          use-image-by-width img wid
-      | PDF(wid, srcpath, num) ->
-          let img = load-pdf-image srcpath num in
-          use-image-by-width img wid
-    in
-    let it-gr = inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib]) in
+    let it-gr = fig-abs-pos pt img-info in
     line-break true true ctx (it-gr ++ inline-fil)
 
   let-inline ctx \fig-right img-info =
-    let ib = match img-info with
-      | JPEG(wid, srcpath) ->
-          let img = load-image srcpath in
-          use-image-by-width img wid
-      | PDF(wid, srcpath, num) ->
-          let img = load-pdf-image srcpath num in
-          use-image-by-width img wid
-    in
-    let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
-    inline-graphics 0pt 0pt 0pt (fun (x, y) ->
-      [
-        draw-text
-          (paper-width -' text-horizontal-margin -' ib-w,
-          y +' (ctx |> get-font-size) -' ib-h) ib
-      ])
+    match img-info with
+    | JPEG(wid, srcpath) ->
+        let img = load-image srcpath in
+        let ib = use-image-by-width img wid in
+        let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
+        inline-graphics 0pt 0pt 0pt (fun (x, y) ->
+          [
+            draw-text
+              (paper-width -' text-horizontal-margin -' ib-w,
+              y +' (ctx |> get-font-size) -' ib-h) ib
+          ])
+    | PDF(wid, srcpath, num) ->
+        let img = load-pdf-image srcpath num in
+        let ib = use-image-by-width img wid in
+        let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
+        inline-graphics 0pt 0pt 0pt (fun (x, y) ->
+          [
+            draw-text
+              (paper-width -' text-horizontal-margin -' ib-w,
+              y +' (ctx |> get-font-size) -' ib-h) ib
+          ])
+    | DummyBox(wid, ht) ->
+        let pt y =
+          (paper-width -' text-horizontal-margin -' wid,
+          y +' (ctx |> get-font-size) -' ht) in
+          inline-graphics 0pt 0pt 0pt (fun (x, y) -> draw-dummy-box wid ht (pt y))
 
     % }}}
 
