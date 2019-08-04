@@ -48,7 +48,7 @@ Slydifi.document(|
 
       * \emph{\SLyDiFi;} (\link(`https://github.com/monaqa/slydifi`);)
         ** \SATySFi; でスライドを作成することができる
-        ** 実は既に先駆者がいる（\link?:({Steamer})(`https://github.com/konn/satysfi-steamer`);）
+        ** 実は既に先駆者がいる（\link?:({Steamer: Slide Presentation in SATySFi})(`https://github.com/konn/satysfi-steamer`);）
     }
     % +p{
     %   \jugem;
