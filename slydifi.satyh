@@ -27,6 +27,13 @@ let-inline ctx \SLyDiFi =
   in
   script-guard Latin (no-break ib)
 
+let-rec power-float-int r m =
+  match m with
+  | 0 -> 1.
+  | _ -> (power-float-int r (m - 1)) *. r
+
+let max-float f1 f2 = if (1pt *' f1) >' (1pt *' f2) then f1 else f2
+
 module Slydifi : sig
 
   val document: 'a -> block-text -> document
@@ -580,11 +587,15 @@ end = struct
 
   let-rec item : context -> int -> itemize -> block-boxes
     | ctx depth (Item(parent, children)) =
+        let font-size-tmp = font-size-normal *' (max-float (power-float-int 0.9 depth) 0.75) in
         let color = color-title in
         let br-bullet = (inline-graphics (font-size-normal *' 0.8) font-size-normal 0pt (bullet depth color)) in
         let bullet-width = get-natural-width br-bullet in
         let parent-indent = item-indent *' (float depth) in
-        let ctx2 = ctx |> set-paragraph-margin (font-size-normal *' 0.6) (font-size-normal *' 0.6) in
+        let ctx2 = ctx
+          |> set-font-size font-size-tmp
+          |> set-paragraph-margin (font-size-tmp *' 0.6) (font-size-tmp *' 0.6)
+        in
         let br-parent =
           embed-block-top ctx2 ((get-text-width ctx2) -' parent-indent -' bullet-width) (fun ctx2 ->
             form-paragraph ctx2 ((read-inline ctx2 parent) ++ inline-fil)

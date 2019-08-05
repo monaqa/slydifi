@@ -16,6 +16,9 @@ let-inline \jugem = {
   グーリンダイのポンポコピーのポンポコナーの，
   長久命の長助．
 }
+
+let-inline \show-float n = embed-string (show-float n)
+
 in
 
 Slydifi.document(|
@@ -47,6 +50,7 @@ Slydifi.document(|
         * \emph{\SLyDiFi;} (\link(`https://github.com/monaqa/slydifi`);)
           ** \SATySFi; でスライドを作成することができる
           ** 実は既に先駆者がいる（\link?:({Steamer: Slide Presentation in SATySFi})(`https://github.com/konn/satysfi-steamer`);）
+            *** Steamer とは page break 周りの実装を少しばかり変えている
       }
       % +p{
       %   \jugem;
@@ -71,6 +75,12 @@ Slydifi.document(|
       % +centered-image(PDF(150pt, `./logo.pdf`, 1));
       % +centered-image(JPEG(150pt, `./logo.jpg`));
       +centered-image(DummyBox(500pt, 120pt));
+    >
+
+  >
+
+  +section{|機能一覧|}<
+    +frame{演算}<
     >
   >
 >
