@@ -44,6 +44,7 @@ module Slydifi : sig
   val paper-width : length
   val paper-height : length
 
+  direct +section : [inline-text list; block-text] block-cmd
   direct +p : [inline-text] block-cmd
   direct +frame : [inline-text; block-text] block-cmd
   direct +frame-nt : [block-text] block-cmd
@@ -379,6 +380,57 @@ end = struct
       % }}}
 
   % 文書構造 {{{
+
+  let section-title ctx its-title =
+    let ctx-title = ctx |> set-font-size font-size-title
+                        |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
+                        |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
+                        |> set-text-color color-title
+    in
+    let l = get-font-size ctx-title *' 0.25 in
+    let bbs-title ctx =
+      its-title |> List.map (fun it ->
+        line-break true true (ctx |> set-paragraph-margin l l)
+          (read-inline ctx it ++ inline-fil))
+    in
+    let ib-title = embed-block-top ctx-title title-width
+      (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
+    in
+    let draw-title =
+      [(put-text (title-xmax +' title-mgn, title-ymax +' title-mgn)
+        (0., 0.) ib-title);]
+    in
+    let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-title) in
+    (line-break true false ctx (ib ++ inline-fil))
+
+  let-block ctx +section its bt =
+    let sec-title-xmin = title-xmin in
+    let sec-title-ymin = title-ymin in
+    let sec-title-xmax = title-xmin +' 5pt in
+    let sec-title-ymax = title-ymin +' 5pt in
+    let north-rect = Gr.rectangle (sec-title-xmin, sec-title-ymax) (sec-title-xmax, relht 1.00) in
+    let south-rect = Gr.rectangle (sec-title-xmin, sec-title-ymin) (sec-title-xmax, relht 0.00) in
+    let east-rect  = Gr.rectangle (sec-title-xmax, sec-title-ymin) (relwid 1.00, sec-title-ymax) in
+    let west-rect  = Gr.rectangle (sec-title-xmin, sec-title-ymin) (relwid 0.00, sec-title-ymax) in
+    let cent-rect  = Gr.rectangle (sec-title-xmin, sec-title-ymin) (sec-title-xmax, sec-title-ymax) in
+    let rect-color = SlydifiColor.inner-color color-title color-bg 0.4 in
+    let draw-titleframe =
+      [
+        (fill rect-color north-rect);
+        (fill rect-color south-rect);
+        (fill rect-color east-rect);
+        (fill rect-color west-rect);
+        (fill color-title cent-rect);
+      ]
+    in
+    let ib =
+      inline-graphics 0pt 0pt 0pt (fun _ -> draw-titleframe)
+    in
+    (clear-page-or-nil is-first-page) +++
+    (bb-bg ctx) +++ (line-break true false ctx (ib ++ inline-fil))
+      +++ (section-title ctx its) +++ (read-block ctx bt)
+
+
 
   let-block ctx +p it =
     line-break true true ctx
