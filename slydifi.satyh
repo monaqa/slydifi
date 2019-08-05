@@ -358,7 +358,8 @@ end = struct
                 form-paragraph (make-frame-title ctx) (ib-title ++ inline-fil)
               )
     in
-    let bb-inner = read-block ctx inner in
+    let ib-inner = embed-block-top ctx text-width (fun ctx -> read-block ctx inner) in
+    let bb-inner = line-break false false ctx ib-inner in
     let glue-height = (text-height -' get-natural-length bb-inner -' get-natural-length bb-title) *' .5 in
     let bb-glue = make-placeholder ctx glue-height in
     (clear-page-or-nil is-first-page) +++
@@ -367,7 +368,8 @@ end = struct
           % bb-title +++ bb-inner +++ clear-page
 
   let-block ctx +frame-nt inner =
-    let bb-inner = read-block ctx inner in
+    let ib-inner = embed-block-top ctx text-width (fun ctx -> read-block ctx inner) in
+    let bb-inner = line-break false false ctx ib-inner in
     let glue-height = (text-height -' get-natural-length bb-inner) *' .5 in
     let bb-glue = make-placeholder ctx glue-height in
     % bb-glue +++ bb-inner +++ clear-page
