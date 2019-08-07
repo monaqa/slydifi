@@ -36,6 +36,7 @@ let max-float f1 f2 = if (1pt *' f1) >' (1pt *' f2) then f1 else f2
 
 module Slydifi : sig
 
+  % Signature {{{
   val document: 'a -> block-text -> document
     constraint 'a :: (|
       fonts: (|
@@ -68,6 +69,7 @@ module Slydifi : sig
   direct \fig-abs-pos : [(length * length); imginfo] inline-cmd
   direct +fig-abs-pos : [(length * length); imginfo] block-cmd
   direct \fig-right : [imginfo] inline-cmd
+  % }}}
 
 end = struct
 
@@ -122,6 +124,7 @@ end = struct
   let color-fg = SlydifiColor.html-color 0x282828
   let color-emph = SlydifiColor.html-color 0xCC241D
   let color-link = SlydifiColor.html-color 0x8F3F71
+  let color-footer = SlydifiColor.inner-color color-bg color-fg 0.5
 
 
   % options {{{
@@ -185,15 +188,36 @@ end = struct
     |)
     in
 
-    let pagepartsf _ = (|
+    let pagepartsf pbinfo =
+      let footer =
+        let ctx = get-standard-context paper-width
+          |> set-font Latin (record#fonts#normal-text-latin, font-ratio-latin, 0.)
+          |> set-font-size font-size-header-footer
+          |> set-text-color color-footer
+        in
+        let it-pageno = embed-string (arabic pbinfo#page-number) in
+        let it-count = match get-cross-reference `pagecount` with
+          | None -> {??}
+          | Some(i) -> embed-string i
+        in
+        line-break true true ctx (inline-fil ++ (read-inline ctx {#it-pageno;/#it-count;}) ++ inline-skip 20pt)
+      in
+      (|
       header-origin  = (0pt, 0pt);
       header-content = block-nil;
-      footer-origin  = (0pt, 0pt);
-      footer-content = block-nil;
-    |)
+      footer-origin  = (0pt, paper-height -' footer-height);
+      footer-content = footer;
+      |)
     in
 
-    page-break page pagecontf pagepartsf bb-main
+    let hook = line-break false false (get-standard-context 0pt)
+        (hook-page-break (fun pbInfo _ -> (
+            let numpages = pbInfo#page-number in
+            register-cross-reference `pagecount` (arabic numpages)
+        )))
+    in
+
+    page-break page pagecontf pagepartsf (bb-main +++ hook)
 
   % }}}
 
