@@ -22,6 +22,7 @@ let-inline \show-float n = embed-string (show-float n)
 in
 
 Slydifi.document(|
+  draft-mode = true;
   fonts = (|
     frame-title-cjk = `mplus-sans-b`;    % 自分が持っているフォントに変えること
     normal-text-cjk  = `mplus-sans-r`;   % 自分が持っているフォントに変えること
