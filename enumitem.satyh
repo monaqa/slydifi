@@ -1,0 +1,50 @@
+% -*- coding: utf-8 -*-
+% vim:foldmethod=marker:
+
+module Itemize : sig
+
+  direct +genlisting : [(context -> int -> inline-boxes); itemize] block-cmd
+  % direct \listings : [(int -> inline-text); itemize] inline-cmd
+  val arabic-dot: context -> int -> inline-boxes
+
+end = struct
+
+  let (+++>) = List.fold-left (+++)
+  let concat-blocks = (+++>) block-nil
+
+  let item-indent = 16pt
+  let item-gap = 10pt
+  let item-gap-outer = 6pt
+
+  let-rec general-list-item : int -> context -> (context -> int -> inline-boxes) -> int -> itemize -> block-boxes
+    | index ctx idxrule depth (Item(parent, children)) =
+        let ib-index = idxrule ctx index in
+        let bullet-width = get-natural-width ib-index in
+        let parent-indent = item-indent *' (float depth) in
+        let ib-parent =
+          embed-block-top ctx ((get-text-width ctx) -' parent-indent -' bullet-width) (fun ctx ->
+            form-paragraph (ctx |> set-paragraph-margin item-gap item-gap)
+              (read-inline ctx parent ++ inline-fil)
+          )
+        in
+        let bb-parent =
+          form-paragraph (ctx |> set-paragraph-margin item-gap item-gap)
+            ((inline-skip parent-indent) ++ ib-index ++ ib-parent)
+        in
+        let bblst-children = List.mapi (fun i -> general-list-item (i + 1) ctx idxrule (depth + 1)) children in
+        bb-parent +++> bblst-children
+
+  let general-list ctx idxrule (Item(_, itmzlst)) =
+    let bblst = List.mapi (fun i -> general-list-item (i + 1) ctx idxrule 0) itmzlst in
+      (block-skip item-gap-outer) +++ (concat-blocks bblst) +++ (block-skip item-gap-outer)
+
+  let-block ctx +genlisting idxrule item =
+    general-list ctx idxrule item
+
+  let arabic-dot ctx idx =
+    let it-num = (embed-string (arabic idx)) in
+    read-inline ctx {#it-num;.\ }
+
+end
+
+let arabic-dot = Itemize.arabic-dot

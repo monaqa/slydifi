@@ -4,6 +4,7 @@
 @require: code
 @require: annot
 @import: ../slydifi
+@import: ../enumitem
 
 
 let-inline \jugem = {
@@ -82,6 +83,17 @@ Slydifi.document(|
 
   +section{|機能一覧|}<
     +frame{演算}<
+      +genlisting(arabic-dot){
+        * ほげほげ
+          ** ふがふが
+          ** ぴよぴよ
+        * なんだか
+          ** 味気ない？
+          ** 気がする？
+
+        * 連続しても
+        * 大丈夫かな
+      }
     >
   >
 >
