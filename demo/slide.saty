@@ -3,6 +3,7 @@
 
 @require: code
 @require: annot
+@require: list
 @import: ../slydifi
 @import: ../enumitem
 
@@ -19,6 +20,10 @@ let-inline \jugem = {
 }
 
 let-inline \show-float n = embed-string (show-float n)
+
+let-inline \show-unexplode ns = embed-string (string-unexplode ns)
+
+let-block ctx +listing item = Enumitem.general-list ctx idx-arabic-bracket item
 
 in
 
@@ -83,7 +88,7 @@ Slydifi.document(|
 
   +section{|機能一覧|}<
     +frame{演算}<
-      +genlisting(arabic-dot){
+      +listing{
         * ほげほげ
           ** ふがふが
           ** ぴよぴよ
@@ -92,7 +97,7 @@ Slydifi.document(|
           ** 気がする？
 
         * 連続しても
-        * 大丈夫かな
+        * 大丈夫です
       }
     >
   >

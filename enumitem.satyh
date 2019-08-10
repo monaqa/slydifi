@@ -1,11 +1,24 @@
 % -*- coding: utf-8 -*-
 % vim:foldmethod=marker:
 
-module Itemize : sig
+module Enumitem : sig
 
+  % genlisting command
   direct +genlisting : [(context -> int -> inline-boxes); itemize] block-cmd
-  % direct \listings : [(int -> inline-text); itemize] inline-cmd
-  val arabic-dot: context -> int -> inline-boxes
+  val general-list : context -> (context -> int -> inline-boxes) -> itemize -> block-boxes
+
+  % index-specify command
+  val idx-raw     : (int -> inline-text) -> context -> int -> inline-boxes
+  val idx-dot     : (int -> inline-text) -> context -> int -> inline-boxes
+  val idx-paren   : (int -> inline-text) -> context -> int -> inline-boxes
+  val idx-bracket : (int -> inline-text) -> context -> int -> inline-boxes
+
+  % text mapping command
+  val to-arabic: int -> inline-text
+  val to-roman : int -> inline-text
+  val to-Roman : int -> inline-text
+  val to-alph  : int -> inline-text
+  val to-Alph  : int -> inline-text
 
 end = struct
 
@@ -15,6 +28,8 @@ end = struct
   let item-indent = 16pt
   let item-gap = 10pt
   let item-gap-outer = 6pt
+
+  % genlisting command {{{
 
   let-rec general-list-item : int -> context -> (context -> int -> inline-boxes) -> int -> itemize -> block-boxes
     | index ctx idxrule depth (Item(parent, children)) =
@@ -41,10 +56,102 @@ end = struct
   let-block ctx +genlisting idxrule item =
     general-list ctx idxrule item
 
-  let arabic-dot ctx idx =
-    let it-num = (embed-string (arabic idx)) in
+  % }}}
+
+  % text mapping command {{{
+  let num-to-roman-char capital num =
+    let unic-point = match num with
+      |  1 -> 0x0049  % `I`
+      |  5 -> 0x0056  % `V`
+      | 10 -> 0x0058  % `X`
+      |  _ -> 0x003F  % `?`
+    in
+    if capital then unic-point else unic-point + 0x20
+
+  let roman-seq num = match num with
+    |  1 -> [ 1;                 ] % i
+    |  2 -> [ 1;  1;             ] % ii
+    |  3 -> [ 1;  1;  1;         ] % iii
+    |  4 -> [ 1;  5;             ] % iv
+    |  5 -> [ 5;                 ] % v
+    |  6 -> [ 5;  1;             ] % vi
+    |  7 -> [ 5;  1;  1;         ] % vii
+    |  8 -> [ 5;  1;  1;  1;     ] % viii
+    |  9 -> [ 1; 10;             ] % ix
+    | 10 -> [10;                 ] % x
+    | 11 -> [10;  1;             ] % xi
+    | 12 -> [10;  1;  1;         ] % xii
+    | 13 -> [10;  1;  1;  1;     ] % xiii
+    | 14 -> [10;  1;  5;         ] % xiv
+    | 15 -> [10;  5;             ] % xv
+    | 16 -> [10;  5;  1;         ] % xvi
+    | 17 -> [10;  5;  1;  1;     ] % xvii
+    | 18 -> [10;  5;  1;  1;  1; ] % xviii
+    | 19 -> [10;  1; 10;         ] % xix
+    | 20 -> [10; 10;             ] % xx
+    | 21 -> [10; 10;  1;         ] % xxi
+    | 22 -> [10; 10;  1;  1;     ] % xxii
+    | 23 -> [10; 10;  1;  1;  1; ] % xxiii
+    | 24 -> [10; 10;  1;  5;     ] % xxiv
+    | 25 -> [10; 10;  5;         ] % xxv
+    |  _ -> [ 0;  0;             ] % ??
+
+  let to-arabic num = embed-string (arabic num)
+
+  let to-roman num =
+    embed-string
+      (string-unexplode
+        (List.map (fun i -> num-to-roman-char false i) (roman-seq num)))
+  let to-Roman num =
+    embed-string
+      (string-unexplode
+        (List.map (fun i -> num-to-roman-char true i) (roman-seq num)))
+
+  let to-alph num = embed-string (string-unexplode [num + 0x0060;])
+  let to-Alph num = embed-string (string-unexplode [num + 0x0040;])
+  % }}}
+
+  % index-specify command {{{
+
+  let idx-raw num-format ctx idx =
+    let it-num = num-format idx in
+    read-inline ctx {#it-num;\ }
+
+  let idx-dot num-format ctx idx =
+    let it-num = num-format idx in
     read-inline ctx {#it-num;.\ }
+
+  let idx-paren num-format ctx idx =
+    let it-num = num-format idx in
+    read-inline ctx {(#it-num;)\ }
+
+  let idx-bracket num-format ctx idx =
+    let it-num = num-format idx in
+    read-inline ctx {[#it-num;]\ }
+  % }}}
 
 end
 
-let arabic-dot = Itemize.arabic-dot
+let idx-arabic-raw = Enumitem.idx-raw Enumitem.to-arabic
+let  idx-roman-raw = Enumitem.idx-raw Enumitem.to-roman
+let  idx-Roman-raw = Enumitem.idx-raw Enumitem.to-Roman
+let   idx-alph-raw = Enumitem.idx-raw Enumitem.to-alph
+let   idx-Alph-raw = Enumitem.idx-raw Enumitem.to-Alph
+
+let idx-arabic-dot = Enumitem.idx-dot Enumitem.to-arabic
+let  idx-roman-dot = Enumitem.idx-dot Enumitem.to-roman
+let  idx-Roman-dot = Enumitem.idx-dot Enumitem.to-Roman
+let   idx-alph-dot = Enumitem.idx-dot Enumitem.to-alph
+let   idx-Alph-dot = Enumitem.idx-dot Enumitem.to-Alph
+
+let idx-arabic-paren = Enumitem.idx-paren Enumitem.to-arabic
+let  idx-roman-paren = Enumitem.idx-paren Enumitem.to-roman
+let  idx-Roman-paren = Enumitem.idx-paren Enumitem.to-Roman
+let   idx-alph-paren = Enumitem.idx-paren Enumitem.to-alph
+let   idx-Alph-paren = Enumitem.idx-paren Enumitem.to-Alph
+
+let idx-arabic-bracket = Enumitem.idx-bracket Enumitem.to-arabic
+let  idx-roman-bracket = Enumitem.idx-bracket Enumitem.to-roman
+let  idx-Roman-bracket = Enumitem.idx-bracket Enumitem.to-Roman
+let   idx-alph-bracket = Enumitem.idx-bracket Enumitem.to-alph
+let   idx-Alph-bracket = Enumitem.idx-bracket Enumitem.to-Alph
