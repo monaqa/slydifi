@@ -23,7 +23,7 @@ let-inline \show-float n = embed-string (show-float n)
 
 let-inline \show-unexplode ns = embed-string (string-unexplode ns)
 
-let-block ctx +listing item = Enumitem.general-list ctx idx-arabic-bracket item
+let-block +listing item = '< +genlisting(label-roman-dot)(item); >
 
 in
 

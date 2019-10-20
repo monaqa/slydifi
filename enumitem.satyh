@@ -8,10 +8,10 @@ module Enumitem : sig
   val general-list : context -> (context -> int -> inline-boxes) -> itemize -> block-boxes
 
   % index-specify command
-  val idx-raw     : (int -> inline-text) -> context -> int -> inline-boxes
-  val idx-dot     : (int -> inline-text) -> context -> int -> inline-boxes
-  val idx-paren   : (int -> inline-text) -> context -> int -> inline-boxes
-  val idx-bracket : (int -> inline-text) -> context -> int -> inline-boxes
+  val label-raw     : (int -> inline-text) -> context -> int -> inline-boxes
+  val label-dot     : (int -> inline-text) -> context -> int -> inline-boxes
+  val label-paren   : (int -> inline-text) -> context -> int -> inline-boxes
+  val label-bracket : (int -> inline-text) -> context -> int -> inline-boxes
 
   % text mapping command
   val to-arabic: int -> inline-text
@@ -34,10 +34,10 @@ end = struct
   let-rec general-list-item : int -> context -> (context -> int -> inline-boxes) -> int -> itemize -> block-boxes
     | index ctx idxrule depth (Item(parent, children)) =
         let ib-index = idxrule ctx index in
-        let bullet-width = get-natural-width ib-index in
+        let index-width = get-natural-width ib-index in
         let parent-indent = item-indent *' (float depth) in
         let ib-parent =
-          embed-block-top ctx ((get-text-width ctx) -' parent-indent -' bullet-width) (fun ctx ->
+          embed-block-top ctx ((get-text-width ctx) -' parent-indent -' index-width) (fun ctx ->
             form-paragraph (ctx |> set-paragraph-margin item-gap item-gap)
               (read-inline ctx parent ++ inline-fil)
           )
@@ -112,46 +112,50 @@ end = struct
   % }}}
 
   % index-specify command {{{
-
-  let idx-raw num-format ctx idx =
+  let label-raw num-format ctx idx =
     let it-num = num-format idx in
     read-inline ctx {#it-num;\ }
 
-  let idx-dot num-format ctx idx =
+  let label-dot num-format ctx idx =
     let it-num = num-format idx in
     read-inline ctx {#it-num;.\ }
 
-  let idx-paren num-format ctx idx =
+  let label-paren num-format ctx idx =
     let it-num = num-format idx in
     read-inline ctx {(#it-num;)\ }
 
-  let idx-bracket num-format ctx idx =
+  let label-bracket num-format ctx idx =
     let it-num = num-format idx in
     read-inline ctx {[#it-num;]\ }
+
+  % let label-bullet ctx idx =
+  %   inline-graphics 8pt 8pt 0pt (bullet color) ++ inline-skip 8pt
   % }}}
 
 end
 
-let idx-arabic-raw = Enumitem.idx-raw Enumitem.to-arabic
-let  idx-roman-raw = Enumitem.idx-raw Enumitem.to-roman
-let  idx-Roman-raw = Enumitem.idx-raw Enumitem.to-Roman
-let   idx-alph-raw = Enumitem.idx-raw Enumitem.to-alph
-let   idx-Alph-raw = Enumitem.idx-raw Enumitem.to-Alph
+let label-arabic-raw = Enumitem.label-raw Enumitem.to-arabic
+let  label-roman-raw = Enumitem.label-raw Enumitem.to-roman
+let  label-Roman-raw = Enumitem.label-raw Enumitem.to-Roman
+let   label-alph-raw = Enumitem.label-raw Enumitem.to-alph
+let   label-Alph-raw = Enumitem.label-raw Enumitem.to-Alph
 
-let idx-arabic-dot = Enumitem.idx-dot Enumitem.to-arabic
-let  idx-roman-dot = Enumitem.idx-dot Enumitem.to-roman
-let  idx-Roman-dot = Enumitem.idx-dot Enumitem.to-Roman
-let   idx-alph-dot = Enumitem.idx-dot Enumitem.to-alph
-let   idx-Alph-dot = Enumitem.idx-dot Enumitem.to-Alph
+let label-arabic-dot = Enumitem.label-dot Enumitem.to-arabic
+let  label-roman-dot = Enumitem.label-dot Enumitem.to-roman
+let  label-Roman-dot = Enumitem.label-dot Enumitem.to-Roman
+let   label-alph-dot = Enumitem.label-dot Enumitem.to-alph
+let   label-Alph-dot = Enumitem.label-dot Enumitem.to-Alph
 
-let idx-arabic-paren = Enumitem.idx-paren Enumitem.to-arabic
-let  idx-roman-paren = Enumitem.idx-paren Enumitem.to-roman
-let  idx-Roman-paren = Enumitem.idx-paren Enumitem.to-Roman
-let   idx-alph-paren = Enumitem.idx-paren Enumitem.to-alph
-let   idx-Alph-paren = Enumitem.idx-paren Enumitem.to-Alph
+let label-arabic-paren = Enumitem.label-paren Enumitem.to-arabic
+let  label-roman-paren = Enumitem.label-paren Enumitem.to-roman
+let  label-Roman-paren = Enumitem.label-paren Enumitem.to-Roman
+let   label-alph-paren = Enumitem.label-paren Enumitem.to-alph
+let   label-Alph-paren = Enumitem.label-paren Enumitem.to-Alph
 
-let idx-arabic-bracket = Enumitem.idx-bracket Enumitem.to-arabic
-let  idx-roman-bracket = Enumitem.idx-bracket Enumitem.to-roman
-let  idx-Roman-bracket = Enumitem.idx-bracket Enumitem.to-Roman
-let   idx-alph-bracket = Enumitem.idx-bracket Enumitem.to-alph
-let   idx-Alph-bracket = Enumitem.idx-bracket Enumitem.to-Alph
+let label-arabic-bracket = Enumitem.label-bracket Enumitem.to-arabic
+let  label-roman-bracket = Enumitem.label-bracket Enumitem.to-roman
+let  label-Roman-bracket = Enumitem.label-bracket Enumitem.to-Roman
+let   label-alph-bracket = Enumitem.label-bracket Enumitem.to-alph
+let   label-Alph-bracket = Enumitem.label-bracket Enumitem.to-Alph
+
+let-block +listing item = '< +genlisting(label-arabic-dot)(item); >
