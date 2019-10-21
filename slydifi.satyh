@@ -11,6 +11,7 @@ type imginfo =
   | JPEG of length * string       % width * filepath
   | PDF of length * string * int  % width * filepath * page-number
   | DummyBox of length * length   % width * height
+  | Block of length * block-text
   % | Text of length * inline-text  % width * content: not implemented
 
 let-inline ctx \SLyDiFi =
@@ -557,6 +558,9 @@ end = struct
     | PDF(wid, srcpath, num) ->
         let img = load-pdf-image srcpath num in
         line-break true true ctx (inline-fil ++ use-image-by-width img wid ++ inline-fil)
+    | Block(wid, bt) ->
+        let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
+        line-break true true ctx (inline-fil ++ ib ++ inline-fil)
     | DummyBox(wid, ht) ->
         line-break true true ctx (inline-fil ++ (inline-graphics wid ht 0pt (draw-dummy-box wid ht)) ++ inline-fil)
 
@@ -566,11 +570,13 @@ end = struct
         let img = load-image srcpath in use-image-by-width img wid
     | PDF(wid, srcpath, num) ->
         let img = load-pdf-image srcpath num in use-image-by-width img wid
+    | Block(wid, bt) ->
+        let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in ib
     | DummyBox(wid, ht) ->
         inline-graphics wid ht 0pt (draw-dummy-box wid ht)
 
 
-  let fig-abs-pos pt img-info =
+  let fig-abs-pos ctx pt img-info =
     match img-info with
       | JPEG(wid, srcpath) ->
           let img = load-image srcpath in
@@ -580,15 +586,18 @@ end = struct
           let img = load-pdf-image srcpath num in
           let ib = use-image-by-width img wid in
           inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
+      | Block(wid, bt) ->
+          let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
+          inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
       | DummyBox(wid, ht) ->
           inline-graphics 0pt 0pt 0pt (fun _ -> draw-dummy-box wid ht pt)
 
 
   let-inline ctx \fig-abs-pos pt img-info =
-    fig-abs-pos pt img-info
+    fig-abs-pos ctx pt img-info
 
   let-block ctx +fig-abs-pos pt img-info =
-    let it-gr = fig-abs-pos pt img-info in
+    let it-gr = fig-abs-pos ctx pt img-info in
     line-break true true ctx (it-gr ++ inline-fil)
 
   let-inline ctx \fig-right img-info =
@@ -606,6 +615,15 @@ end = struct
     | PDF(wid, srcpath, num) ->
         let img = load-pdf-image srcpath num in
         let ib = use-image-by-width img wid in
+        let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
+        inline-graphics 0pt 0pt 0pt (fun (x, y) ->
+          [
+            draw-text
+              (paper-width -' text-horizontal-margin -' ib-w,
+              y +' (ctx |> get-font-size) -' ib-h) ib
+          ])
+    | Block(wid, bt) ->
+        let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
         let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
         inline-graphics 0pt 0pt 0pt (fun (x, y) ->
           [
