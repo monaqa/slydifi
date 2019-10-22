@@ -4,8 +4,8 @@
 @require: math
 @require: list
 @require: annot
-@require: footnote-scheme
 @import: slydifi-color
+@import: slydifi-footnote-scheme
 
 
 type imginfo =
@@ -72,6 +72,8 @@ module Slydifi : sig
   direct +fig-abs-pos : [(length * length); imginfo] block-cmd
   direct \fig-right : [imginfo] inline-cmd
   direct \footnote : [inline-text] inline-cmd
+  direct \footnote-just : [string; inline-text] inline-cmd
+  direct \ref-footnote : [string] inline-cmd
   % }}}
 
 end = struct
@@ -692,6 +694,38 @@ end = struct
       % }}}
 
     % \footnote{} command {{{
+
+
+  let-inline ctx \footnote-just ref-label it =
+    let bbf num =
+      let it-num = embed-string (arabic num) in
+      let ctx =
+        ctx |> set-font-size (font-size-footnote *' 0.9)
+            |> set-leading (font-size-footnote *' 1.2)
+            |> set-paragraph-margin (font-size-footnote *' 0.5) (font-size-footnote *' 0.5)
+          %temporary
+      in
+        line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
+    in
+      FootnoteScheme.main ctx (Some(ref-label)) (fun _ -> inline-nil) bbf
+
+  let-inline ctx \ref-footnote ref-label =
+    let size = get-font-size ctx in
+    let ctx =
+      ctx |> set-font-size (size *' 0.75)
+          |> set-manual-rising (size *' 0.25)
+    in
+    let ctx =
+      ctx |> set-font-size (size *' 0.75)
+          |> set-manual-rising (size *' 0.25)
+    in
+    match FootnoteScheme.get-footnote-num ref-label with
+    | Some(n) ->
+      let it-num = embed-string n in
+      read-inline ctx {\*#it-num;}
+    | _ ->
+      read-inline ctx {\*?}
+
   let-inline ctx \footnote it =
     let size = get-font-size ctx in
     let ibf num =
@@ -712,7 +746,7 @@ end = struct
       in
         line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
     in
-      FootnoteScheme.main ctx ibf bbf
+      FootnoteScheme.main ctx None ibf bbf
 
 
     %}}}
