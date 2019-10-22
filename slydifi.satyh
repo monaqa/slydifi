@@ -97,7 +97,6 @@ end = struct
   let text-vertical-margin = font-size-normal *' 1.0
   let text-height = paper-height -' text-vertical-margin *' 2. -' footer-height -' header-height
   let text-width  = paper-width -' text-horizontal-margin *' 2.
-  let text-origin = (text-horizontal-margin, header-height)
 
   let relwid relx = paper-width *' relx
   let relht rely = paper-height *' rely
