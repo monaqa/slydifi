@@ -72,8 +72,8 @@ module Slydifi : sig
   direct +fig-abs-pos : [(length * length); imginfo] block-cmd
   direct \fig-right : [imginfo] inline-cmd
   direct \footnote : [inline-text] inline-cmd
-  direct \footnote-just : [string; inline-text] inline-cmd
-  direct \ref-footnote : [string] inline-cmd
+  direct \footnotetext : [string; inline-text] inline-cmd
+  direct \footnotemark : [string] inline-cmd
   % }}}
 
 end = struct
@@ -696,7 +696,7 @@ end = struct
     % \footnote{} command {{{
 
 
-  let-inline ctx \footnote-just ref-label it =
+  let-inline ctx \footnotetext ref-label it =
     let bbf num =
       let it-num = embed-string (arabic num) in
       let ctx =
@@ -709,7 +709,7 @@ end = struct
     in
       FootnoteScheme.main ctx (Some(ref-label)) (fun _ -> inline-nil) bbf
 
-  let-inline ctx \ref-footnote ref-label =
+  let-inline ctx \footnotemark ref-label =
     let size = get-font-size ctx in
     let ctx =
       ctx |> set-font-size (size *' 0.75)
