@@ -23,7 +23,7 @@ let-inline \show-float n = embed-string (show-float n)
 
 let-inline \show-unexplode ns = embed-string (string-unexplode ns)
 
-let-block +listing item = '< +genlisting(label-roman-dot)(item); >
+let-block +listing item = '< +genlisting(label-roman-paren)(item); >
 
 in
 
@@ -88,14 +88,13 @@ Slydifi.document(|
 
   +section{|機能一覧|}<
     +frame{演算}<
+      +p{以下がリスティングの例．}
       +listing{
-        * ほげほげ
-          ** ふがふが
-          ** ぴよぴよ
-        * なんだか
-          ** 味気ない？
-          ** 気がする？
-
+        * ほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげ
+          ** foo bar foobar
+          ** ぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよ
+            *** foo bar foo bar
+            *** ふがふが
         * 連続しても
         * 大丈夫です
       }

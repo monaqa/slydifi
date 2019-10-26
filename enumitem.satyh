@@ -32,11 +32,12 @@ end = struct
   let (+++>) = List.fold-left (+++)
   let concat-blocks = (+++>) block-nil
 
-  let item-indent-ratio = 1.6
-  let item-gap-ratio = 0.5
+  let item-indent-ratio = 1.5
+  let item-gap-ratio = 0.75
   let item-gap-outer-ratio = 0.3
-  let font-shrink-ratio = 0.9
-  let minimal-font-ratio = 0.75
+  let font-shrink-ratio = 0.95
+  let minimal-font-ratio = 0.85
+  let label-width-ratio = 1.5  % ラベル幅: item-indent からラベル幅だけシフトした場所から本文が始まる
 
 
   % genlisting command {{{
@@ -148,20 +149,32 @@ end = struct
 
   % index-specify command {{{
   let label-raw num-format ctx idx =
+    let label-width = (get-font-size ctx) *' label-width-ratio in
     let it-num = num-format idx in
-    read-inline ctx {#it-num;\ }
+    let ib-label = read-inline ctx {#it-num;\ } in
+    let (wid-label, _, _) = get-natural-metrics ib-label in
+    inline-skip (label-width -' wid-label) ++ ib-label
 
   let label-dot num-format ctx idx =
+    let label-width = (get-font-size ctx) *' label-width-ratio in
     let it-num = num-format idx in
-    read-inline ctx {#it-num;.\ }
+    let ib-label = read-inline ctx {#it-num;.\ } in
+    let (wid-label, _, _) = get-natural-metrics ib-label in
+    inline-skip (label-width -' wid-label) ++ ib-label
 
   let label-paren num-format ctx idx =
+    let label-width = (get-font-size ctx) *' label-width-ratio in
     let it-num = num-format idx in
-    read-inline ctx {(#it-num;)\ }
+    let ib-label = read-inline ctx {(#it-num;)\ } in
+    let (wid-label, _, _) = get-natural-metrics ib-label in
+    inline-skip (label-width -' wid-label) ++ ib-label
 
   let label-bracket num-format ctx idx =
+    let label-width = (get-font-size ctx) *' label-width-ratio in
     let it-num = num-format idx in
-    read-inline ctx {[#it-num;]\ }
+    let ib-label = read-inline ctx {[#it-num;]\ } in
+    let (wid-label, _, _) = get-natural-metrics ib-label in
+    inline-skip (label-width -' wid-label) ++ ib-label
 
   % let label-bullet ctx idx =
   %   inline-graphics 8pt 8pt 0pt (bullet color) ++ inline-skip 8pt
