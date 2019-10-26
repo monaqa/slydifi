@@ -231,7 +231,6 @@ end = struct
 
   % }}}
 
-
   % common function in slides {{{
   let-rec range n1 n2 =
     let-rec aux min max =
@@ -434,7 +433,7 @@ end = struct
           title-padding -' text-vertical-margin, title-padding +' text-vertical-margin)
             (deco, deco, deco, deco)
               (fun ctx ->
-                form-paragraph (make-frame-title ctx) (ib-title ++ inline-fil)
+                line-break true true (make-frame-title ctx) (ib-title ++ inline-fil)
               )
     in
     let ib-inner = embed-block-top ctx text-width (fun ctx -> read-block ctx inner) in
@@ -670,11 +669,11 @@ end = struct
         in
         let br-parent =
           embed-block-top ctx2 ((get-text-width ctx2) -' parent-indent -' bullet-width) (fun ctx2 ->
-            form-paragraph ctx2 ((read-inline ctx2 parent) ++ inline-fil)
+            line-break true true ctx2 ((read-inline ctx2 parent) ++ inline-fil)
           )
         in
         let bc-parent =
-          form-paragraph ctx2
+          line-break true true ctx2
             ((inline-skip parent-indent) ++ br-bullet ++ br-parent)
         in
         let bclst-children = List.map (item ctx2 (depth + 1)) children in

@@ -1,6 +1,13 @@
 % -*- coding: utf-8 -*-
 % vim:foldmethod=marker:
 
+let-rec power-float-int r m =
+  match m with
+  | 0 -> 1.
+  | _ -> (power-float-int r (m - 1)) *. r
+
+let max-float f1 f2 = if (1pt *' f1) >' (1pt *' f2) then f1 else f2
+
 module Enumitem : sig
 
   % genlisting command
@@ -25,33 +32,61 @@ end = struct
   let (+++>) = List.fold-left (+++)
   let concat-blocks = (+++>) block-nil
 
-  let item-indent = 16pt
-  let item-gap = 10pt
-  let item-gap-outer = 6pt
+  let item-indent-ratio = 1.6
+  let item-gap-ratio = 0.5
+  let item-gap-outer-ratio = 0.3
+  let font-shrink-ratio = 0.9
+  let minimal-font-ratio = 0.75
+
 
   % genlisting command {{{
 
   let-rec general-list-item : int -> context -> (context -> int -> inline-boxes) -> int -> itemize -> block-boxes
     | index ctx idxrule depth (Item(parent, children)) =
-        let ib-index = idxrule ctx index in
+        % フォント関係の設定
+        let base-font-size = get-font-size ctx in
+        let shrink-ratio = max-float (power-float-int font-shrink-ratio depth) minimal-font-ratio in
+        let item-font-size = base-font-size *' shrink-ratio in
+        let ctx-item = ctx
+          |> set-font-size item-font-size
+        in
+
+        % index の inline box
+        let ib-index = idxrule ctx-item index in
+
+        % index の幅を計算
         let index-width = get-natural-width ib-index in
-        let parent-indent = item-indent *' (float depth) in
-        let ib-parent =
-          embed-block-top ctx ((get-text-width ctx) -' parent-indent -' index-width) (fun ctx ->
-            form-paragraph (ctx |> set-paragraph-margin item-gap item-gap)
+        let item-gap = base-font-size *' item-gap-ratio in
+        let parent-indent = base-font-size *' (item-indent-ratio *. (float depth)) in
+
+        % 本文の inline-box. embed-block-top で作る．
+        % 幅は index-width のぶん狭くなる
+        let item-text-width = ((get-text-width ctx-item) -' parent-indent -' index-width) in
+        let ib-parent-text =
+          embed-block-top ctx-item item-text-width (fun ctx ->
+            line-break true true (ctx |> set-paragraph-margin item-gap item-gap)
               (read-inline ctx parent ++ inline-fil)
           )
         in
+
+        % index と text をあわせたものが parent の block-box になる
         let bb-parent =
-          form-paragraph (ctx |> set-paragraph-margin item-gap item-gap)
-            ((inline-skip parent-indent) ++ ib-index ++ ib-parent)
+          line-break true true (ctx-item |> set-paragraph-margin item-gap item-gap)
+            ((inline-skip parent-indent) ++ ib-index ++ ib-parent-text)
         in
-        let bblst-children = List.mapi (fun i -> general-list-item (i + 1) ctx idxrule (depth + 1)) children in
+
+        % 子の item を呼び出す
+        let bblst-children = List.mapi (
+          fun i -> general-list-item (i + 1) ctx-item idxrule (depth + 1)
+        ) children in
+
         bb-parent +++> bblst-children
 
   let general-list ctx idxrule (Item(_, itmzlst)) =
+    let base-font-size = get-font-size ctx in
+    let item-gap-outer = base-font-size *' item-gap-outer-ratio in
     let bblst = List.mapi (fun i -> general-list-item (i + 1) ctx idxrule 0) itmzlst in
-      (block-skip item-gap-outer) +++ (concat-blocks bblst) +++ (block-skip item-gap-outer)
+      (concat-blocks bblst)
 
   let-block ctx +genlisting idxrule item =
     general-list ctx idxrule item
