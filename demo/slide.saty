@@ -23,8 +23,6 @@ let-inline \show-float n = embed-string (show-float n)
 
 let-inline \show-unexplode ns = embed-string (string-unexplode ns)
 
-let-block +listing item = '< +genlisting(label-bullet)(item); >
-
 in
 
 Slydifi.document(|

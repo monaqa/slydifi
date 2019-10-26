@@ -621,71 +621,55 @@ end = struct
     % }}}
 
     % +listing{} command {{{
-  let (+++>) = List.fold-left (+++)
 
-  let item-indent = 20pt
+  let label-dia ctx idx =
+    let path (x, y) =
+      let yc = y +' font-size-normal *' 0.3 in
+      let north = yc +' font-size-normal *' 0.25 in
+      let east  = x  +' font-size-normal *' 0.25 in
+      let south = yc -' font-size-normal *' 0.25 in
+      let west  = x  -' font-size-normal *' 0.25 in
+      start-path (x, north)
+        |> line-to (east, yc)
+        |> line-to (x, south)
+        |> line-to (west, yc)
+        |> close-with-line
+    in
+    let gr (x, y) = [fill color-title (path (x, y))] in
+    inline-graphics 8pt 8pt 0pt (gr) ++ inline-skip 8pt
 
-  let bullet depth color (x, y) =
-    let yc = y +' font-size-normal *' 0.3 in
-    let xl = x in
-    let xr = x +' font-size-normal *' 0.4 in
-    let yu = yc +' font-size-normal *' 0.2 in
-    let yd = yc -' font-size-normal *' 0.2 in
-    let tria = start-path (xl, yu)
-      |> line-to (xr, yc)
-      |> line-to (xl, yd)
-      |> close-with-line in
+  let label-tria ctx idx =
+    let path (x, y) =
+      let yc = y +' font-size-normal *' 0.3 in
+      let xl = x in
+      let xr = x +' font-size-normal *' 0.4 in
+      let yu = yc +' font-size-normal *' 0.2 in
+      let yd = yc -' font-size-normal *' 0.2 in
+      start-path (xl, yu)
+        |> line-to (xr, yc)
+        |> line-to (xl, yd)
+        |> close-with-line
+    in
+    let gr (x, y) = [fill color-title (path (x, y))] in
+    inline-graphics 8pt 8pt 0pt (gr) ++ inline-skip 8pt
 
-    let north = yc +' font-size-normal *' 0.25 in
-    let east  = x  +' font-size-normal *' 0.25 in
-    let south = yc -' font-size-normal *' 0.25 in
-    let west  = x  -' font-size-normal *' 0.25 in
-    let dia = start-path (x, north)
-      |> line-to (east, yc)
-      |> line-to (x, south)
-      |> line-to (west, yc)
-      |> close-with-line in
-
-    let circ =
+  let label-circ ctx idx =
+    let path (x, y) =
       let cx = x +' font-size-normal *' 0.3 in
       let cy = y +' font-size-normal *' 0.3 in
       let r = font-size-normal *' 0.15 in
-      Gr.circle (cx, cy) r in
-
-    let path =
-      match depth with
-      | 0 -> dia
-      | 1 -> tria
-      | _ -> circ
+      Gr.circle (cx, cy) r
     in
-    [ fill color path; ]
+    let gr (x, y) = [fill color-title (path (x, y))] in
+    inline-graphics 8pt 8pt 0pt (gr) ++ inline-skip 8pt
 
-  let-rec item : context -> int -> itemize -> block-boxes
-    | ctx depth (Item(parent, children)) =
-        let font-size-tmp = font-size-normal *' (max-float (power-float-int 0.9 depth) 0.75) in
-        let color = color-title in
-        let br-bullet = (inline-graphics (font-size-normal *' 0.8) font-size-normal 0pt (bullet depth color)) in
-        let bullet-width = get-natural-width br-bullet in
-        let parent-indent = item-indent *' (float depth) in
-        let ctx2 = ctx
-          |> set-font-size font-size-tmp
-          |> set-paragraph-margin (font-size-tmp *' 0.6) (font-size-tmp *' 0.6)
-        in
-        let br-parent =
-          embed-block-top ctx2 ((get-text-width ctx2) -' parent-indent -' bullet-width) (fun ctx2 ->
-            line-break true true ctx2 ((read-inline ctx2 parent) ++ inline-fil)
-          )
-        in
-        let bc-parent =
-          line-break true true ctx2
-            ((inline-skip parent-indent) ++ br-bullet ++ br-parent)
-        in
-        let bclst-children = List.map (item ctx2 (depth + 1)) children in
-        bc-parent +++> bclst-children
+  let label-rule depth =
+    match depth with
+    | 0 -> label-dia
+    | 1 -> label-tria
+    | _ -> label-circ
 
-  let-block ctx +listing (Item(_, itmzlst)) =
-    let bclst = List.map (item ctx 0) itmzlst in
-    block-nil +++> bclst
+  let-block +listing item = '< +genlistings(label-rule)(item); >
 
       % }}}
 
