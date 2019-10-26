@@ -85,16 +85,29 @@ Slydifi.document(|
   >
 
   +section{|機能一覧|}<
-    +frame{演算}<
-      +p{以下がリスティングの例．}
+    +frame{Listing command}<
+      +p{箇条書きコマンド．}
       +listing{
-        * ほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげほげ
-          ** foo bar foobar
-          ** ぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよぴよ
-            *** foo bar foo bar
-            *** ふがふが
-        * 連続しても
-        * 大丈夫です
+        * 箇条書きコマンドは以下の2種類が用意されている．
+          ** \code(`+listing`);: unordered listing（番号のない箇条書き）
+          ** \code(`+enumerate`);: ordered listing（番号のある箇条書き）
+            *** Ordered listing の場合，ネストの深さによってインデックスの体裁が変化していく．
+            *** 子の箇条書きを追加しても，親の番号はリセットされない．
+        * 箇条書きのラベルは，\SLyDiFi;用にカスタマイズされている．
+        * さらなるカスタマイズも，enumitem パッケージを用いれば難しくない．
+      }
+    >
+
+    +frame{Enumerate command}<
+      +p{箇条書きコマンド．}
+      +enumerate{
+        * 箇条書きコマンドは以下の2種類が用意されている．
+          ** \code(`+listing`);: unordered listing（番号のない箇条書き）
+          ** \code(`+enumerate`);: ordered listing（番号のある箇条書き）
+            *** Ordered listing の場合，ネストの深さによってインデックスの体裁が変化していく．
+            *** 子の箇条書きを追加しても，親の番号はリセットされない．
+        * 現にこのような場合でも，番号は保存されている．
+          ** もちろん，子の番号は親が変わればリセットされる．
       }
     >
   >

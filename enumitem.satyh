@@ -231,3 +231,13 @@ let   label-Alph-bracket = Enumitem.label-bracket Enumitem.to-Alph
 let label-bullet = Enumitem.label-bullet
 
 let-block +listing item = '< +genlisting(label-bullet)(item); >
+
+let enum-rule depth =
+  match depth with
+  | 0 -> label-arabic-dot
+  | 1 -> label-roman-dot
+  | 2 -> label-alph-paren
+  | _ -> label-arabic-raw
+
+let-block +enumerate item = '< +genlistings(enum-rule)(item); >
+
