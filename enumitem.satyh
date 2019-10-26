@@ -12,9 +12,10 @@ let max-float f1 f2 = if (1pt *' f1) >' (1pt *' f2) then f1 else f2
 
 module Enumitem : sig
 
+
   % genlisting command
   direct +genlisting : [(context -> int -> inline-boxes); itemize] block-cmd
-  val general-list : context -> (context -> int -> inline-boxes) -> itemize -> block-boxes
+  direct +genlistings : [(int -> context -> int -> inline-boxes); itemize] block-cmd
 
   % index-specify command (ordered index)
   val label-raw     : (int -> inline-text) -> context -> int -> inline-boxes
@@ -47,8 +48,8 @@ end = struct
 
   % genlisting command {{{
 
-  let-rec general-list-item : int -> context -> (context -> int -> inline-boxes) -> int -> itemize -> block-boxes
-    | index ctx idxrule depth (Item(parent, children)) =
+  let-rec general-list-item : int -> context -> (int -> context -> int -> inline-boxes) -> int -> itemize -> block-boxes
+    | index ctx idxrules depth (Item(parent, children)) =
         % フォント関係の設定
         let base-font-size = get-font-size ctx in
         let shrink-ratio = max-float (power-float-int font-shrink-ratio depth) minimal-font-ratio in
@@ -58,7 +59,7 @@ end = struct
         in
 
         % index の inline box
-        let ib-index = idxrule ctx-item index in
+        let ib-index = idxrules depth ctx-item index in
 
         % index の幅を計算
         let index-width = get-natural-width ib-index in
@@ -83,20 +84,26 @@ end = struct
 
         % 子の item を呼び出す
         let bblst-children = List.mapi (
-          fun i -> general-list-item (i + 1) ctx-item idxrule (depth + 1)
+          fun i -> general-list-item (i + 1) ctx-item idxrules (depth + 1)
         ) children in
 
         bb-parent +++> bblst-children
 
-  let general-list ctx idxrule (Item(_, itmzlst)) =
+  let general-list ctx idxrules (Item(_, itmzlst)) =
     let base-font-size = get-font-size ctx in
     let item-gap-outer = base-font-size *' item-gap-outer-ratio in
-    let bblst = List.mapi (fun i -> general-list-item (i + 1) ctx idxrule 0) itmzlst in
+    let bblst = List.mapi (fun i -> general-list-item (i + 1) ctx idxrules 0) itmzlst in
       (concat-blocks bblst)
 
+  % idxrule: ctx, index (item に振る番号) をとって index の inline-boxes を返す関数．
   let-block ctx +genlisting idxrule item =
-    general-list ctx idxrule item
+    let idxrules _ = idxrule in
+    general-list ctx idxrules item
 
+  % idxrules: depth (itemize のネストの深さ), ctx, index (item に振る番号) をとって
+  %           index の inline-boxes を返す関数．
+  let-block ctx +genlistings idxrules item =
+    general-list ctx idxrules item
   % }}}
 
   % text mapping command {{{
@@ -223,4 +230,4 @@ let   label-Alph-bracket = Enumitem.label-bracket Enumitem.to-Alph
 
 let label-bullet = Enumitem.label-bullet
 
-let-block +listing item = '< +genlisting(label-arabic-dot)(item); >
+let-block +listing item = '< +genlisting(label-bullet)(item); >
