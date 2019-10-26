@@ -1,5 +1,7 @@
 % -*- coding: utf-8 -*-
 % vim:foldmethod=marker:
+@require: gr
+@require: color
 
 let-rec power-float-int r m =
   match m with
@@ -14,11 +16,14 @@ module Enumitem : sig
   direct +genlisting : [(context -> int -> inline-boxes); itemize] block-cmd
   val general-list : context -> (context -> int -> inline-boxes) -> itemize -> block-boxes
 
-  % index-specify command
+  % index-specify command (ordered index)
   val label-raw     : (int -> inline-text) -> context -> int -> inline-boxes
   val label-dot     : (int -> inline-text) -> context -> int -> inline-boxes
   val label-paren   : (int -> inline-text) -> context -> int -> inline-boxes
   val label-bracket : (int -> inline-text) -> context -> int -> inline-boxes
+
+  % index-specify command (unordered index)
+  val label-bullet : context -> int -> inline-boxes
 
   % text mapping command
   val to-arabic: int -> inline-text
@@ -176,8 +181,18 @@ end = struct
     let (wid-label, _, _) = get-natural-metrics ib-label in
     inline-skip (label-width -' wid-label) ++ ib-label
 
-  % let label-bullet ctx idx =
-  %   inline-graphics 8pt 8pt 0pt (bullet color) ++ inline-skip 8pt
+  let bullet ctx color (x, y) =
+    let font-size = get-font-size ctx in
+    let circ =
+      let cx = x +' font-size *' 0.3 in
+      let cy = y +' font-size *' 0.3 in
+      let r = font-size *' 0.15 in
+      Gr.circle (cx, cy) r
+    in
+    [fill color circ]
+
+  let label-bullet ctx idx =
+    inline-graphics 8pt 8pt 0pt (bullet ctx Color.black) ++ inline-skip 8pt
   % }}}
 
 end
@@ -205,5 +220,7 @@ let  label-roman-bracket = Enumitem.label-bracket Enumitem.to-roman
 let  label-Roman-bracket = Enumitem.label-bracket Enumitem.to-Roman
 let   label-alph-bracket = Enumitem.label-bracket Enumitem.to-alph
 let   label-Alph-bracket = Enumitem.label-bracket Enumitem.to-Alph
+
+let label-bullet = Enumitem.label-bullet
 
 let-block +listing item = '< +genlisting(label-arabic-dot)(item); >

@@ -635,26 +635,30 @@ end = struct
       |> line-to (xr, yc)
       |> line-to (xl, yd)
       |> close-with-line in
-  let north = yc +' font-size-normal *' 0.25 in
-  let east  = x  +' font-size-normal *' 0.25 in
-  let south = yc -' font-size-normal *' 0.25 in
-  let west  = x  -' font-size-normal *' 0.25 in
-  let dia = start-path (x, north)
-    |> line-to (east, yc)
-    |> line-to (x, south)
-    |> line-to (west, yc)
-    |> close-with-line in
-  let circ =
-    let cx = x +' font-size-normal *' 0.3 in
-    let cy = y +' font-size-normal *' 0.3 in
-    let r = font-size-normal *' 0.15 in
-    Gr.circle (cx, cy) r in
+
+    let north = yc +' font-size-normal *' 0.25 in
+    let east  = x  +' font-size-normal *' 0.25 in
+    let south = yc -' font-size-normal *' 0.25 in
+    let west  = x  -' font-size-normal *' 0.25 in
+    let dia = start-path (x, north)
+      |> line-to (east, yc)
+      |> line-to (x, south)
+      |> line-to (west, yc)
+      |> close-with-line in
+
+    let circ =
+      let cx = x +' font-size-normal *' 0.3 in
+      let cy = y +' font-size-normal *' 0.3 in
+      let r = font-size-normal *' 0.15 in
+      Gr.circle (cx, cy) r in
+
     let path =
       match depth with
       | 0 -> dia
       | 1 -> tria
       | _ -> circ
-    in [ fill color path; ]
+    in
+    [ fill color path; ]
 
   let-rec item : context -> int -> itemize -> block-boxes
     | ctx depth (Item(parent, children)) =
