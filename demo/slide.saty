@@ -5,7 +5,6 @@
 @require: annot
 @require: list
 @import: ../slydifi
-@import: ../enumitem
 
 
 let-inline \jugem = {

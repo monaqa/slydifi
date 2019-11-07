@@ -6,6 +6,7 @@
 @require: annot
 @import: slydifi-color
 @import: slydifi-footnote-scheme
+@import: slydifi-enumitem
 
 
 type imginfo =

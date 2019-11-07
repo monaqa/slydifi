@@ -16,6 +16,9 @@ module Enumitem : sig
   % genlisting command
   direct +genlisting : [(context -> int -> inline-boxes); itemize] block-cmd
   direct +genlistings : [(int -> context -> int -> inline-boxes); itemize] block-cmd
+  direct \listing-from-block : [block-text] inline-cmd
+  direct \genlisting : [(context -> int -> inline-boxes); itemize] inline-cmd
+  direct \genlistings : [(int -> context -> int -> inline-boxes); itemize] inline-cmd
 
   % index-specify command (ordered index)
   val label-raw     : (int -> inline-text) -> context -> int -> inline-boxes
@@ -25,6 +28,7 @@ module Enumitem : sig
 
   % index-specify command (unordered index)
   val label-bullet : context -> int -> inline-boxes
+  val label-white-bullet : context -> int -> inline-boxes
 
   % text mapping command
   val to-arabic: int -> inline-text
@@ -43,7 +47,6 @@ end = struct
   let item-gap-outer-ratio = 0.3
   let font-shrink-ratio = 0.95
   let minimal-font-ratio = 0.85
-  let label-width-ratio = 1.5  % ラベル幅: item-indent からラベル幅だけシフトした場所から本文が始まる
 
 
   % genlisting command {{{
@@ -104,6 +107,16 @@ end = struct
   %           index の inline-boxes を返す関数．
   let-block ctx +genlistings idxrules item =
     general-list ctx idxrules item
+
+  let-inline ctx \listing-from-block block-listing =
+    let ib-block = embed-block-breakable ctx (read-block ctx '<#block-listing;>) in
+  inline-fil ++ ib-block ++ omit-skip-after
+
+  let-inline \genlisting idxrule item =
+    {\listing-from-block<+genlisting(idxrule)(item);>} 
+  let-inline \genlistings idxrules item =
+    {\listing-from-block<+genlistings(idxrules)(item);>} 
+
   % }}}
 
   % text mapping command {{{
@@ -160,6 +173,9 @@ end = struct
   % }}}
 
   % index-specify command {{{
+
+  let label-width-ratio = 2.0  % ラベル幅: item-indent からラベル幅だけシフトした場所から本文が始まる
+
   let label-raw num-format ctx idx =
     let label-width = (get-font-size ctx) *' label-width-ratio in
     let it-num = num-format idx in
@@ -188,18 +204,33 @@ end = struct
     let (wid-label, _, _) = get-natural-metrics ib-label in
     inline-skip (label-width -' wid-label) ++ ib-label
 
-  let bullet ctx color (x, y) =
+
+  let label-bullet ctx idx =
     let font-size = get-font-size ctx in
-    let circ =
-      let cx = x +' font-size *' 0.3 in
+    let label-width = font-size *' label-width-ratio in
+    let interval = font-size *' 0.3 in
+    let circ ctx (x, y) =
+      let cx = x +' label-width -' (font-size *' 0.3) -' interval in
       let cy = y +' font-size *' 0.3 in
       let r = font-size *' 0.15 in
       Gr.circle (cx, cy) r
     in
-    [fill color circ]
+    inline-graphics label-width 8pt 0pt
+      (fun (x, y) -> [fill Color.black (circ ctx (x, y))])
 
-  let label-bullet ctx idx =
-    inline-graphics 8pt 8pt 0pt (bullet ctx Color.black) ++ inline-skip 8pt
+  let label-white-bullet ctx idx =
+    let font-size = get-font-size ctx in
+    let label-width = font-size *' label-width-ratio in
+    let interval = font-size *' 0.3 in
+    let circ ctx (x, y) =
+      let cx = x +' label-width -' (font-size *' 0.3) -' interval in
+      let cy = y +' font-size *' 0.3 in
+      let r = font-size *' 0.12 in
+      Gr.circle (cx, cy) r
+    in
+    inline-graphics label-width 8pt 0pt
+      (fun (x, y) -> [stroke 1pt Color.black (circ ctx (x, y))])
+
   % }}}
 
 end
@@ -229,6 +260,7 @@ let   label-alph-bracket = Enumitem.label-bracket Enumitem.to-alph
 let   label-Alph-bracket = Enumitem.label-bracket Enumitem.to-Alph
 
 let label-bullet = Enumitem.label-bullet
+let label-white-bullet = Enumitem.label-white-bullet
 
 let-block +listing item = '< +genlisting(label-bullet)(item); >
 
@@ -241,3 +273,5 @@ let enum-rule depth =
 
 let-block +enumerate item = '< +genlistings(enum-rule)(item); >
 
+let-inline \listing item = {\listing-from-block<+listing(item);>} 
+let-inline \enumerate item = {\listing-from-block<+enumerate(item);>} 
