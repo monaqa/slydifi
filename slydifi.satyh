@@ -1,6 +1,5 @@
 % vim: foldmethod=marker
 @require: gr
-@require: color
 @require: math
 @require: list
 @require: annot
@@ -61,6 +60,8 @@ module Slydifi : sig
   direct +frame : [inline-text; block-text] block-cmd
   direct +frame-nt : [block-text] block-cmd
   direct \emph : [inline-text] inline-cmd
+  direct \textbf : [inline-text] inline-cmd
+  direct \text-color : [color; inline-text] inline-cmd
   direct \br : [] inline-cmd
   direct \link : [inline-text?; string] inline-cmd
   direct +listing : [itemize] block-cmd
@@ -516,8 +517,6 @@ end = struct
     (bb-bg ctx !draft-mode) +++ (line-break true false ctx (ib ++ inline-fil))
       +++ (section-title ctx its) +++ (read-block ctx bt)
 
-
-
   let-block ctx +p it =
     line-break true true ctx
       (read-inline ctx it ++ inline-fil)
@@ -529,6 +528,16 @@ end = struct
   let-inline ctx \emph it =
     let ctx2 = ctx |> set-text-color color-emph
                    |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
+                   |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
+    in
+    (read-inline ctx2 it)
+
+  let-inline ctx \text-color clr it =
+    let ctx2 = ctx |> set-text-color clr in
+    (read-inline ctx2 it)
+
+  let-inline ctx \textbf it =
+    let ctx2 = ctx |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
                    |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
     in
     (read-inline ctx2 it)
@@ -545,12 +554,12 @@ end = struct
     in
     read-inline ctx-link {\href(url){#text;}}
 
-  let-inline ctx \br
-    = discretionary (- 1000) inline-nil inline-fil inline-nil
+  let-inline ctx \br =
+    discretionary (- 1000) inline-nil inline-fil inline-nil
 
   % }}}
 
-    % 画像追加 {{{
+  % 画像追加 {{{
 
   let draw-dummy-box wid ht (x, y) =
     let rect-path = Gr.rectangle (x, y) (x +' wid, y +' ht) in
@@ -643,9 +652,9 @@ end = struct
           y +' (ctx |> get-font-size) -' ht) in
           inline-graphics 0pt 0pt 0pt (fun (x, y) -> draw-dummy-box wid ht (pt y))
 
-    % }}}
+  % }}}
 
-    % +listing{} command {{{
+  % +listing{} command {{{
 
   let label-dia ctx idx =
     let path (x, y) =
@@ -696,10 +705,9 @@ end = struct
 
   let-block +listing item = '< +genlistings(label-rule)(item); >
 
-      % }}}
+  % }}}
 
-    % \footnote{} command {{{
-
+  % \footnote{} command {{{
 
   let-inline ctx \footnotetext ref-label it =
     let bbf num =
@@ -753,9 +761,8 @@ end = struct
     in
       FootnoteScheme.main ctx None ibf bbf
 
+  % }}}
 
-    %}}}
-    
 end
 
 
