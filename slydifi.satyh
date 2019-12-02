@@ -7,13 +7,18 @@
 @import: slydifi-footnote-scheme
 @import: slydifi-enumitem
 
-
+% TODO: 本当は Shift や Phantom は関数化したほうがいい．
+% image-shift: length -> length -> imginfo -> imginfo
+% のような関数を作れば JPEG(100pt, `hoge.jpg`) |> image-shift 10pt 0pt
+% のように imginfo を生成できて便利．
+% しかし現状，context の扱いが難しく実装困難．
 type imginfo =
-  | JPEG of length * string       % width * filepath
-  | PDF of length * string * int  % width * filepath * page-number
-  | DummyBox of length * length   % width * height
-  | Block of length * block-text
-  % | Text of length * inline-text  % width * content: not implemented
+  | JPEG of length * string               % width * filepath
+  | PDF of length * string * int          % width * filepath * page-number
+  | Block of length * block-text          % width * text
+  | DummyBox of length * length           % width * height
+  | Shift of length * length * imginfo  % (x-shift , y-shift) * imginfo
+  | Phantom of imginfo
 
 let-inline ctx \SLyDiFi =
   let size = get-font-size ctx in
@@ -77,6 +82,7 @@ module Slydifi : sig
   direct \footnote : [inline-text] inline-cmd
   direct \footnotetext : [string; inline-text] inline-cmd
   direct \footnotemark : [string] inline-cmd
+
   % }}}
 
 end = struct
@@ -565,47 +571,73 @@ end = struct
     let rect-path = Gr.rectangle (x, y) (x +' wid, y +' ht) in
     [(stroke 1pt color-fg rect-path)]
 
-  let-block ctx +centered-image img-info =
+  let-rec insert-image ctx img-info =
     match img-info with
     | JPEG(wid, srcpath) ->
         let img = load-image srcpath in
-        line-break true true ctx (inline-fil ++ use-image-by-width img wid ++ inline-fil)
+        use-image-by-width img wid
     | PDF(wid, srcpath, num) ->
         let img = load-pdf-image srcpath num in
-        line-break true true ctx (inline-fil ++ use-image-by-width img wid ++ inline-fil)
+        use-image-by-width img wid
     | Block(wid, bt) ->
         let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
-        line-break true true ctx (inline-fil ++ ib ++ inline-fil)
-    | DummyBox(wid, ht) ->
-        line-break true true ctx (inline-fil ++ (inline-graphics wid ht 0pt (draw-dummy-box wid ht)) ++ inline-fil)
-
-  let-inline ctx \insert-image img-info =
-    match img-info with
-    | JPEG(wid, srcpath) ->
-        let img = load-image srcpath in use-image-by-width img wid
-    | PDF(wid, srcpath, num) ->
-        let img = load-pdf-image srcpath num in use-image-by-width img wid
-    | Block(wid, bt) ->
-        let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in ib
+        ib
     | DummyBox(wid, ht) ->
         inline-graphics wid ht 0pt (draw-dummy-box wid ht)
+    | Shift(xs, ys, inner-img-info) ->
+        let ib = insert-image ctx inner-img-info in
+        let (wid-ib, ht-ib, dp-ib) = get-natural-metrics ib in
+        inline-graphics wid-ib ht-ib dp-ib
+          (fun (x, y) -> [draw-text (x +' xs, y +' ys) ib])
+    | Phantom(inner-img-info) ->
+        let ib = insert-image ctx inner-img-info in
+        let (wid-ib, ht-ib, dp-ib) = get-natural-metrics ib in
+        inline-graphics wid-ib ht-ib 0pt (draw-dummy-box wid-ib ht-ib)
 
+  let-block ctx +centered-image img-info =
+    line-break true true ctx (inline-fil ++ (insert-image ctx img-info) ++ inline-fil)
+    % match img-info with
+    % | JPEG(wid, srcpath) ->
+    %     let img = load-image srcpath in
+    %     line-break true true ctx (inline-fil ++ use-image-by-width img wid ++ inline-fil)
+    % | PDF(wid, srcpath, num) ->
+    %     let img = load-pdf-image srcpath num in
+    %     line-break true true ctx (inline-fil ++ use-image-by-width img wid ++ inline-fil)
+    % | Block(wid, bt) ->
+    %     let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
+    %     line-break true true ctx (inline-fil ++ ib ++ inline-fil)
+    % | DummyBox(wid, ht) ->
+    %     line-break true true ctx (inline-fil ++ (inline-graphics wid ht 0pt (draw-dummy-box wid ht)) ++ inline-fil)
+
+  let-inline ctx \insert-image img-info = insert-image ctx img-info
+    % match img-info with
+    % | JPEG(wid, srcpath) ->
+    %     let img = load-image srcpath in use-image-by-width img wid
+    % | PDF(wid, srcpath, num) ->
+    %     let img = load-pdf-image srcpath num in use-image-by-width img wid
+    % | Block(wid, bt) ->
+    %     let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in ib
+    % | DummyBox(wid, ht) ->
+    %     inline-graphics wid ht 0pt (draw-dummy-box wid ht)
 
   let fig-abs-pos ctx pt img-info =
-    match img-info with
-      | JPEG(wid, srcpath) ->
-          let img = load-image srcpath in
-          let ib = use-image-by-width img wid in
-          inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
-      | PDF(wid, srcpath, num) ->
-          let img = load-pdf-image srcpath num in
-          let ib = use-image-by-width img wid in
-          inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
-      | Block(wid, bt) ->
-          let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
-          inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
-      | DummyBox(wid, ht) ->
-          inline-graphics 0pt 0pt 0pt (fun _ -> draw-dummy-box wid ht pt)
+    % DummyBox が inline-graphics を無用に2回使ってしまう
+    let ib = insert-image ctx img-info in
+    inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
+    % match img-info with
+    %   | JPEG(wid, srcpath) ->
+    %       let img = load-image srcpath in
+    %       let ib = use-image-by-width img wid in
+    %       inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
+    %   | PDF(wid, srcpath, num) ->
+    %       let img = load-pdf-image srcpath num in
+    %       let ib = use-image-by-width img wid in
+    %       inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
+    %   | Block(wid, bt) ->
+    %       let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
+    %       inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
+    %   | DummyBox(wid, ht) ->
+    %       inline-graphics 0pt 0pt 0pt (fun _ -> draw-dummy-box wid ht pt)
 
 
   let-inline ctx \fig-abs-pos pt img-info =
@@ -616,41 +648,49 @@ end = struct
     line-break true true ctx (it-gr ++ inline-fil)
 
   let-inline ctx \fig-right img-info =
-    match img-info with
-    | JPEG(wid, srcpath) ->
-        let img = load-image srcpath in
-        let ib = use-image-by-width img wid in
-        let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
-        inline-graphics 0pt 0pt 0pt (fun (x, y) ->
-          [
-            draw-text
-              (paper-width -' text-horizontal-margin -' ib-w,
-              y +' (ctx |> get-font-size) -' ib-h) ib
-          ])
-    | PDF(wid, srcpath, num) ->
-        let img = load-pdf-image srcpath num in
-        let ib = use-image-by-width img wid in
-        let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
-        inline-graphics 0pt 0pt 0pt (fun (x, y) ->
-          [
-            draw-text
-              (paper-width -' text-horizontal-margin -' ib-w,
-              y +' (ctx |> get-font-size) -' ib-h) ib
-          ])
-    | Block(wid, bt) ->
-        let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
-        let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
-        inline-graphics 0pt 0pt 0pt (fun (x, y) ->
-          [
-            draw-text
-              (paper-width -' text-horizontal-margin -' ib-w,
-              y +' (ctx |> get-font-size) -' ib-h) ib
-          ])
-    | DummyBox(wid, ht) ->
-        let pt y =
-          (paper-width -' text-horizontal-margin -' wid,
-          y +' (ctx |> get-font-size) -' ht) in
-          inline-graphics 0pt 0pt 0pt (fun (x, y) -> draw-dummy-box wid ht (pt y))
+    let ib = insert-image ctx img-info in
+    let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
+    inline-graphics 0pt 0pt 0pt (fun (x, y) ->
+      [
+        draw-text
+          (paper-width -' text-horizontal-margin -' ib-w,
+          y +' (ctx |> get-font-size) -' ib-h) ib
+      ])
+    % match img-info with
+    % | JPEG(wid, srcpath) ->
+    %     let img = load-image srcpath in
+    %     let ib = use-image-by-width img wid in
+    %     let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
+    %     inline-graphics 0pt 0pt 0pt (fun (x, y) ->
+    %       [
+    %         draw-text
+    %           (paper-width -' text-horizontal-margin -' ib-w,
+    %           y +' (ctx |> get-font-size) -' ib-h) ib
+    %       ])
+    % | PDF(wid, srcpath, num) ->
+    %     let img = load-pdf-image srcpath num in
+    %     let ib = use-image-by-width img wid in
+    %     let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
+    %     inline-graphics 0pt 0pt 0pt (fun (x, y) ->
+    %       [
+    %         draw-text
+    %           (paper-width -' text-horizontal-margin -' ib-w,
+    %           y +' (ctx |> get-font-size) -' ib-h) ib
+    %       ])
+    % | Block(wid, bt) ->
+    %     let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
+    %     let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
+    %     inline-graphics 0pt 0pt 0pt (fun (x, y) ->
+    %       [
+    %         draw-text
+    %           (paper-width -' text-horizontal-margin -' ib-w,
+    %           y +' (ctx |> get-font-size) -' ib-h) ib
+    %       ])
+    % | DummyBox(wid, ht) ->
+    %     let pt y =
+    %       (paper-width -' text-horizontal-margin -' wid,
+    %       y +' (ctx |> get-font-size) -' ht) in
+    %       inline-graphics 0pt 0pt 0pt (fun (x, y) -> draw-dummy-box wid ht (pt y))
 
   % }}}
 
