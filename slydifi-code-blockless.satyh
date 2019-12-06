@@ -1,0 +1,181 @@
+@require: pervasives
+@require: list
+@require: color
+@require: gr
+@require: vdecoset
+
+type block = context -> block-boxes
+type cel = int -> block
+type celRange =
+  | Always of unit
+  | Only of int
+  | Before of int
+  | After of int
+  | Range of int * int
+  | GeneralRange of int -> bool
+  | InvRange of celRange
+
+let phantom-block bb = block-skip (get-natural-length bb)
+
+% celRange 型を，
+% layer 番号 i が， celRange で定まる範囲に入っているかどうかを表す
+% int -> bool 型に変換する．
+let-rec is-in-range : celRange -> int -> bool | cel-range i =
+  match cel-range with
+  | Always() -> true
+  | Only(n) -> (i == n)
+  | Before(n) -> (i <= n)
+  | After(n) -> (i >= n)
+  | Range(m, n) -> (i >= m) && (i <= n)
+  | GeneralRange(f) -> (f i)
+  | InvRange(crange) -> is-in-range crange i
+
+% cel-num (cel number) が crange (cel range) に入っているときだけ
+% 具現化され，それ以外は phantom となる block-box.
+let ghost-block crange cel-num bb =
+  if is-in-range crange cel-num then bb else phantom-block bb
+
+% cel-num が crange に入っているときだけ bb-true が使われ，
+% それ以外は bb-false に擬態する block-box.
+let fox-block crange cel-num bb-true bb-false =
+  if is-in-range crange cel-num then bb-true else bb-false
+
+module Code : sig
+
+  val scheme : deco-set -> color -> context -> string -> block-boxes
+  val code : string -> cel
+  val console : string -> cel
+
+  direct \code : [string] inline-cmd
+  direct \console : [string] inline-cmd
+  direct \d-code : [string] inline-cmd
+
+end = struct
+
+  % blockless satysfi
+  let block-list-to-block-boxes : context -> block list -> block-boxes |  ctx b =
+    b |> List.map (fun b -> b ctx)
+      |> Block.concat
+
+  let cel-list-to-block-boxes : context -> cel list -> int -> block-boxes | ctx c cel-num =
+    c |> List.map (fun c -> c cel-num ctx)
+      |> Block.concat
+
+  let code-fill-color = Gray(0.875)
+  let code-stroke-color = Gray(0.625)
+  let console-fill-color = Gray(0.25)
+
+
+  let decoset-code =
+    VDecoSet.simple-frame 1pt code-stroke-color code-fill-color
+
+
+  let dummy _ =
+    let strokef = stroke 1pt code-stroke-color in
+    let gr-back x y w d h =
+      fill code-fill-color (Gr.rectangle (x, y -' d) (x +' w, y +' h))
+    in
+    let decoS (x, y) w h d =
+      [
+        gr-back x y w d h;
+        strokef (Gr.rectangle (x, y -' d) (x +' w, y +' h));
+      ]
+    in
+    let decoH (x, y) w h d =
+      [
+        gr-back x y w d h;
+        strokef (Gr.poly-line (x, y -' d) [(x, y +' h); (x +' w, y +' h); (x +' w, y -' d);])
+      ]
+    in
+    let decoM (x, y) w h d =
+      [
+        gr-back x y w d h;
+        strokef (Gr.line (x, y -' d) (x, y +' h));
+        strokef (Gr.line (x +' w, y -' d) (x +' w, y +' h));
+      ]
+    in
+    let decoT (x, y) w h d =
+      [
+        gr-back x y w d h;
+        strokef (Gr.poly-line (x, y +' h) [(x, y -' d); (x +' w, y -' d); (x +' w, y +' h)])
+      ]
+    in
+      (decoS, decoH, decoM, decoT)
+
+
+  let decoset-console =
+    let deco (x, y) w h d =
+      [ fill console-fill-color (Gr.rectangle (x, y -' d) (x +' w, y +' h)) ]
+    in
+      (deco, deco, deco, deco)
+
+
+  let set-code-font ctx =
+    ctx |> set-font Latin (`lmmono`, 1., 0.)
+        |> set-hyphen-penalty 100000
+
+
+  let scheme decoset txtcolor ctx code-string =
+    let pads = (5pt, 5pt, 5pt, 5pt) in
+    block-frame-breakable ctx pads decoset (fun ctx -> (
+      let fontsize = get-font-size ctx in
+      let ctx = ctx |> set-code-font in
+      let charwid = get-natural-width (read-inline ctx {0}) in
+      let ctx-code =
+        ctx |> set-space-ratio (charwid /' fontsize) 0. 0.
+            |> set-text-color txtcolor
+      in
+
+      let lstraw = split-into-lines code-string in
+      let lst =
+        match lstraw with
+        | []        -> lstraw
+        | x :: []   -> lstraw
+        | _ :: tail -> tail
+      in
+      let ib-code =
+        lst |> List.fold-left-adjacent (fun ibacc (i, s) _ optnext -> (
+          let ib-last =
+            match optnext with
+            | Some(_) -> inline-fil ++ discretionary 0 (inline-skip ((get-text-width ctx) *' 2.)) inline-nil inline-nil
+            | None    -> inline-fil
+          in
+          let ib =
+            inline-skip (charwid *' (float i))
+              ++ read-inline ctx-code (embed-string s)
+              ++ ib-last
+          in
+            ibacc ++ ib
+        )) inline-nil
+      in
+        line-break true true ctx ib-code
+    ))
+
+  let code-ghost crange code-string cel-num ctx =
+    ghost-block crange cel-num
+      (scheme decoset-code Color.black ctx code-string)
+
+  let code = code-ghost (Always())
+
+  let-inline ctx \d-code code-string =
+    let bb = cel-list-to-block-boxes ctx [code(code-string)] 1 in
+    inline-fil ++ (embed-block-breakable ctx bb)
+
+
+  let console code-string cel-num ctx =
+    scheme decoset-console Color.white ctx code-string
+
+
+  let-inline ctx \console code-string =
+    let bb = cel-list-to-block-boxes ctx [console(code-string)] 1 in
+    inline-fil ++ (embed-block-breakable ctx bb)
+
+
+  let-inline ctx \code code-string =
+    script-guard Latin
+      (read-inline (ctx |> set-code-font) (embed-string code-string))
+
+end
+
+let code = Code.code
+let console = Code.console

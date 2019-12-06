@@ -6,9 +6,11 @@
 @import: slydifi-color
 @import: slydifi-footnote-scheme
 @import: slydifi-enumitem-blockless
+@import: slydifi-code-blockless
 @require: satysfi-lib/block
 
 type block = context -> block-boxes
+type cel = int -> block
 
 % TODO: 本当は Shift や Phantom は関数化したほうがいい．
 % image-shift: length -> length -> imginfo -> imginfo
@@ -19,16 +21,21 @@ type imginfo =
   | JPEG of length * string               % width * filepath
   | PDF of length * string * int          % width * filepath * page-number
   | Block of length * block list          % width * text
+  | Cel of length * cel list          % width * text
   | DummyBox of length * length           % width * height
   | Shift of length * length * imginfo  % (x-shift , y-shift) * imginfo
   | Phantom of imginfo
 
 type celRange =
+  | Always of unit
   | Only of int
   | Before of int
   | After of int
   | Range of int * int
   | GeneralRange of int -> bool
+  | InvRange of celRange
+
+let phantom-block bb = block-skip (get-natural-length bb)
 
 let-inline ctx \SLyDiFi =
   let size = get-font-size ctx in
@@ -38,7 +45,7 @@ let-inline ctx \SLyDiFi =
                |> set-manual-rising (size *' 0.2)
                |> read-inline
   in
-  let ib = 
+  let ib =
     f {SL} ++ kern(size *' 0.05) ++ fd{Y} ++ kern(size *' 0.03) ++ f{DIF}
       ++ kern(size *' 0.05) ++ fd{I}
   in
@@ -83,16 +90,24 @@ module Slydifi : sig
   direct \footnotemark : [string] inline-cmd
 
   val section : inline-text list -> block list -> block
-  val frame : inline-text -> block list -> block
-  val frame-nt : block list -> block
+
+  val frame-anime : int -> inline-text -> cel list -> block
+  val frame : inline-text -> cel list -> block
+  val frame-anime-nt : int -> cel list -> block
+  val frame-nt : cel list -> block
+
   val make-title : block list -> block
-  val listing : itemize -> block
   val title: inline-text list -> block
   val author: inline-text list -> block
   val date: inline-text list -> block
-  val p : inline-text -> block
-  val centered-image : imginfo -> block
-  val fig-abs-pos : (length * length) -> imginfo -> block
+
+  val p-ghost : celRange -> inline-text -> cel
+  val p-fox : celRange -> inline-text -> inline-text -> cel
+  val p : inline-text -> cel
+  val listing : itemize -> cel
+
+  val centered-image : imginfo -> cel
+  val fig-abs-pos : (length * length) -> imginfo -> cel
 
   % val layer : displayRange -> block list -> block
   % val frame-overlay : int -> inline-text -> block list -> block
@@ -103,6 +118,10 @@ end = struct
   % blockless satysfi
   let block-list-to-block-boxes ctx b =
     b |> List.map (fun b -> b ctx)
+      |> Block.concat
+
+  let cel-list-to-block-boxes ctx c cel-num =
+    c |> List.map (fun c -> c cel-num ctx)
       |> Block.concat
 
   % 文書設定 {{{1
@@ -308,10 +327,34 @@ end = struct
     in
     (line-break true true ctx-phantom (ib-bg ++ (make-grids dmode) ++ inline-fil))
 
+  % Overlay
+
+  % celRange 型を，
+  % layer 番号 i が， celRange で定まる範囲に入っているかどうかを表す
+  % int -> bool 型に変換する．
+  let-rec is-in-range : celRange -> int -> bool | cel-range i =
+    match cel-range with
+    | Always() -> true
+    | Only(n) -> (i == n)
+    | Before(n) -> (i <= n)
+    | After(n) -> (i >= n)
+    | Range(m, n) -> (i >= m) && (i <= n)
+    | GeneralRange(f) -> (f i)
+    | InvRange(crange) -> is-in-range crange i
+
+  % cel-num (cel number) が crange (cel range) に入っているときだけ
+  % 具現化され，それ以外は phantom となる block-box.
+  let ghost-block crange cel-num bb =
+    if is-in-range crange cel-num then bb else phantom-block bb
+
+  % cel-num が crange に入っているときだけ bb-true が使われ，
+  % それ以外は bb-false に擬態する block-box.
+  let fox-block crange cel-num bb-true bb-false =
+    if is-in-range crange cel-num then bb-true else bb-false
 
   % }}}
 
-  % +make-title{} command {{{
+  % make-title{} function {{{
 
   % title config
   let title-xmin = relwid 0.18
@@ -426,7 +469,7 @@ end = struct
 
   % }}}
 
-  % +frame{}<> command {{{
+  % frame{} function {{{
 
   let placeholder height (origX, origY) =
     [fill Color.white (Gr.rectangle (origX, origY) (origX, origY +' height))]
@@ -443,7 +486,7 @@ end = struct
     let ctx2 = ctx |> set-paragraph-margin 0pt 0pt in
     line-break true false ctx2 (inline-graphics 0pt ht 0pt (placeholder ht) ++ inline-fil)
 
-  let frame title inner ctx =
+  let frame-anime max-frame title inner ctx =
     let ctx-title = make-frame-title ctx in
     let title-padding = 12pt in
     let deco (x, y) wid hgt dpt =
@@ -458,8 +501,15 @@ end = struct
         (fill color-title path1);
       ]
     in
-    let bb-title =
-      let ib-title = read-inline ctx-title title in
+    let bb-title cel-num =
+      let it-number =
+        if max-frame == 1 then {}
+        else
+          let it-cel-num = embed-string(arabic cel-num) in
+          let it-max-frame = embed-string(arabic max-frame) in
+          { (#it-cel-num;/#it-max-frame;)}
+      in
+      let ib-title = read-inline ctx-title {#title;#it-number;} in
       block-frame-breakable
         (ctx |> set-paragraph-margin 0pt 0pt)
           (title-padding -' text-horizontal-margin, title-padding,
@@ -469,39 +519,79 @@ end = struct
                 line-break true true (make-frame-title ctx) (ib-title ++ inline-fil)
               )
     in
-    let ib-inner = embed-block-top ctx text-width (fun ctx -> block-list-to-block-boxes ctx inner) in
-    let bb-inner = line-break false false ctx ib-inner in
-    let glue-height = (text-height -' footer-height -' header-height -' get-natural-length bb-inner -' get-natural-length bb-title) *' .5 in
-    let bb-glue = make-placeholder ctx glue-height in
-    (clear-page-or-nil is-first-page) +++
-    (bb-bg ctx !draft-mode) +++
-      bb-title % +++ bb-glue
-        +++ bb-inner
-          % bb-title +++ bb-inner +++ clear-page
+    let ib-inner cel-num = embed-block-top ctx text-width (fun ctx -> cel-list-to-block-boxes ctx inner cel-num) in
+    let bb-inner cel-num = line-break false false ctx (ib-inner cel-num) in
+    % let glue-height = (text-height -' footer-height -' header-height -' get-natural-length bb-inner -' get-natural-length bb-title) *' .5 in
+    % let bb-glue = make-placeholder ctx glue-height in
 
-  let frame-nt inner ctx =
-    let ib-inner = embed-block-top ctx text-width (fun ctx -> block-list-to-block-boxes ctx inner) in
-    let bb-inner = line-break false false ctx ib-inner in
-    let glue-height = (text-height -' footer-height -' header-height -' get-natural-length bb-inner) *' .5 in
-    let bb-glue = make-placeholder ctx glue-height in
-    % bb-glue +++ bb-inner +++ clear-page
-    (clear-page-or-nil is-first-page) +++
-    (bb-bg ctx !draft-mode) +++ bb-inner
+    let-rec content n =
+      if n == 0
+      then block-nil
+      else
+      (content (n - 1)) +++
+        (clear-page-or-nil is-first-page) +++
+        (bb-bg ctx !draft-mode) +++ (bb-title n) +++ (bb-inner n)
+    in
+
+    content max-frame
+
+  % let frame title inner ctx =
+  %   let ctx-title = make-frame-title ctx in
+  %   let title-padding = 12pt in
+  %   let deco (x, y) wid hgt dpt =
+  %     let path1 =
+  %       let xL = x -' text-horizontal-margin +' title-padding in
+  %       let yT = y +' text-vertical-margin in
+  %       let xR = xL +' paper-width -' title-padding *' 2.0 in
+  %       let yB = yT -' 3pt in
+  %       Gr.rectangle (xL, yT) (xR, yB)
+  %     in
+  %     [
+  %       (fill color-title path1);
+  %     ]
+  %   in
+  %   let bb-title =
+  %     let ib-title = read-inline ctx-title title in
+  %     block-frame-breakable
+  %       (ctx |> set-paragraph-margin 0pt 0pt)
+  %         (title-padding -' text-horizontal-margin, title-padding,
+  %         title-padding -' text-vertical-margin, title-padding +' text-vertical-margin)
+  %           (deco, deco, deco, deco)
+  %             (fun ctx ->
+  %               line-break true true (make-frame-title ctx) (ib-title ++ inline-fil)
+  %             )
+  %   in
+  %   let ib-inner = embed-block-top ctx text-width (fun ctx -> block-list-to-block-boxes ctx inner) in
+  %   let bb-inner = line-break false false ctx ib-inner in
+  %   let glue-height = (text-height -' footer-height -' header-height -' get-natural-length bb-inner -' get-natural-length bb-title) *' .5 in
+  %   let bb-glue = make-placeholder ctx glue-height in
+  %   (clear-page-or-nil is-first-page) +++
+  %   (bb-bg ctx !draft-mode) +++
+  %     bb-title % +++ bb-glue
+  %       +++ bb-inner
+  %         % bb-title +++ bb-inner +++ clear-page
+
+  let frame = frame-anime 1
+
+  let frame-anime-nt max-frame inner ctx =
+
+    let ib-inner cel-num = embed-block-top ctx text-width (fun ctx -> cel-list-to-block-boxes ctx inner cel-num) in
+    let bb-inner cel-num = line-break false false ctx (ib-inner cel-num) in
+
+    let-rec content n =
+      if n == 0
+      then block-nil
+      else
+      (content (n - 1)) +++
+        (clear-page-or-nil is-first-page) +++
+        (bb-bg ctx !draft-mode) +++ (bb-inner n)
+    in
+
+    content max-frame
+
+  let frame-nt = frame-anime-nt 1
 
       % }}}
-
-  % Overlay
-
-  % celRange 型を，
-  % layer 番号 i が， celRange で定まる範囲に入っているかどうかを表す
-  % int -> bool 型に変換する．
-  let general-range : celRange -> int -> bool | cel-range i =
-    match cel-range with
-      | Only(n) -> (i == n)
-      | Before(n) -> (i <= n)
-      | After(n) -> (i >= n)
-      | Range(m, n) -> (i >= m) && (i <= n)
-      | GeneralRange(f) -> (f i)
 
   % 文書構造 {{{
 
@@ -554,8 +644,22 @@ end = struct
     (bb-bg ctx !draft-mode) +++ (line-break true false ctx (ib ++ inline-fil))
       +++ (section-title ctx its) +++ (block-list-to-block-boxes ctx bt)
 
-  let p it ctx =
-    line-break true true ctx (read-inline ctx it ++ inline-fil)
+  % let p it ctx =
+  %   line-break true true ctx (read-inline ctx it ++ inline-fil)
+
+  let p-ghost crange it cel-num ctx =
+    ghost-block crange cel-num
+      (line-break true true ctx (read-inline ctx it ++ inline-fil))
+
+  let p-fox crange it1 it2 cel-num ctx =
+    let ib-paragraph it =
+      line-break true true ctx (read-inline ctx it ++ inline-fil)
+    in
+    fox-block crange cel-num (ib-paragraph it1) (ib-paragraph it2)
+
+  let p = p-ghost (Always())
+
+
 
   % }}}
 
@@ -612,6 +716,9 @@ end = struct
     | Block(wid, bt) ->
         let ib = embed-block-top ctx wid (fun ctx -> block-list-to-block-boxes ctx bt) in
         ib
+    | Cel(wid, bt) ->
+        let ib = embed-block-top ctx wid (fun ctx -> cel-list-to-block-boxes ctx bt 1) in
+        ib
     | DummyBox(wid, ht) ->
         inline-graphics wid ht 0pt (draw-dummy-box wid ht)
     | Shift(xs, ys, inner-img-info) ->
@@ -624,58 +731,28 @@ end = struct
         let (wid-ib, ht-ib, dp-ib) = get-natural-metrics ib in
         inline-graphics wid-ib ht-ib 0pt (draw-dummy-box wid-ib ht-ib)
 
-  let centered-image img-info ctx =
-    line-break true true ctx (inline-fil ++ (insert-image ctx img-info) ++ inline-fil)
-    % match img-info with
-    % | JPEG(wid, srcpath) ->
-    %     let img = load-image srcpath in
-    %     line-break true true ctx (inline-fil ++ use-image-by-width img wid ++ inline-fil)
-    % | PDF(wid, srcpath, num) ->
-    %     let img = load-pdf-image srcpath num in
-    %     line-break true true ctx (inline-fil ++ use-image-by-width img wid ++ inline-fil)
-    % | Block(wid, bt) ->
-    %     let ib = embed-block-top ctx wid (fun ctx -> block-list-to-block-boxes ctx bt) in
-    %     line-break true true ctx (inline-fil ++ ib ++ inline-fil)
-    % | DummyBox(wid, ht) ->
-    %     line-break true true ctx (inline-fil ++ (inline-graphics wid ht 0pt (draw-dummy-box wid ht)) ++ inline-fil)
+  let centered-image-cel crange img-info cel-num ctx =
+    ghost-block crange cel-num
+      (line-break true true ctx (inline-fil ++ (insert-image ctx img-info) ++ inline-fil))
+
+  let centered-image = centered-image-cel (Always())
 
   let-inline ctx \insert-image img-info = insert-image ctx img-info
-    % match img-info with
-    % | JPEG(wid, srcpath) ->
-    %     let img = load-image srcpath in use-image-by-width img wid
-    % | PDF(wid, srcpath, num) ->
-    %     let img = load-pdf-image srcpath num in use-image-by-width img wid
-    % | Block(wid, bt) ->
-    %     let ib = embed-block-top ctx wid (fun ctx -> block-list-to-block-boxes ctx bt) in ib
-    % | DummyBox(wid, ht) ->
-    %     inline-graphics wid ht 0pt (draw-dummy-box wid ht)
 
-  let fig-abs-pos ctx pt img-info =
+  let absolute-fig ctx pt img-info =
     % DummyBox が inline-graphics を無用に2回使ってしまう
     let ib = insert-image ctx img-info in
     inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
-    % match img-info with
-    %   | JPEG(wid, srcpath) ->
-    %       let img = load-image srcpath in
-    %       let ib = use-image-by-width img wid in
-    %       inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
-    %   | PDF(wid, srcpath, num) ->
-    %       let img = load-pdf-image srcpath num in
-    %       let ib = use-image-by-width img wid in
-    %       inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
-    %   | Block(wid, bt) ->
-    %       let ib = embed-block-top ctx wid (fun ctx -> block-list-to-block-boxes ctx bt) in
-    %       inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
-    %   | DummyBox(wid, ht) ->
-    %       inline-graphics 0pt 0pt 0pt (fun _ -> draw-dummy-box wid ht pt)
-
 
   let-inline ctx \fig-abs-pos pt img-info =
-    fig-abs-pos ctx pt img-info
+    absolute-fig ctx pt img-info
 
-  let fig-abs-pos pt img-info ctx =
-    let it-gr = fig-abs-pos ctx pt img-info in
-    line-break true true ctx (it-gr ++ inline-fil)
+  let fig-abs-pos-cel crange pt img-info cel-num ctx =
+    let it-gr = absolute-fig ctx pt img-info in
+    ghost-block crange cel-num
+      (line-break true true ctx (it-gr ++ inline-fil))
+
+  let fig-abs-pos = fig-abs-pos-cel (Always())
 
   let-inline ctx \fig-right img-info =
     let ib = insert-image ctx img-info in
@@ -686,41 +763,6 @@ end = struct
           (paper-width -' text-horizontal-margin -' ib-w,
           y +' (ctx |> get-font-size) -' ib-h) ib
       ])
-    % match img-info with
-    % | JPEG(wid, srcpath) ->
-    %     let img = load-image srcpath in
-    %     let ib = use-image-by-width img wid in
-    %     let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
-    %     inline-graphics 0pt 0pt 0pt (fun (x, y) ->
-    %       [
-    %         draw-text
-    %           (paper-width -' text-horizontal-margin -' ib-w,
-    %           y +' (ctx |> get-font-size) -' ib-h) ib
-    %       ])
-    % | PDF(wid, srcpath, num) ->
-    %     let img = load-pdf-image srcpath num in
-    %     let ib = use-image-by-width img wid in
-    %     let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
-    %     inline-graphics 0pt 0pt 0pt (fun (x, y) ->
-    %       [
-    %         draw-text
-    %           (paper-width -' text-horizontal-margin -' ib-w,
-    %           y +' (ctx |> get-font-size) -' ib-h) ib
-    %       ])
-    % | Block(wid, bt) ->
-    %     let ib = embed-block-top ctx wid (fun ctx -> block-list-to-block-boxes ctx bt) in
-    %     let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
-    %     inline-graphics 0pt 0pt 0pt (fun (x, y) ->
-    %       [
-    %         draw-text
-    %           (paper-width -' text-horizontal-margin -' ib-w,
-    %           y +' (ctx |> get-font-size) -' ib-h) ib
-    %       ])
-    % | DummyBox(wid, ht) ->
-    %     let pt y =
-    %       (paper-width -' text-horizontal-margin -' wid,
-    %       y +' (ctx |> get-font-size) -' ht) in
-    %       inline-graphics 0pt 0pt 0pt (fun (x, y) -> draw-dummy-box wid ht (pt y))
 
   % }}}
 
@@ -773,7 +815,7 @@ end = struct
     | 1 -> label-tria
     | _ -> label-circ
 
-  let listing = genlistings label-rule
+  let listing item _ = (genlistings label-rule item)
 
   % }}}
 
@@ -833,60 +875,21 @@ end = struct
 
   % }}}
 
-  % overlay {{{
-  % let-block ctx +frame-overlay max-layer title inner =
-  %
-  %   let () = layer <- 1 in
-  %
-  %   let ctx-title = make-frame-title ctx in
-  %   let title-padding = 12pt in
-  %   let deco (x, y) wid hgt dpt =
-  %     let path1 =
-  %       let xL = x -' text-horizontal-margin +' title-padding in
-  %       let yT = y +' text-vertical-margin in
-  %       let xR = xL +' paper-width -' title-padding *' 2.0 in
-  %       let yB = yT -' 3pt in
-  %       Gr.rectangle (xL, yT) (xR, yB)
-  %     in
-  %     [
-  %       (fill color-title path1);
-  %     ]
-  %   in
-  %   let bb-title =
-  %     let ib-title = read-inline ctx-title title in
-  %     block-frame-breakable
-  %       (ctx |> set-paragraph-margin 0pt 0pt)
-  %         (title-padding -' text-horizontal-margin, title-padding,
-  %         title-padding -' text-vertical-margin, title-padding +' text-vertical-margin)
-  %           (deco, deco, deco, deco)
-  %             (fun ctx ->
-  %               line-break true true (make-frame-title ctx) (ib-title ++ inline-fil)
-  %             )
-  %   in
-  %   let ib-inner = embed-block-top ctx text-width (fun ctx -> read-block ctx inner) in
-  %   let bb-inner = line-break false false ctx ib-inner in
-  %   let glue-height = (text-height -' footer-height -' header-height -' get-natural-length bb-inner -' get-natural-length bb-title) *' .5 in
-  %   let bb-glue = make-placeholder ctx glue-height in
-  %   let content = 
-  %     (clear-page-or-nil is-first-page) +++
-  %       (bb-bg ctx !draft-mode) +++
-  %         bb-title % +++ bb-glue
-  %           +++ bb-inner
-  %   in
-  %   fold-layer max-layer content
-  % }}}
-
-
 end
 
+
 let section = Slydifi.section
+let frame-anime = Slydifi.frame-anime
 let frame = Slydifi.frame
 let frame-nt = Slydifi.frame-nt
+let frame-anime-nt = Slydifi.frame-anime-nt
 let make-title = Slydifi.make-title
-let listing = Slydifi.listing
-let title= Slydifi.title
-let author= Slydifi.author
-let date= Slydifi.date
+let title = Slydifi.title
+let author = Slydifi.author
+let date = Slydifi.date
+let p-ghost = Slydifi.p-ghost
+let p-fox = Slydifi.p-fox
 let p = Slydifi.p
+let listing = Slydifi.listing
 let centered-image = Slydifi.centered-image
 let fig-abs-pos = Slydifi.fig-abs-pos

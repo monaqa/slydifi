@@ -22,6 +22,10 @@ let-inline \show-float n = embed-string (show-float n)
 
 let-inline \show-unexplode ns = embed-string (string-unexplode ns)
 
+let-inline ctx \gray it =
+  let ctx2 = ctx |> set-text-color (SlydifiColor.html-color 0xAAAAAA) in
+  read-inline ctx2 it
+
 in
 
 Slydifi.document(|
@@ -98,15 +102,15 @@ Slydifi.document(|
 
     frame{Enumerate command}[
       p{箇条書きコマンド．};
-      enumerate{
-        * 箇条書きコマンドは以下の2種類が用意されている．
-          ** \code(`listing`);: unordered listing（番号のない箇条書き）
-          ** \code(`enumerate`);: ordered listing（番号のある箇条書き）
-            *** Ordered listing の場合，ネストの深さによってインデックスの体裁が変化していく．
-            *** 子の箇条書きを追加しても，親の番号はリセットされない．
-        * 現にこのような場合でも，番号は保存されている．
-          ** もちろん，子の番号は親が変わればリセットされる．
-      };
+      % enumerate{
+      %   * 箇条書きコマンドは以下の2種類が用意されている．
+      %     ** \code(`listing`);: unordered listing（番号のない箇条書き）
+      %     ** \code(`enumerate`);: ordered listing（番号のある箇条書き）
+      %       *** Ordered listing の場合，ネストの深さによってインデックスの体裁が変化していく．
+      %       *** 子の箇条書きを追加しても，親の番号はリセットされない．
+      %   * 現にこのような場合でも，番号は保存されている．
+      %     ** もちろん，子の番号は親が変わればリセットされる．
+      % };
     ];
 
     % frame-overlay(3){たとえば}[
@@ -114,5 +118,14 @@ Slydifi.document(|
     %   p{例えばこんな感じ．\layer(Only(2)){あああ}};
     %
     % ];
+
+    frame-anime(5){Overlay 機能のテスト}[
+      p-fox(Range(2, 4)){☆★★★☆：2--4のとき有効．}{\gray{☆★★★☆：2--4のとき有効．}};
+      p-fox(Only(3)    ){☆☆★☆☆：3 枚目だけ有効．}{\gray{☆☆★☆☆：3 枚目だけ有効．}};
+      p-fox(Before(2)  ){★★☆☆☆：2 枚目まで有効．}{\gray{★★☆☆☆：2 枚目まで有効．}};
+      p-fox(After(3)   ){☆☆★★★：3 枚目以降有効．}{\gray{☆☆★★★：3 枚目以降有効．}};
+      p-fox(GeneralRange(fun i -> (i mod 2) == 1))
+        {★☆★☆★：奇数枚目のみ有効．}{\gray{★☆★☆★：奇数枚目のみ有効．}};
+    ];
   ]
 ]
