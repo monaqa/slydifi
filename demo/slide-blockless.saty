@@ -1,0 +1,118 @@
+% -*- coding: utf-8 -*-
+% vim:foldmethod=marker:
+
+@require: code
+@require: annot
+@require: list
+@import: ../slydifi-blockless
+
+
+let-inline \jugem = {
+  寿限無寿限無，五劫の擦り切れ，
+  海砂利水魚の水行末雲来末風来末，
+  喰う寝る処に住む処，
+  藪柑子の藪柑子，
+  パイポ・パイポ・パイポのシューリンガン，
+  シューリンガンのグーリンダイ，
+  グーリンダイのポンポコピーのポンポコナーの，
+  長久命の長助．
+}
+
+let-inline \show-float n = embed-string (show-float n)
+
+let-inline \show-unexplode ns = embed-string (string-unexplode ns)
+
+in
+
+Slydifi.document(|
+  draft-mode = true;
+  fonts = (|
+    frame-title-cjk = `mplus-sans-b`;    % 自分が持っているフォントに変えること
+    normal-text-cjk  = `mplus-sans-r`;   % 自分が持っているフォントに変えること
+    frame-title-latin = `mplus-sans-b`;  % 自分が持っているフォントに変えること
+    normal-text-latin  = `mplus-sans-r`; % 自分が持っているフォントに変えること
+    mono-text-latin  = `mplus-mono-r`;   % 自分が持っているフォントに変えること
+    font-ratio-cjk = 1.0;
+  |);
+|)[
+
+  make-title[
+    title{|\SLyDiFi; でらくらくスライド作成|};
+    author{|monaqa|};
+    date{|2019年8月3日|};
+  ];
+
+  section{|はじめに|}[
+    frame{\SLyDiFi;: \SATySFi; のスライド作成用パッケージ}[
+      listing{
+        * \emph{\SATySFi;} (\link(`https://github.com/gfngfn/SATySFi`);)
+          ** 静的型付き関数型言語ベースの新たな組版処理システム
+          ** 普通の文書作成時にはそこまで関数型言語を意識しなくてよい
+          ** パッケージをカスタマイズする際の構文は OCaml 風
+
+        * \emph{\SLyDiFi;} (\link(`https://github.com/monaqa/slydifi`);)
+          ** \SATySFi; でスライドを作成することができる
+          ** 実は既に先駆者がいる（\link?:({Steamer: Slide Presentation in SATySFi})(`https://github.com/konn/satysfi-steamer`);）
+            *** Steamer とは page break 周りの実装を少しばかり変えている
+      };
+      % p{
+      %   \jugem;
+      % }
+    ];
+
+    frame{画像はりテスト
+    \fig-abs-pos
+    ((Slydifi.paper-width *' 0.9, Slydifi.paper-height *' 0.9))
+    (DummyBox(30pt, 30pt));
+    }[
+      p{
+        \fig-right(DummyBox(100pt, 50pt));
+        いろんな画像が貼れる．JPEG と PDF に対応している他，\br;
+        \code(`DummyBox`); を用いてダミー画像を貼ることも出来る．
+      };
+      listing{
+        * \code(`\insert-image`);: 本文中に画像を貼る．
+        * \code(`\fig-abs-pos`);: 絶対座標を指定して画像を貼る．
+        * \code(`\fig-right`);: コマンド挿入箇所の右端に画像を貼る．
+      };
+      % centered-image(PDF(150pt, `./logo.pdf`, 1));
+      % centered-image(JPEG(150pt, `./logo.jpg`));
+      centered-image(DummyBox(500pt, 120pt));
+    ];
+
+  ];
+
+  section{|機能一覧|}[
+    frame{Listing command}[
+      p{箇条書きコマンド．};
+      listing{
+        * 箇条書きコマンドは以下の2種類が用意されている．
+          ** \code(`listing`);: unordered listing（番号のない箇条書き）
+          ** \code(`enumerate`);: ordered listing（番号のある箇条書き）
+            *** Ordered listing の場合，ネストの深さによってインデックスの体裁が変化していく．
+            *** 子の箇条書きを追加しても，親の番号はリセットされない．
+        * 箇条書きのラベルは，\SLyDiFi;用にカスタマイズされている．
+        * さらなるカスタマイズも，enumitem パッケージを用いれば難しくない．
+      };
+    ];
+
+    frame{Enumerate command}[
+      p{箇条書きコマンド．};
+      enumerate{
+        * 箇条書きコマンドは以下の2種類が用意されている．
+          ** \code(`listing`);: unordered listing（番号のない箇条書き）
+          ** \code(`enumerate`);: ordered listing（番号のある箇条書き）
+            *** Ordered listing の場合，ネストの深さによってインデックスの体裁が変化していく．
+            *** 子の箇条書きを追加しても，親の番号はリセットされない．
+        * 現にこのような場合でも，番号は保存されている．
+          ** もちろん，子の番号は親が変わればリセットされる．
+      };
+    ];
+
+    % frame-overlay(3){たとえば}[
+    %
+    %   p{例えばこんな感じ．\layer(Only(2)){あああ}};
+    %
+    % ];
+  ]
+]

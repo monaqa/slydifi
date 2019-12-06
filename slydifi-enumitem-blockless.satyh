@@ -1,0 +1,288 @@
+% -*- coding: utf-8 -*-
+% vim:foldmethod=marker:
+@require: gr
+@require: color
+@require: satysfi-lib/block
+
+type block = context -> block-boxes
+
+let-rec power-float-int r m =
+  match m with
+  | 0 -> 1.
+  | _ -> (power-float-int r (m - 1)) *. r
+
+let max-float f1 f2 = if (1pt *' f1) >' (1pt *' f2) then f1 else f2
+
+module Enumitem : sig
+
+
+  % genlisting command
+  val genlisting : (context -> int -> inline-boxes) -> itemize -> block
+  val genlistings : (int -> context -> int -> inline-boxes) -> itemize -> block
+  direct \listing-from-block : [block] inline-cmd
+  direct \genlisting : [(context -> int -> inline-boxes); itemize] inline-cmd
+  direct \genlistings : [(int -> context -> int -> inline-boxes); itemize] inline-cmd
+
+  % index-specify command (ordered index)
+  val label-raw     : (int -> inline-text) -> context -> int -> inline-boxes
+  val label-dot     : (int -> inline-text) -> context -> int -> inline-boxes
+  val label-paren   : (int -> inline-text) -> context -> int -> inline-boxes
+  val label-bracket : (int -> inline-text) -> context -> int -> inline-boxes
+
+  % index-specify command (unordered index)
+  val label-bullet : context -> int -> inline-boxes
+  val label-white-bullet : context -> int -> inline-boxes
+
+  % text mapping command
+  val to-arabic: int -> inline-text
+  val to-roman : int -> inline-text
+  val to-Roman : int -> inline-text
+  val to-alph  : int -> inline-text
+  val to-Alph  : int -> inline-text
+
+end = struct
+
+  let (+++>) = List.fold-left (+++)
+  let concat-blocks = (+++>) block-nil
+
+  let item-indent-ratio = 1.5
+  let item-gap-ratio = 0.75
+  let item-gap-outer-ratio = 0.3
+  let font-shrink-ratio = 0.95
+  let minimal-font-ratio = 0.85
+
+  % blockless satysfi
+  let block-list-to-block-boxes ctx b =
+    b |> List.map (fun b -> b ctx)
+      |> Block.concat
+
+  % genlisting command {{{
+
+  let-rec general-list-item : int -> context -> (int -> context -> int -> inline-boxes) -> int -> itemize -> block-boxes
+    | index ctx idxrules depth (Item(parent, children)) =
+        % フォント関係の設定
+        let base-font-size = get-font-size ctx in
+        let shrink-ratio = max-float (power-float-int font-shrink-ratio depth) minimal-font-ratio in
+        let item-font-size = base-font-size *' shrink-ratio in
+        let ctx-item = ctx
+          |> set-font-size item-font-size
+        in
+
+        % index の inline box
+        let ib-index = idxrules depth ctx-item index in
+
+        % index の幅を計算
+        let index-width = get-natural-width ib-index in
+        let item-gap = base-font-size *' item-gap-ratio in
+        let parent-indent = base-font-size *' (item-indent-ratio *. (float depth)) in
+
+        % 本文の inline-box. embed-block-top で作る．
+        % 幅は index-width のぶん狭くなる
+        let item-text-width = ((get-text-width ctx-item) -' parent-indent -' index-width) in
+        let ib-parent-text =
+          embed-block-top ctx-item item-text-width (fun ctx ->
+            line-break true true (ctx |> set-paragraph-margin item-gap item-gap)
+              (read-inline ctx parent ++ inline-fil)
+          )
+        in
+
+        % index と text をあわせたものが parent の block-box になる
+        let bb-parent =
+          line-break true true (ctx-item |> set-paragraph-margin item-gap item-gap)
+            ((inline-skip parent-indent) ++ ib-index ++ ib-parent-text)
+        in
+
+        % 子の item を呼び出す
+        let bblst-children = List.mapi (
+          fun i -> general-list-item (i + 1) ctx-item idxrules (depth + 1)
+        ) children in
+
+        bb-parent +++> bblst-children
+
+  let general-list ctx idxrules (Item(_, itmzlst)) =
+    let base-font-size = get-font-size ctx in
+    let item-gap-outer = base-font-size *' item-gap-outer-ratio in
+    let bblst = List.mapi (fun i -> general-list-item (i + 1) ctx idxrules 0) itmzlst in
+      (concat-blocks bblst)
+
+  % idxrule: ctx, index (item に振る番号) をとって index の inline-boxes を返す関数．
+  let genlisting idxrule item ctx =
+    let idxrules _ = idxrule in
+    general-list ctx idxrules item
+
+  % idxrules: depth (itemize のネストの深さ), ctx, index (item に振る番号) をとって
+  %           index の inline-boxes を返す関数．
+  let genlistings idxrules item ctx =
+    general-list ctx idxrules item
+
+  let-inline ctx \listing-from-block blk =
+    let block-listing = [blk] in
+    let ib-block = embed-block-breakable ctx (block-list-to-block-boxes ctx block-listing) in
+  inline-fil ++ ib-block ++ omit-skip-after
+
+  let-inline \genlisting idxrule item =
+    {\listing-from-block(genlisting(idxrule)(item));} 
+  let-inline \genlistings idxrules item =
+    {\listing-from-block(genlistings(idxrules)(item));} 
+
+  % }}}
+
+  % text mapping command {{{
+  let num-to-roman-char capital num =
+    let unic-point = match num with
+      |  1 -> 0x0049  % `I`
+      |  5 -> 0x0056  % `V`
+      | 10 -> 0x0058  % `X`
+      |  _ -> 0x003F  % `?`
+    in
+    if capital then unic-point else unic-point + 0x20
+
+  let roman-seq num = match num with
+    |  1 -> [ 1;                 ] % i
+    |  2 -> [ 1;  1;             ] % ii
+    |  3 -> [ 1;  1;  1;         ] % iii
+    |  4 -> [ 1;  5;             ] % iv
+    |  5 -> [ 5;                 ] % v
+    |  6 -> [ 5;  1;             ] % vi
+    |  7 -> [ 5;  1;  1;         ] % vii
+    |  8 -> [ 5;  1;  1;  1;     ] % viii
+    |  9 -> [ 1; 10;             ] % ix
+    | 10 -> [10;                 ] % x
+    | 11 -> [10;  1;             ] % xi
+    | 12 -> [10;  1;  1;         ] % xii
+    | 13 -> [10;  1;  1;  1;     ] % xiii
+    | 14 -> [10;  1;  5;         ] % xiv
+    | 15 -> [10;  5;             ] % xv
+    | 16 -> [10;  5;  1;         ] % xvi
+    | 17 -> [10;  5;  1;  1;     ] % xvii
+    | 18 -> [10;  5;  1;  1;  1; ] % xviii
+    | 19 -> [10;  1; 10;         ] % xix
+    | 20 -> [10; 10;             ] % xx
+    | 21 -> [10; 10;  1;         ] % xxi
+    | 22 -> [10; 10;  1;  1;     ] % xxii
+    | 23 -> [10; 10;  1;  1;  1; ] % xxiii
+    | 24 -> [10; 10;  1;  5;     ] % xxiv
+    | 25 -> [10; 10;  5;         ] % xxv
+    |  _ -> [ 0;  0;             ] % ??
+
+  let to-arabic num = embed-string (arabic num)
+
+  let to-roman num =
+    embed-string
+      (string-unexplode
+        (List.map (fun i -> num-to-roman-char false i) (roman-seq num)))
+  let to-Roman num =
+    embed-string
+      (string-unexplode
+        (List.map (fun i -> num-to-roman-char true i) (roman-seq num)))
+
+  let to-alph num = embed-string (string-unexplode [num + 0x0060;])
+  let to-Alph num = embed-string (string-unexplode [num + 0x0040;])
+  % }}}
+
+  % index-specify command {{{
+
+  let label-width-ratio = 2.0  % ラベル幅: item-indent からラベル幅だけシフトした場所から本文が始まる
+
+  let label-raw num-format ctx idx =
+    let label-width = (get-font-size ctx) *' label-width-ratio in
+    let it-num = num-format idx in
+    let ib-label = read-inline ctx {#it-num;\ } in
+    let (wid-label, _, _) = get-natural-metrics ib-label in
+    inline-skip (label-width -' wid-label) ++ ib-label
+
+  let label-dot num-format ctx idx =
+    let label-width = (get-font-size ctx) *' label-width-ratio in
+    let it-num = num-format idx in
+    let ib-label = read-inline ctx {#it-num;.\ } in
+    let (wid-label, _, _) = get-natural-metrics ib-label in
+    inline-skip (label-width -' wid-label) ++ ib-label
+
+  let label-paren num-format ctx idx =
+    let label-width = (get-font-size ctx) *' label-width-ratio in
+    let it-num = num-format idx in
+    let ib-label = read-inline ctx {(#it-num;)\ } in
+    let (wid-label, _, _) = get-natural-metrics ib-label in
+    inline-skip (label-width -' wid-label) ++ ib-label
+
+  let label-bracket num-format ctx idx =
+    let label-width = (get-font-size ctx) *' label-width-ratio in
+    let it-num = num-format idx in
+    let ib-label = read-inline ctx {[#it-num;]\ } in
+    let (wid-label, _, _) = get-natural-metrics ib-label in
+    inline-skip (label-width -' wid-label) ++ ib-label
+
+
+  let label-bullet ctx idx =
+    let font-size = get-font-size ctx in
+    let label-width = font-size *' label-width-ratio in
+    let interval = font-size *' 0.3 in
+    let circ ctx (x, y) =
+      let cx = x +' label-width -' (font-size *' 0.3) -' interval in
+      let cy = y +' font-size *' 0.3 in
+      let r = font-size *' 0.15 in
+      Gr.circle (cx, cy) r
+    in
+    inline-graphics label-width 8pt 0pt
+      (fun (x, y) -> [fill Color.black (circ ctx (x, y))])
+
+  let label-white-bullet ctx idx =
+    let font-size = get-font-size ctx in
+    let label-width = font-size *' label-width-ratio in
+    let interval = font-size *' 0.3 in
+    let circ ctx (x, y) =
+      let cx = x +' label-width -' (font-size *' 0.3) -' interval in
+      let cy = y +' font-size *' 0.3 in
+      let r = font-size *' 0.12 in
+      Gr.circle (cx, cy) r
+    in
+    inline-graphics label-width 8pt 0pt
+      (fun (x, y) -> [stroke 1pt Color.black (circ ctx (x, y))])
+
+  % }}}
+
+end
+
+let label-arabic-raw = Enumitem.label-raw Enumitem.to-arabic
+let  label-roman-raw = Enumitem.label-raw Enumitem.to-roman
+let  label-Roman-raw = Enumitem.label-raw Enumitem.to-Roman
+let   label-alph-raw = Enumitem.label-raw Enumitem.to-alph
+let   label-Alph-raw = Enumitem.label-raw Enumitem.to-Alph
+
+let label-arabic-dot = Enumitem.label-dot Enumitem.to-arabic
+let  label-roman-dot = Enumitem.label-dot Enumitem.to-roman
+let  label-Roman-dot = Enumitem.label-dot Enumitem.to-Roman
+let   label-alph-dot = Enumitem.label-dot Enumitem.to-alph
+let   label-Alph-dot = Enumitem.label-dot Enumitem.to-Alph
+
+let label-arabic-paren = Enumitem.label-paren Enumitem.to-arabic
+let  label-roman-paren = Enumitem.label-paren Enumitem.to-roman
+let  label-Roman-paren = Enumitem.label-paren Enumitem.to-Roman
+let   label-alph-paren = Enumitem.label-paren Enumitem.to-alph
+let   label-Alph-paren = Enumitem.label-paren Enumitem.to-Alph
+
+let label-arabic-bracket = Enumitem.label-bracket Enumitem.to-arabic
+let  label-roman-bracket = Enumitem.label-bracket Enumitem.to-roman
+let  label-Roman-bracket = Enumitem.label-bracket Enumitem.to-Roman
+let   label-alph-bracket = Enumitem.label-bracket Enumitem.to-alph
+let   label-Alph-bracket = Enumitem.label-bracket Enumitem.to-Alph
+
+let label-bullet = Enumitem.label-bullet
+let label-white-bullet = Enumitem.label-white-bullet
+
+let genlisting = Enumitem.genlisting
+let genlistings = Enumitem.genlistings
+
+let listing = genlisting(label-bullet)
+
+let enum-rule depth =
+  match depth with
+  | 0 -> label-arabic-dot
+  | 1 -> label-roman-dot
+  | 2 -> label-alph-paren
+  | _ -> label-arabic-raw
+
+let enumerate = genlistings(enum-rule)
+
+let-inline \listing item = {\listing-from-block(listing(item));}
+let-inline \enumerate item = {\listing-from-block(enumerate(item));}
