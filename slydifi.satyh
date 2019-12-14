@@ -20,7 +20,7 @@ type imginfo =
   | Shift of length * length * imginfo  % (x-shift , y-shift) * imginfo
   | Phantom of imginfo
 
-let-inline ctx \SLyDiFi =
+let-inline ctx \SLyDIFi =
   let size = get-font-size ctx in
   let f = read-inline ctx in
   let fd = ctx |> set-manual-rising (0pt -' (size *' 0.25)) |> read-inline in
