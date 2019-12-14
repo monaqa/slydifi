@@ -2,7 +2,7 @@
 % vim:foldmethod=marker:
 @require: gr
 @require: color
-@require: satysfi-lib/block
+@require: satysfi-base/block
 
 type block = context -> block-boxes
 

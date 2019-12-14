@@ -3,6 +3,7 @@
 @require: color
 @require: gr
 @require: vdecoset
+@require: satysfi-base/block
 
 type block = context -> block-boxes
 type cel = int -> block

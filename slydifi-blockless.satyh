@@ -7,7 +7,7 @@
 @import: slydifi-footnote-scheme
 @import: slydifi-enumitem-blockless
 @import: slydifi-code-blockless
-@require: satysfi-lib/block
+@require: satysfi-base/block
 
 type block = context -> block-boxes
 type cel = int -> block
