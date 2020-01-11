@@ -1,0 +1,292 @@
+% vim: foldmethod=marker
+@require: gr
+@require: math
+@require: list
+@require: annot
+@import: functions/color
+% @import: functions/enumitem
+% @import: functions/footnote
+
+% TODO: 本当は Shift や Phantom は関数化したほうがいい．
+% image-shift: length -> length -> imginfo -> imginfo
+% のような関数を作れば JPEG(100pt, `hoge.jpg`) |> image-shift 10pt 0pt
+% のように imginfo を生成できて便利．
+% しかし現状，context の扱いが難しく実装困難．
+type imginfo =
+  | JPEG of length * string               % width * filepath
+  | PDF of length * string * int          % width * filepath * page-number
+  | Block of length * block-text          % width * text
+  | DummyBox of length * length           % width * height
+  | Shift of length * length * imginfo  % (x-shift , y-shift) * imginfo
+  | Phantom of imginfo
+
+let image-shift xshift yshift imginfo = Shift(xshift, yshift, imginfo)
+let image-phantom imginfo = Phantom(imginfo)
+
+type config-paper = (|
+  width  : length;
+  height : length;
+|)
+
+type config-font = (|
+  size: length;
+  font-latin: string * float * float;
+  font-cjk: string * float * float;
+|)
+
+type page-info = (|
+  page-number: int;
+|)
+
+type hfr = page-info -> block-boxes
+
+let-inline ctx \SLyDiFi =
+  let size = get-font-size ctx in
+  let f = read-inline ctx in
+  let fd = ctx |> set-manual-rising (0pt -' (size *' 0.25)) |> read-inline in
+  let fI = ctx |> set-font-size (size *' 0.72)
+               |> set-manual-rising (size *' 0.2)
+               |> read-inline
+  in
+  let ib = 
+    f {SL} ++ kern(size *' 0.05) ++ fd{Y} ++ kern(size *' 0.03) ++ f{DIF}
+      ++ kern(size *' 0.05) ++ fd{I}
+  in
+  script-guard Latin (no-break ib)
+
+let-mutable draft-mode <- false
+
+module SlydifiScheme: sig
+
+  val set-font-config : config-font -> context -> context
+
+  val get-standard-context : 'config-text -> 'config-color -> length -> context
+    constraint 'config-text :: (|normal: config-font;|)
+    constraint 'config-color :: (|fg: color;|)
+
+  val clear-page-or-nil : bool ref -> block-boxes
+
+  val document-scheme :
+    config-paper -> 'config-text -> 'config-color -> 'config-spacing
+    -> hfr -> hfr -> 'record -> block-text -> document
+    constraint 'config-text :: (| normal: config-font; |)
+    constraint 'config-color :: (|fg: color;|)
+    constraint 'config-spacing :: (|
+      text-width: length;
+      text-height: length;
+      text-horizontal-margin: length;
+      text-vertical-margin: length;
+      footer-height: length;
+      bg-gr-start-point: length;
+    |)
+    constraint 'record :: (|draft-mode: bool;|)
+
+  % val align-block-middle : context -> length -> block-boxes -> block-boxes
+
+  val frame-scheme :
+    config-paper  -> 'config-color -> 'config-spacing
+    -> bool ref -> graphics list -> context -> block-boxes -> block-boxes
+    constraint 'config-color :: (|bg: color;|)
+    constraint 'config-spacing :: (|
+      text-vertical-margin: length;
+      bg-gr-start-point: length;
+      text-width: length;
+    |)
+
+  % val draw-dummy-box: length -> length -> (length * length) -> graphics list
+  % val insert-image: context -> imginfo -> inline-boxes
+  % val centered-image: context -> imginfo -> block-boxes
+  % val fig-abs-pos: context -> (length * length) -> imginfo -> inline-boxes
+  val fig-right: length -> length -> context -> imginfo -> inline-boxes
+  direct +centered-image : [imginfo] block-cmd
+  direct \insert-image : [imginfo] inline-cmd
+  direct \fig-abs-pos : [(length * length); imginfo] inline-cmd
+  direct +fig-abs-pos : [(length * length); imginfo] block-cmd
+
+  direct +p : [inline-text] block-cmd
+  direct \br: [] inline-cmd
+  direct \text-color: [color; inline-text] inline-cmd
+
+  val ic-link: 'a -> 'b -> context -> inline-text option -> string -> inline-boxes
+    constraint 'a :: (| link: color; |)
+    constraint 'b :: (|mono: config-font;|)
+
+end = struct
+
+  let set-font-config cfg-font ctx =
+    ctx |> set-font-size           cfg-font#size
+        |> set-font Latin          cfg-font#font-latin
+        |> set-font Kana           cfg-font#font-cjk
+        |> set-font HanIdeographic cfg-font#font-cjk
+
+  let get-standard-context cfg-text cfg-color wid =
+    get-initial-context wid (command \math)
+      |> set-dominant-wide-script Kana
+      |> set-language Kana Japanese
+      |> set-language HanIdeographic Japanese
+      |> set-dominant-narrow-script Latin
+      |> set-language Latin English
+      |> set-font-config cfg-text#normal
+      |> set-math-font `lmodern`
+      |> set-hyphen-penalty 100
+      |> set-leading (cfg-text#normal#size *' 1.4)
+      |> set-paragraph-margin (cfg-text#normal#size *' 0.6) (cfg-text#normal#size *' 0.6)
+      |> set-text-color cfg-color#fg
+
+  let-block ctx +p it =
+    line-break true true ctx
+      (read-inline ctx it ++ inline-fil)
+
+
+  let clear-page-or-nil is-first-page =
+    match !is-first-page with
+    | true ->
+        let () = display-message `hoge` in
+        let () = is-first-page <- false in
+        block-nil
+    | false ->
+        let () = display-message `fuga` in
+        clear-page
+
+  % document-scheme {{{
+
+  let document-scheme cfg-paper cfg-text cfg-color cfg-spacing header footer record inner =
+
+    let () = draft-mode <- record#draft-mode in
+
+    let page = UserDefinedPaper  (cfg-paper#width, cfg-paper#height) in
+
+    let ctx-doc wid = (get-standard-context cfg-text cfg-color wid) in
+
+    let bb-main = read-block (ctx-doc cfg-spacing#text-width) inner in
+
+    let pagecontf _ =
+      let () = FootnoteScheme.start-page () in
+      (|
+        text-origin = (cfg-spacing#text-horizontal-margin, cfg-spacing#bg-gr-start-point);
+        text-height = cfg-spacing#text-height;
+      |)
+    in
+
+    let pagepartsf pbinfo =
+      (|
+      header-origin  = (0pt, 3pt);
+      header-content = header pbinfo;
+      footer-origin  = (0pt, cfg-paper#height -' cfg-spacing#footer-height);
+      footer-content = footer pbinfo;
+      |)
+    in
+
+    let hook = line-break false false (get-standard-context cfg-text cfg-color 0pt)
+        (hook-page-break (fun pbInfo _ -> (
+            let numpages = pbInfo#page-number in
+            register-cross-reference `pagecount` (arabic numpages)
+        )))
+    in
+
+    page-break page pagecontf pagepartsf (bb-main +++ hook)
+
+  % }}}
+
+  % frame-scheme {{{
+  let frame-scheme cfg-paper cfg-color cfg-spacing is-first-page bg-graphics ctx bb-inner =
+    let rect-bg =
+      fill cfg-color#bg (Gr.rectangle (0pt, 0pt) (cfg-paper#width, cfg-paper#height))
+    in
+    let spacing-bg-gr = cfg-spacing#text-vertical-margin -' cfg-spacing#bg-gr-start-point in
+    let ctx-bg-gr = ctx |> set-paragraph-margin 0pt spacing-bg-gr in
+    let box-inner =
+      let ib-inner = embed-block-top ctx cfg-spacing#text-width (fun _ -> bb-inner) in
+      line-break false false ctx ib-inner
+    in
+    (clear-page-or-nil is-first-page) +++
+      (line-break true false ctx-bg-gr
+        (inline-graphics 0pt 0pt 0pt (fun _ -> rect-bg :: bg-graphics))) +++
+          box-inner
+
+  % let align-block-middle ctx ht bb-inner =
+  %   let placeholder-length = length-max 0pt (ht -' (get-natural-length bb-inner)) *' 0.5 in
+  %   let ctx2 = ctx |> set-paragraph-margin 0pt 0pt in
+  %   (line-break false false ctx2
+  %     (inline-graphics 0pt placeholder-length 0pt (fun _ -> []) ++ inline-fil)
+  %   ) +++ bb-inner
+
+
+  % }}}
+
+  let-inline ctx \br = discretionary (- 1000) inline-nil inline-fil inline-nil
+
+  let-inline ctx \text-color clr it =
+    let ctx2 = ctx |> set-text-color clr in
+    (read-inline ctx2 it)
+
+  let ic-link cfg-color cfg-text ctx it url =
+    let ctx2 = ctx |> set-text-color cfg-color#link in
+    let ctx-link = match it with
+      | None    -> ctx2 |> set-font-config cfg-text#mono
+      | Some(v) -> ctx2
+    in
+    let text = match it with
+      | None    -> (embed-string url)
+      | Some(v) -> v
+    in
+    read-inline ctx-link {\href(url){#text;}}
+
+  % graphics {{{
+
+  let draw-dummy-box wid ht (x, y) =
+    let rect-path = Gr.rectangle (x, y) (x +' wid, y +' ht) in
+    [(stroke 1pt SlydifiColor.black rect-path)]
+
+  let-rec insert-image ctx img-info =
+    match img-info with
+    | JPEG(wid, srcpath) ->
+        let img = load-image srcpath in
+        use-image-by-width img wid
+    | PDF(wid, srcpath, num) ->
+        let img = load-pdf-image srcpath num in
+        use-image-by-width img wid
+    | Block(wid, bt) ->
+        let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
+        ib
+    | DummyBox(wid, ht) ->
+        inline-graphics wid ht 0pt (draw-dummy-box wid ht)
+    | Shift(xs, ys, inner-img-info) ->
+        let ib = insert-image ctx inner-img-info in
+        let (wid-ib, ht-ib, dp-ib) = get-natural-metrics ib in
+        inline-graphics wid-ib ht-ib dp-ib
+          (fun (x, y) -> [draw-text (x +' xs, y +' ys) ib])
+    | Phantom(inner-img-info) ->
+        let ib = insert-image ctx inner-img-info in
+        let (wid-ib, ht-ib, dp-ib) = get-natural-metrics ib in
+        inline-graphics wid-ib ht-ib 0pt (draw-dummy-box wid-ib ht-ib)
+
+  let-inline ctx \insert-image = insert-image ctx
+
+  let-block ctx +centered-image img-info = 
+    line-break true true ctx (inline-fil ++ (insert-image ctx img-info) ++ inline-fil)
+
+  let fig-abs-pos ctx pt img-info =
+    % DummyBox が inline-graphics を無用に2回使ってしまう
+    let ib = insert-image ctx img-info in
+    inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
+
+  let-inline ctx \fig-abs-pos = fig-abs-pos ctx
+
+  let-block ctx +fig-abs-pos pt img-info =
+    let it-gr = fig-abs-pos ctx pt img-info in
+    line-break true true ctx (it-gr ++ inline-fil)
+
+  let fig-right paper-width text-horizontal-margin ctx img-info =
+    let ib = insert-image ctx img-info in
+    let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
+    inline-graphics 0pt 0pt 0pt (fun (x, y) ->
+      [
+        draw-text
+          (paper-width -' text-horizontal-margin -' ib-w,
+          y +' (ctx |> get-font-size) -' ib-h) ib
+      ])
+
+  % }}}
+
+end

@@ -20,7 +20,7 @@ type imginfo =
   | Shift of length * length * imginfo  % (x-shift , y-shift) * imginfo
   | Phantom of imginfo
 
-let-inline ctx \SLyDIFi =
+let-inline ctx \SLyDiFi =
   let size = get-font-size ctx in
   let f = read-inline ctx in
   let fd = ctx |> set-manual-rising (0pt -' (size *' 0.25)) |> read-inline in
@@ -88,12 +88,12 @@ module Slydifi : sig
 end = struct
 
   % 文書設定 {{{1
-  let font-size-normal  = 20pt
+  let font-size-normal  = 18pt
   let font-size-frame-title = 28pt
   let font-size-header-footer = 12pt
-  let font-size-title   = 32pt
-  let font-size-author  = 20pt
-  let font-size-date  = 18pt
+  let font-size-title   = 36pt
+  let font-size-author  = 24pt
+  let font-size-date  = 24pt
   let font-size-institute  = 20pt
   let font-size-section = 28pt
   let font-size-footnote = 12pt
@@ -137,10 +137,10 @@ end = struct
 
   % colors
 
-  let color-title = SlydifiColor.html-color 0x076678
-  let color-bg = SlydifiColor.html-color 0xF9F5D7
-  let color-fg = SlydifiColor.html-color 0x282828
-  let color-emph = SlydifiColor.html-color 0xCC241D
+  let color-title = SlydifiColor.html-color 0x555555
+  let color-bg = SlydifiColor.html-color 0xFFFFFF
+  let color-fg = SlydifiColor.html-color 0x000000
+  let color-emph = SlydifiColor.html-color 0xFF0027
   let color-link = SlydifiColor.html-color 0x8F3F71
   let color-footer = SlydifiColor.inner-color color-bg color-fg 0.5
 
@@ -197,13 +197,13 @@ end = struct
     let () = fonts-mono-text-latin   <- record#fonts#mono-text-latin in
     let () = draft-mode              <- record#draft-mode in
 
-    let ctx-doc = (get-standard-context text-width)
+    let ctx-doc wid = (get-standard-context wid)
       |> set-font Kana (record#fonts#normal-text-cjk, !fonts-font-ratio-cjk, 0.)
       |> set-font HanIdeographic (record#fonts#normal-text-cjk, !fonts-font-ratio-cjk, 0.)
       |> set-font Latin (record#fonts#normal-text-latin, font-ratio-latin, 0.)
     in
 
-    let bb-main = read-block ctx-doc inner in
+    let bb-main = read-block (ctx-doc text-width) inner in
 
     let pagecontf _ =
       let () = FootnoteScheme.start-page () in
@@ -214,8 +214,27 @@ end = struct
     in
 
     let pagepartsf pbinfo =
+      let header =
+        let ctx = ctx-doc paper-width
+          |> set-font Latin (record#fonts#normal-text-latin, font-ratio-latin, 0.)
+          |> set-font-size font-size-header-footer
+          |> set-text-color color-emph
+        in
+        let ib-top = read-inline ctx {社外秘} in
+        let (wid-top, ht-top, dp-top) = get-natural-metrics ib-top in
+        let margin = 3pt in
+        let ib = inline-graphics (wid-top +' margin *' 2.0) (ht-top +' margin *' 2.0) (dp-top +' margin *' 2.0) (fun (x, y) -> [
+          (fill Color.white (
+            Gr.rectangle (x -' margin, y -' margin)
+              (x +' wid-top +' margin, y +' ht-top +' margin)));
+          (draw-text (x, y) ib-top)  % x, y に関わらず point の絶対座標で決める
+        ])
+        in
+        line-break true true ctx (inline-fil ++ ib ++ (inline-skip 3pt))
+      in
+
       let footer =
-        let ctx = get-standard-context paper-width
+        let ctx = ctx-doc paper-width
           |> set-font Latin (record#fonts#normal-text-latin, font-ratio-latin, 0.)
           |> set-font-size font-size-header-footer
           |> set-text-color color-footer
@@ -227,9 +246,10 @@ end = struct
         in
         line-break true true ctx (inline-fil ++ (read-inline ctx {#it-pageno;/#it-count;}) ++ inline-skip 20pt)
       in
+
       (|
-      header-origin  = (0pt, 0pt);
-      header-content = block-nil;
+      header-origin  = (0pt, 3pt);
+      header-content = header;
       footer-origin  = (0pt, paper-height -' footer-height);
       footer-content = footer;
       |)
@@ -296,14 +316,16 @@ end = struct
   % +make-title{} command {{{
 
   % title config
-  let title-xmin = relwid 0.18
-  let title-xmax = title-xmin +' 8pt
-  let title-ymin = relht 0.42
-  let title-ymax = title-ymin +' 8pt
-  let title-width = text-width *' 0.8
-  let author-width = text-width *' 0.8
+  % 消す予定
+  let title-xmax = relwid 0.1
+  let title-ymax = relht 0.45
+
+  let title-xmin = relwid 0.1
+  let title-ymin = relht 0.45
+  let title-width = relwid 0.8
+  let author-width = relwid 0.8
   let date-ymin = relht 0.2
-  let title-mgn = 16pt
+  let title-mgn = 24pt
 
   let put-text point align ib =
     let (w, h, d) = get-natural-metrics ib in
@@ -321,19 +343,19 @@ end = struct
     let ctx-title = ctx |> set-font-size font-size-title
                         |> set-font Latin (!fonts-frame-title-latin, 1.0, 0.)
                         |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
-                        |> set-text-color color-title
+                        |> set-text-color color-bg
     in
-    let l = get-font-size ctx-title *' 0.25 in
+    let l = get-font-size ctx-title *' 0.65 in
     let bbs-title ctx =
       its-title |> List.map (fun it ->
         line-break true true (ctx |> set-paragraph-margin l l)
-          (read-inline ctx it ++ inline-fil))
+          (inline-fil ++ (read-inline ctx it) ++ inline-fil))
     in
     let ib-title = embed-block-top ctx-title title-width
       (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
     in
     let draw-title =
-      [(put-text (title-xmax +' title-mgn, title-ymax +' title-mgn)
+      [(put-text (title-xmin, title-ymin +' title-mgn)
         (0., 0.) ib-title);]
     in
     let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-title) in
@@ -346,17 +368,17 @@ end = struct
                         |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
                         |> set-text-color color-title
     in
-    let l = get-font-size ctx-author *' 0.25 in
+    let l = get-font-size ctx-author *' 0.65 in
     let bbs-author ctx =
       its-author |> List.map (fun it ->
         line-break true true (ctx |> set-paragraph-margin l l)
-          (read-inline ctx it ++ inline-fil))
+          (inline-fil ++ (read-inline ctx it) ++ inline-fil))
     in
     let ib-author = embed-block-top ctx-author author-width
       (fun ctx -> (bbs-author ctx |> List.fold-left (+++) block-nil))
     in
     let draw-author =
-      [(put-text (title-xmax +' title-mgn, title-ymin -' title-mgn)
+      [(put-text (title-xmin, title-ymin -' title-mgn)
         (0., 1.) ib-author);]
     in
     let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-author) in
@@ -373,30 +395,24 @@ end = struct
     let bbs-date ctx =
       its-date |> List.map (fun it ->
         line-break true true (ctx |> set-paragraph-margin l l)
-          (read-inline ctx it ++ inline-fil))
+          (inline-fil ++ (read-inline ctx it) ++ inline-fil))
     in
     let ib-date = embed-block-top ctx-date author-width
       (fun ctx -> (bbs-date ctx |> List.fold-left (+++) block-nil))
     in
     let draw-date =
-      [(put-text (title-xmax +' title-mgn, date-ymin -' title-mgn)
+      [(put-text (title-xmin, date-ymin -' title-mgn)
         (0., 1.) ib-date);]
     in
     let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-date) in
     (line-break true false ctx (ib ++ inline-fil))
 
   let-block ctx +make-title bt-inner =
-    let north-rect = Gr.rectangle (title-xmin, title-ymax) (title-xmax, relht 1.00) in
-    let south-rect = Gr.rectangle (title-xmin, title-ymin) (title-xmax, relht 0.00) in
-    let east-rect  = Gr.rectangle (title-xmax, title-ymin) (relwid 1.00, title-ymax) in
-    let west-rect  = Gr.rectangle (title-xmin, title-ymin) (relwid 0.00, title-ymax) in
+    let whole-rect = Gr.rectangle (relwid 0.0, title-ymin) (relwid 1.0, relht 1.00) in
 
     let draw-titleframe =
       [
-        (fill color-title north-rect);
-        (fill color-title south-rect);
-        (fill color-title east-rect);
-        (fill color-title west-rect);
+        (fill color-title whole-rect);
       ]
     in
     let ib =
@@ -426,6 +442,17 @@ end = struct
     line-break true false ctx2 (inline-graphics 0pt ht 0pt (placeholder ht) ++ inline-fil)
 
   let-block ctx +frame title inner =
+    let ib-top-graphic =
+      let ctx-top = ctx |> set-font-size font-size-header-footer in
+      let ib-top = read-inline ctx-top {社外秘} in
+      let (wid-top, ht-top, dp-top) = get-natural-metrics ib-top in
+      let pt-right = paper-width -' 10pt in
+      let pt-top = paper-height -' 10pt in
+      inline-graphics 0pt 0pt 0pt (fun _ -> [
+      (fill Color.white (Gr.rectangle (pt-right -' wid-top, pt-top -' ht-top) (pt-right,pt-top)));
+      (put-text (pt-right, pt-top) (1., 1.) ib-top);
+    ])
+    in
     let ctx-title = make-frame-title ctx in
     let title-padding = 12pt in
     let deco (x, y) wid hgt dpt =
@@ -441,7 +468,7 @@ end = struct
       ]
     in
     let bb-title =
-      let ib-title = read-inline ctx-title title in
+      let ib-title = ib-top-graphic ++ (read-inline ctx-title title) in
       block-frame-breakable
         (ctx |> set-paragraph-margin 0pt 0pt)
           (title-padding -' text-horizontal-margin, title-padding,
@@ -480,7 +507,7 @@ end = struct
                         |> set-cjk-font (!fonts-frame-title-cjk, !fonts-font-ratio-cjk, 0.)
                         |> set-text-color color-title
     in
-    let l = get-font-size ctx-title *' 0.25 in
+    let l = get-font-size ctx-title *' 0.5 in
     let bbs-title ctx =
       its-title |> List.map (fun it ->
         line-break true true (ctx |> set-paragraph-margin l l)
