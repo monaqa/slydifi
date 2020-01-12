@@ -8,13 +8,13 @@
 @require: slydifi/functions/enumitem
 @require: slydifi/functions/footnote
 
-% SLyDiFi with Hakodate theme.
+% SLyDIFi with Hakodate theme.
 module SlydifiHakodate : sig
   % Signature {{{
 
   val document: 'a -> block-text -> document
     constraint 'a :: (|
-      % SLyDiFi の必須パラメータ
+      % SLyDIFi の必須パラメータ
       draft-mode: bool;
     |)
 
@@ -83,7 +83,7 @@ end = struct
 
   % with 文を用いて，様々な文脈のフォント（書体，サイズ）を設定する
   let cfg-text = (|
-    % SLyDiFi の必須パラメータ
+    % SLyDIFi の必須パラメータ
     normal = cfg-font-normal;
     mono = (|
       size = 20pt;
@@ -112,7 +112,7 @@ end = struct
 
   % 様々な色を設定
   let cfg-color = (|
-    % SLyDiFi の必須パラメータ
+    % SLyDIFi の必須パラメータ
     bg        = color-bg;
     fg        = color-fg;
     main-grid = SlydifiColor.inner-color color-bg color-fg 0.7;
@@ -127,7 +127,7 @@ end = struct
 
   % cfg-spacing: スペーシングやなにかの長さに関する設定を引き渡す際に用いるレコード
   let cfg-spacing = (|
-    % SLyDiFi 必須パラメータ
+    % SLyDIFi 必須パラメータ
     text-width  = cfg-paper#width -' 30pt *' 2.;
     text-height = cfg-paper#height -' 15pt *' 2.;
     text-horizontal-margin = 30pt;

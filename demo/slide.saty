@@ -11,20 +11,20 @@ SlydifiPlain.document(|
 |)'<
 
   +make-title(|
-    title = {|\SLyDiFi; でらくらくスライド作成|};
+    title = {|\SLyDIFi; でらくらくスライド作成|};
     author = {|monaqa|GitHub: \link(`https://github.com/monaqa`);|};
     date = {|2020年1月12日|};
   |);
 
   +section{|はじめに|}<
-    +frame{\SLyDiFi;: \SATySFi; のスライド作成用パッケージ}<
+    +frame{\SLyDIFi;: \SATySFi; のスライド作成用パッケージ}<
       +listing{
         * \emph{\SATySFi;} (\link(`https://github.com/gfngfn/SATySFi`);)
           ** 静的型付き関数型言語ベースの新たな組版処理システム
           ** 普通の文書作成時にはそこまで関数型言語を意識しなくてよい
           ** パッケージの記述に用いる構文は OCaml 風
 
-        * \emph{\SLyDiFi;} (\link(`https://github.com/monaqa/slydifi`);)
+        * \emph{\SLyDIFi;} (\link(`https://github.com/monaqa/slydifi`);)
           ** \SATySFi; でスライドを作成することができる
           ** 実は既に先駆者がいる（\link?:({Steamer: Slide Presentation in SATySFi})(`https://github.com/konn/satysfi-steamer`);）
             *** Steamer とは page break 周りの実装を少しばかり変えている
@@ -33,11 +33,11 @@ SlydifiPlain.document(|
     >
   >
 
-  +section{|\SLyDiFi; の機能|}<
+  +section{|\SLyDIFi; の機能|}<
     +frame{フレーム作成}<
       +listing{
         * フレーム：スライド資料の1ページ1ページに値するもの
-        * \SLyDiFi; では3種類のフレームを区別する
+        * \SLyDIFi; では3種類のフレームを区別する
           ** 見出し：スライド全体の題目，発表者名などを載せるフレーム
           ** セクション見出し：セクションのタイトルを載せる
           ** 本文：通常のフレーム
@@ -65,7 +65,7 @@ SlydifiPlain.document(|
     >
   >
 
-  +section{|\SLyDiFi; のテーマのカスタマイズ|}<
+  +section{|\SLyDIFi; のテーマのカスタマイズ|}<
   >
 
 >
