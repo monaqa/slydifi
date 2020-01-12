@@ -4,11 +4,10 @@
 @require: code
 @require: annot
 @require: list
-@import: ../src/slydifitheme/akasaka
+@import: ../slydifi/theme/hakodate
 
-SlydifiAkasaka.document(|
+SlydifiHakodate.document(|
   draft-mode = false;
-  header-text = {ここに注意書きを入れられる};
 |)'<
 
   +make-title(|
