@@ -93,6 +93,7 @@ end = struct
       leading-ratio = 1.4;
     |);
     % Hakodate 独自パラメータ
+    emph = cfg-font-emph;
     frame-title = (| cfg-font-emph with size = 28pt; |);
     header = (| cfg-font-normal with size = 12pt; |);
     footer = (| cfg-font-normal with size = 12pt; |);
@@ -139,7 +140,7 @@ end = struct
     % Hakodate の独自パラメータ
     title-padding-lr = 12pt;  % タイトルの左右のパディング（紙面基準）
     title-padding-upper-line = 5pt;  % タイトルの下線とタイトル文字の間隔
-    title-padding-lower-line = 0pt;  % タイトルの下線と本文の間隔
+    title-padding-lower-line = 20pt;  % タイトルの下線と本文の間隔
     title-line-width = 3pt;  % タイトルの下線とタイトル文字の間隔
   |)
 
@@ -367,12 +368,12 @@ end = struct
 
   let-inline ctx \emph it =
     let ctx2 = ctx |> set-text-color cfg-color#emph
-                   |> SlydifiScheme.set-font-config cfg-text#normal
+                   |> SlydifiScheme.set-font-config cfg-text#emph
     in
     (read-inline ctx2 it)
 
   let-inline ctx \textbf it =
-    let ctx2 = ctx |> SlydifiScheme.set-font-config cfg-text#normal in
+    let ctx2 = ctx |> SlydifiScheme.set-font-config cfg-text#emph in
     (read-inline ctx2 it)
 
   let-inline ctx \link ?:it url =

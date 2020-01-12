@@ -95,6 +95,7 @@ end = struct
       leading-ratio = 1.4;
     |);
     % Akasaka 独自パラメータ
+    emph = cfg-font-emph;
     frame-title = (| cfg-font-emph with size = 28pt; |);
     header = (| cfg-font-normal with size = 12pt; |);
     footer = (| cfg-font-normal with size = 12pt; |);
@@ -371,12 +372,12 @@ end = struct
 
   let-inline ctx \emph it =
     let ctx2 = ctx |> set-text-color cfg-color#emph
-                   |> SlydifiScheme.set-font-config cfg-text#normal
+                   |> SlydifiScheme.set-font-config cfg-text#emph
     in
     (read-inline ctx2 it)
 
   let-inline ctx \textbf it =
-    let ctx2 = ctx |> SlydifiScheme.set-font-config cfg-text#normal in
+    let ctx2 = ctx |> SlydifiScheme.set-font-config cfg-text#emph in
     (read-inline ctx2 it)
 
   let-inline ctx \link ?:it url =

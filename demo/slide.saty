@@ -11,30 +11,61 @@ SlydifiHakodate.document(|
 |)'<
 
   +make-title(|
-    title = {|\SLyDiFi; を用いて|らくらくスライド作成|};
+    title = {|\SLyDiFi; でらくらくスライド作成|};
     author = {|monaqa|GitHub: \link(`https://github.com/monaqa`);|};
     date = {|2020年1月12日|};
   |);
 
-  +frame{\SLyDiFi; とは}<
-    +listing{
-      * スライドを作成するためのクラスファイル
-    }
-  >
+  +section{|はじめに|}<
+    +frame{\SLyDiFi;: \SATySFi; のスライド作成用パッケージ}<
+      +listing{
+        * \emph{\SATySFi;} (\link(`https://github.com/gfngfn/SATySFi`);)
+          ** 静的型付き関数型言語ベースの新たな組版処理システム
+          ** 普通の文書作成時にはそこまで関数型言語を意識しなくてよい
+          ** パッケージの記述に用いる構文は OCaml 風
 
-  +section{|セクション|}<
-    +frame{あああ}<
-      +p{
-        \text-color(SlydifiColor.orange){こんな}感じ．\br;
-        改行も可能．
+        * \emph{\SLyDiFi;} (\link(`https://github.com/monaqa/slydifi`);)
+          ** \SATySFi; でスライドを作成することができる
+          ** 実は既に先駆者がいる（\link?:({Steamer: Slide Presentation in SATySFi})(`https://github.com/konn/satysfi-steamer`);）
+            *** Steamer とは page break 周りの実装を少しばかり変えている
       }
-      +p{ ほげほげ }
-      +p{ ほげほげ }
+
     >
   >
 
-  +frame-nt<
-    +p{綺麗にできてるかな？}
+  +section{|\SLyDiFi; の機能|}<
+    +frame{フレーム作成}<
+      +listing{
+        * フレーム：スライド資料の1ページ1ページに値するもの
+        * \SLyDiFi; では3種類のフレームを区別する
+          ** 見出し：スライド全体の題目，発表者名などを載せるフレーム
+          ** セクション見出し：セクションのタイトルを載せる
+          ** 本文：通常のフレーム
+      }
+      +centered-image(DummyBox(660pt, 160pt));
+    >
+
+    +frame{テキストの記述}<
+      +p{以下のようなコマンドを用いてテキストを記述できる．}
+      +listing{
+        * \code(`+p{}`);: 段落
+        * \code(`+listing{}`);: 番号のない箇条書き
+        * \code(`+enumerate{}`);: 番号付きの箇条書き
+      }
+      +p{さらに，インラインテキストの中では以下のマークアップが使える．}
+      +listing{
+        * \code(`\emph{}`);: \emph{強調}
+        * \code(`\textbf{}`);: \textbf{太字}
+        * \code(`\text-color(){}`);: \text-color(SlydifiColor.html-color 0x42883B){文字色変更}
+        * \code(``\link?:({Hyper Link})(`url`)``);: \link?:({ハイパーリンク})(`https://github.com/gfngfn/SATySFi`);
+      }
+    >
+
+    +frame{図表の貼り付け}<
+    >
+  >
+
+  +section{|\SLyDiFi; のテーマのカスタマイズ|}<
   >
 
 >
