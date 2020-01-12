@@ -11,11 +11,11 @@ SlydifiAkasaka.document(|
   header-text = {ここに注意書きを入れられる};
 |)'<
 
-  +make-title<
-    +title{|テスト|}
-    +author{|monaqa|}
-    +date{|2020年1月12日|}
-  >
+  +make-title(|
+    title = {|\SLyDiFi; を用いて|らくらくスライド作成|};
+    author = {|monaqa|GitHub: \link(`https://github.com/monaqa`);|};
+    date = {|2020年1月12日|};
+  |);
 
   +frame{\SLyDiFi; とは}<
     +listing{

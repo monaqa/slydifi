@@ -24,10 +24,12 @@ module SlydifiAkasaka : sig
   direct \textbf : [inline-text] inline-cmd
   direct \link : [inline-text?; string] inline-cmd
   direct +listing : [itemize] block-cmd
-  direct +make-title : [block-text] block-cmd
-  direct +title: [inline-text list] block-cmd
-  direct +author: [inline-text list] block-cmd
-  direct +date: [inline-text list] block-cmd
+  direct +make-title : ['a] block-cmd
+    constraint 'a :: (|
+      title: inline-text list;
+      author: inline-text list;
+      date: inline-text list;
+    |)
   direct \fig-right : [imginfo] inline-cmd
   direct \footnote : [inline-text] inline-cmd
   direct \footnotetext : [string; inline-text] inline-cmd
@@ -52,11 +54,15 @@ end = struct
     size = 18pt;
     font-latin = (`NotoSans-R`     , 1.0, 0.0);
     font-cjk   = (`NotoSansCJKjp-R`, 1.0, 0.0);
+    par-margin-ratio = (0.6, 0.6);
+    leading-ratio = 1.4;
   |)
   let cfg-text-emph = (|
     size = 18pt;
     font-latin = (`NotoSans-B`     , 1.0, 0.0);
     font-cjk   = (`NotoSansCJKjp-B`, 1.0, 0.0);
+    par-margin-ratio = (0.6, 0.6);
+    leading-ratio = 1.4;
   |)
   let cfg-text = (|
     normal = cfg-text-normal;
@@ -65,15 +71,31 @@ end = struct
     footer = (| cfg-text-normal with size = 12pt; |);
     slide-title = (| cfg-text-emph with size = 36pt; |);
     slide-author = (| cfg-text-emph with size = 24pt; |);
-    slide-date = (| cfg-text-emph with size = 24pt; |);
+    slide-date = (| cfg-text-emph with size = 20pt; |);
     slide-institute = (| cfg-text-normal with size = 20pt; |);
     section-title = (| cfg-text-emph with size = 28pt; |);
     footnote = (| cfg-text-normal with size = 12pt; |);
     mono = (|
       size = 18pt;
-      font-latin = (`HackNerd-R`, 1.0, 0.0);
-      font-cjk   = (`HackNerd-R`, 1.0, 0.0);
+      font-latin = (`mplus-2m-r`, 1.0, 0.0);
+      font-cjk   = (`mplus-2m-r`, 1.0, 0.0);
+      par-margin-ratio = (0.65, 0.65);
+      leading-ratio = 1.3;
     |);
+  |)
+
+  let color-bg = SlydifiColor.html-color 0xEEEEEE
+  let color-fg = SlydifiColor.html-color 0x000000
+  let cfg-color = (|
+    bg        = color-bg;
+    fg        = color-fg;
+    title     = SlydifiColor.html-color 0x555555;
+    emph      = SlydifiColor.html-color 0xFF0027;
+    link      = SlydifiColor.html-color 0x8F3F71;
+    header    = SlydifiColor.inner-color color-bg color-fg 0.5;
+    footer    = SlydifiColor.inner-color color-bg color-fg 0.5;
+    main-grid = SlydifiColor.inner-color color-bg color-fg 0.7;
+    sub-grid  = SlydifiColor.inner-color color-bg color-fg 0.9;
   |)
 
   let cfg-spacing = (|
@@ -92,20 +114,6 @@ end = struct
     title-line-width = 3pt;  % タイトルの下線とタイトル文字の間隔
   |)
 
-  let color-bg = SlydifiColor.html-color 0xCCCCCC
-  let color-fg = SlydifiColor.html-color 0x000000
-  let cfg-color = (|
-    bg        = color-bg;
-    fg        = color-fg;
-    title     = SlydifiColor.html-color 0x555555;
-    emph      = SlydifiColor.html-color 0xFF0027;
-    link      = SlydifiColor.html-color 0x8F3F71;
-    header    = SlydifiColor.inner-color color-bg color-fg 0.5;
-    footer    = SlydifiColor.inner-color color-bg color-fg 0.5;
-    main-grid = SlydifiColor.inner-color color-bg color-fg 0.7;
-    sub-grid  = SlydifiColor.inner-color color-bg color-fg 0.9;
-  |)
-
   let relwid relx = cfg-paper#width *' relx
   let relht rely = cfg-paper#height *' rely
   let relpt relx rely = (relwid relx, relht rely)
@@ -113,11 +121,14 @@ end = struct
   let ctx-doc wid = SlydifiScheme.get-standard-context cfg-text cfg-color wid
 
   let-mutable is-first-page <- true
+  let-mutable is-draft-mode <- false
 
   % }}}
 
   % document command {{{
   let document record inner=
+
+    let () = is-draft-mode <- record#draft-mode in
 
     let header pbinfo =
       let ctx = ctx-doc cfg-paper#width
@@ -154,54 +165,7 @@ end = struct
 
   % }}}
 
-  % common function in slides {{{
-  let-rec range n1 n2 =
-    let-rec aux min max =
-      if min == max  then [min] else min :: (aux (min + 1) max)
-    in
-    if n1 < n2 then (aux n1 n2) else (aux n2 n1)
-
-  let ib-bg =
-    let rect-bg =
-      fill cfg-color#bg (Gr.rectangle (0pt, 0pt) (cfg-paper#width, cfg-paper#height))
-    in
-    inline-graphics 0pt 0pt 0pt (fun _ -> [rect-bg])
-
-  let bg-grids grid-wid grid-ht grid-color =
-    let n-grid-vertical   = round(cfg-paper#width  /' grid-wid) in
-    let n-grid-horizontal = round(cfg-paper#height /' grid-ht)  in
-    let vlines =
-      List.map (
-        fun n -> Gr.line (grid-wid *' float(n), 0pt) (grid-wid *' float(n), cfg-paper#height)
-      ) (range 1 n-grid-vertical) in
-      % [Gr.line (grid-wid, 0pt) (grid-wid, cfg-paper#height)] in
-    let hlines =
-      List.map (
-        fun n -> Gr.line (0pt, grid-ht *' float(n)) (cfg-paper#width, grid-ht *' float(n))
-      ) (range 1 n-grid-horizontal) in
-    % let hlines = [Gr.line (0pt, grid-ht) (cfg-paper#width, grid-ht)] in
-    let lines = List.append vlines hlines in
-    let grid = List.map (stroke 1pt grid-color) lines in
-    let ib = inline-graphics 0pt 0pt 0pt (fun _ -> grid) in
-    ib
-
-  let make-grids dmode =
-    let main-grid = bg-grids cfg-spacing#main-grid cfg-spacing#main-grid cfg-color#main-grid in
-    let sub-grid = bg-grids cfg-spacing#sub-grid cfg-spacing#sub-grid cfg-color#sub-grid in
-    if dmode then (sub-grid ++ main-grid) else inline-nil
-
-  let bb-bg ctx dmode =
-    let ctx-phantom =
-      ctx |> set-font-size 0pt
-          |> set-paragraph-margin 0pt 0pt
-          |> set-leading 0pt
-    in
-    (line-break true true ctx-phantom (ib-bg ++ (make-grids dmode) ++ inline-fil))
-
-
-  % }}}
-
-  % +make-title{} command {{{
+  % +make-title(||) command {{{
 
   % title config
   % 消す予定
@@ -215,106 +179,124 @@ end = struct
   let date-ymin = relht 0.2
   let title-mgn = 24pt
 
-  let put-text point align ib =
-    let (w, h, d) = get-natural-metrics ib in
-    % xalgin: 0. で左揃え，0.5 で中央揃え，1. で右揃え
-    % yalgin: 0. で下揃え，0.5 で中央揃え，1. で上揃え
-    let (xalign, yalign) = align in
-    let (pointx, pointy) = point in
-    let xpos = pointx -' w *' xalign in
-    let ypos = pointy +' d -' (h +' d) *' yalign in
-    draw-text (xpos, ypos) ib  % x, y に関わらず point の絶対座標で決める
-  % inline-graphics wid ht 0pt (fn)
+  let-block ctx +make-title record =
 
-  % +make-title の中で使う
-  let-block ctx +title its-title =
-    let ctx-title = ctx |> SlydifiScheme.set-font-config cfg-text#slide-title
-                        |> set-text-color cfg-color#bg
-    in
-    let l = get-font-size ctx-title *' 0.65 in
-    let bbs-title ctx =
-      its-title |> List.map (fun it ->
-        line-break true true (ctx |> set-paragraph-margin l l)
-          (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-    in
-    let ib-title = embed-block-top ctx-title title-width
-      (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
-    in
-    let draw-title =
-      [(put-text (title-xmin, title-ymin +' title-mgn)
-        (0., 0.) ib-title);]
-    in
-    let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-title) in
-    (line-break true false ctx (ib ++ inline-fil))
+    % title, author, date の全てを background graphics として描画する．
+    % （そうすることで，テキストの位置を絶対座標で配置できる）
+    let bg-graphics =
 
-  % +make-title の中で使う
-  let-block ctx +author its-author =
-    let ctx-author = ctx |> SlydifiScheme.set-font-config cfg-text#slide-author
-                        |> set-text-color cfg-color#title
-    in
-    let l = get-font-size ctx-author *' 0.65 in
-    let bbs-author ctx =
-      its-author |> List.map (fun it ->
-        line-break true true (ctx |> set-paragraph-margin l l)
-          (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-    in
-    let ib-author = embed-block-top ctx-author author-width
-      (fun ctx -> (bbs-author ctx |> List.fold-left (+++) block-nil))
-    in
-    let draw-author =
-      [(put-text (title-xmin, title-ymin -' title-mgn)
-        (0., 1.) ib-author);]
-    in
-    let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-author) in
-    (line-break true false ctx (ib ++ inline-fil))
+      let rect-bg-title =
+        fill cfg-color#title
+          (Gr.rectangle (relwid 0.0, title-ymin) (relwid 1.0, relht 1.00))
+      in
 
-  % +make-title の中で使う
-  let-block ctx +date its-date =
-    let ctx-date = ctx |> SlydifiScheme.set-font-config cfg-text#slide-date
-                       |> set-text-color cfg-color#title
-    in
-    let l = get-font-size ctx-date *' 0.25 in
-    let bbs-date ctx =
-      its-date |> List.map (fun it ->
-        line-break true true (ctx |> set-paragraph-margin l l)
-          (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-    in
-    let ib-date = embed-block-top ctx-date author-width
-      (fun ctx -> (bbs-date ctx |> List.fold-left (+++) block-nil))
-    in
-    let draw-date =
-      [(put-text (title-xmin, date-ymin -' title-mgn)
-        (0., 1.) ib-date);]
-    in
-    let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-date) in
-    (line-break true false ctx (ib ++ inline-fil))
+      let gr-title =
+        let ctx-title = ctx |> SlydifiScheme.set-font-config cfg-text#slide-title
+                            |> set-text-color cfg-color#bg
+        in
+        let bbs-title ctx =
+          record#title |> List.map (fun it ->
+            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
+        in
+        let ib-title = embed-block-top ctx-title title-width
+          (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
+        in
+        SlydifiScheme.put-text (title-xmin, title-ymin +' title-mgn) (0., 0.) ib-title
+      in
 
-  let-block ctx +make-title bt-inner =
-    let whole-rect = Gr.rectangle (relwid 0.0, title-ymin) (relwid 1.0, relht 1.00) in
+      let gr-author =
+        let ctx-author = ctx |> SlydifiScheme.set-font-config cfg-text#slide-author
+                             |> set-text-color cfg-color#title
+        in
+        let bbs-author ctx =
+          record#author |> List.map (fun it ->
+            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
+        in
+        let ib-author = embed-block-top ctx-author author-width
+          (fun ctx -> (bbs-author ctx |> List.fold-left (+++) block-nil))
+        in
+        SlydifiScheme.put-text (title-xmin, title-ymin -' title-mgn) (0., 1.) ib-author
+      in
 
-    let draw-titleframe =
+      let gr-date =
+        let ctx-date = ctx |> SlydifiScheme.set-font-config cfg-text#slide-date
+                           |> set-text-color cfg-color#title
+        in
+        let bbs-date ctx =
+          record#date |> List.map (fun it ->
+            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
+        in
+        let ib-date = embed-block-top ctx-date author-width
+          (fun ctx -> (bbs-date ctx |> List.fold-left (+++) block-nil))
+        in
+        SlydifiScheme.put-text (title-xmin, date-ymin -' title-mgn) (0., 1.) ib-date
+      in
+
       [
-        (fill cfg-color#title whole-rect);
+        rect-bg-title;
+        gr-title;
+        gr-author;
+        gr-date;
       ]
     in
-    let ib =
-      inline-graphics 0pt 0pt 0pt (fun _ -> draw-titleframe)
+
+    SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode
+      bg-graphics ctx block-nil
+
+
+  % }}}
+
+  % +section{||}<> command {{{
+
+  let-block ctx +section its bt =
+
+    % make-title 同様にすべての情報を bg として記述する
+    let bg-graphics =
+      let gr-section-title =
+        let ctx-title = ctx |> SlydifiScheme.set-font-config cfg-text#section-title
+                            |> set-text-color cfg-color#title
+        in
+        let l = get-font-size ctx-title *' 0.5 in
+        let bbs-title ctx =
+          its |> List.map (fun it ->
+            line-break true true (ctx |> set-paragraph-margin l l)
+              (read-inline ctx it ++ inline-fil))
+        in
+        let ib-title = embed-block-top ctx-title title-width
+          (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
+        in
+        SlydifiScheme.put-text (title-xmax +' title-mgn, title-ymax +' title-mgn) (0., 0.) ib-title
+      in
+
+      let sec-title-xmin = relwid 0.1 in
+      let sec-title-ymin = relht 0.45 in
+      let sec-title-xmax = relwid 0.1 +' 5pt in
+      let sec-title-ymax = relht 0.45 +' 5pt in
+      let north-rect = Gr.rectangle (sec-title-xmin, sec-title-ymax) (sec-title-xmax, relht 1.00) in
+      let south-rect = Gr.rectangle (sec-title-xmin, sec-title-ymin) (sec-title-xmax, relht 0.00) in
+      let east-rect  = Gr.rectangle (sec-title-xmax, sec-title-ymin) (relwid 1.00, sec-title-ymax) in
+      let west-rect  = Gr.rectangle (sec-title-xmin, sec-title-ymin) (relwid 0.00, sec-title-ymax) in
+      let cent-rect  = Gr.rectangle (sec-title-xmin, sec-title-ymin) (sec-title-xmax, sec-title-ymax) in
+      let rect-color = SlydifiColor.inner-color cfg-color#title cfg-color#bg 0.4 in
+
+      [
+        fill rect-color north-rect;
+        fill rect-color south-rect;
+        fill rect-color east-rect;
+        fill rect-color west-rect;
+        fill cfg-color#title cent-rect;
+        gr-section-title;
+      ]
     in
-    SlydifiScheme.clear-page-or-nil is-first-page +++
-    (bb-bg ctx !draft-mode) +++ (line-break true false ctx (ib ++ inline-fil))
-      +++ (read-block ctx bt-inner)
+
+    (SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode
+      bg-graphics ctx block-nil)
+        +++ (read-block ctx bt)
+
 
   % }}}
 
   % +frame{}<> command {{{
-
-  let placeholder height (origX, origY) =
-    [fill Color.white (Gr.rectangle (origX, origY) (origX, origY +' height))]
-
-  let make-placeholder ctx glue-height =
-    let ht = length-max 0pt glue-height in
-    let ctx2 = ctx |> set-paragraph-margin 0pt 0pt in
-    line-break true false ctx2 (inline-graphics 0pt ht 0pt (placeholder ht) ++ inline-fil)
 
   let-block ctx +frame title inner =
 
@@ -352,65 +334,13 @@ end = struct
     let ht = cfg-spacing#text-height -' (get-natural-length bb-title) in
     let bb-inner = read-block ctx inner in
 
-    SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page bg-graphics
+    SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode bg-graphics
       ctx (bb-title +++ bb-inner)
 
   let-block ctx +frame-nt inner =
     let bg-graphics = [] in
     let bb-inner = read-block ctx inner in
-    SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page bg-graphics ctx bb-inner
-
-  % }}}
-
-  % 文書構造 {{{
-
-  let section-title ctx its-title =
-    let ctx-title = ctx |> SlydifiScheme.set-font-config cfg-text#section-title
-                        |> set-text-color cfg-color#title
-    in
-    let l = get-font-size ctx-title *' 0.5 in
-    let bbs-title ctx =
-      its-title |> List.map (fun it ->
-        line-break true true (ctx |> set-paragraph-margin l l)
-          (read-inline ctx it ++ inline-fil))
-    in
-    let ib-title = embed-block-top ctx-title title-width
-      (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
-    in
-    let draw-title =
-      [(put-text (title-xmax +' title-mgn, title-ymax +' title-mgn)
-        (0., 0.) ib-title);]
-    in
-    let ib = inline-graphics 0pt 0pt 0pt (fun _ -> draw-title) in
-    (line-break true false ctx (ib ++ inline-fil))
-
-  let-block ctx +section its bt =
-    let sec-title-xmin = title-xmin in
-    let sec-title-ymin = title-ymin in
-    let sec-title-xmax = title-xmin +' 5pt in
-    let sec-title-ymax = title-ymin +' 5pt in
-    let north-rect = Gr.rectangle (sec-title-xmin, sec-title-ymax) (sec-title-xmax, relht 1.00) in
-    let south-rect = Gr.rectangle (sec-title-xmin, sec-title-ymin) (sec-title-xmax, relht 0.00) in
-    let east-rect  = Gr.rectangle (sec-title-xmax, sec-title-ymin) (relwid 1.00, sec-title-ymax) in
-    let west-rect  = Gr.rectangle (sec-title-xmin, sec-title-ymin) (relwid 0.00, sec-title-ymax) in
-    let cent-rect  = Gr.rectangle (sec-title-xmin, sec-title-ymin) (sec-title-xmax, sec-title-ymax) in
-    let rect-color = SlydifiColor.inner-color cfg-color#title cfg-color#bg 0.4 in
-    let draw-titleframe =
-      [
-        (fill rect-color north-rect);
-        (fill rect-color south-rect);
-        (fill rect-color east-rect);
-        (fill rect-color west-rect);
-        (fill cfg-color#title cent-rect);
-      ]
-    in
-    let ib =
-      inline-graphics 0pt 0pt 0pt (fun _ -> draw-titleframe)
-    in
-    SlydifiScheme.clear-page-or-nil is-first-page +++
-    (bb-bg ctx !draft-mode) +++ (line-break true false ctx (ib ++ inline-fil))
-      +++ (section-title ctx its) +++ (read-block ctx bt)
-
+    SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode bg-graphics ctx bb-inner
 
   % }}}
 
