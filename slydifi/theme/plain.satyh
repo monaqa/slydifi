@@ -1,0 +1,390 @@
+% vim: foldmethod=marker
+@require: gr
+@require: math
+@require: list
+@require: annot
+@require: slydifi/slydifi
+@require: slydifi/functions/color
+@require: slydifi/functions/enumitem
+@require: slydifi/functions/footnote
+
+% SLyDiFi with Plain theme.
+module SlydifiPlain : sig
+  % Signature {{{
+
+  val document: 'a -> block-text -> document
+    constraint 'a :: (|
+      % SLyDiFi の必須パラメータ
+      draft-mode: bool;
+    |)
+
+  % frame 作成用のコマンド群
+  direct +make-title : ['a] block-cmd
+    constraint 'a :: (|
+      title: inline-text list;
+      author: inline-text list;
+      date: inline-text list;
+    |)
+  direct +section : [inline-text list; block-text] block-cmd
+  direct +frame : [inline-text; block-text] block-cmd
+  direct +frame-nt : [block-text] block-cmd
+
+  % テキスト修飾
+  direct \emph : [inline-text] inline-cmd
+  direct \textbf : [inline-text] inline-cmd
+  direct \link : [inline-text?; string] inline-cmd
+
+  % 図表挿入
+  direct \fig-right : [imginfo] inline-cmd
+
+  % 箇条書き
+  direct +listing : [itemize] block-cmd
+
+  % 脚注
+  direct \footnote : [inline-text] inline-cmd
+  direct \footnotetext : [string; inline-text] inline-cmd
+  direct \footnotemark : [string] inline-cmd
+
+  % }}}
+end = struct
+
+  % 文書設定 {{{
+
+  % cfg-paper: 紙面の設定を引き渡す際に用いるレコード
+  % 下では PowerPoint の文書サイズ (16:9) に合わせている
+  let cfg-paper = (|
+    width = 25.4cm;
+    height = 14.29cm;
+  |)
+  % もし beamer の 4:3 に合わせたければこっち
+  % let cfg-paper = (|
+  %   width = 12.8cm
+  %   height = 9.6cm
+  % |)
+
+
+  % cfg-text: スライド中の書体に関する設定を引き渡す際に用いるレコード
+
+  % 楽をするために，まず通常フォント・見出し用フォントを設定
+  let cfg-font-normal = (|
+    size = 20pt;
+    font-latin = (`lmsans`, 1.0, 0.0);
+    font-cjk   = (`ipaexg`, 1.0, 0.0);
+    par-margin-ratio = (0.65, 0.65);
+    leading-ratio = 1.4;
+  |)
+  let cfg-font-emph = (|
+    size = 20pt;
+    font-latin = (`lmsans`, 1.0, 0.0);
+    font-cjk   = (`ipaexg`, 1.0, 0.0);
+    par-margin-ratio = (0.65, 0.65);
+    leading-ratio = 1.4;
+  |)
+
+  % with 文を用いて，様々な文脈のフォント（書体，サイズ）を設定する
+  let cfg-text = (|
+    % SLyDiFi の必須パラメータ
+    normal = cfg-font-normal;
+    mono = (|
+      size = 20pt;
+      font-latin = (`lmmono`, 1.0, 0.0);
+      font-cjk   = (`ipaexg`, 1.0, 0.0);
+      par-margin-ratio = (0.65, 0.65);
+      leading-ratio = 1.4;
+    |);
+    % Plain 独自パラメータ
+    emph = cfg-font-emph;
+    frame-title = (| cfg-font-emph with size = 28pt; |);
+    footer = (| cfg-font-normal with size = 12pt; |);
+    slide-title = (| cfg-font-emph with size = 36pt; |);
+    slide-author = (| cfg-font-emph with size = 24pt; |);
+    slide-date = (| cfg-font-emph with size = 20pt; |);
+    section-title = (| cfg-font-emph with size = 28pt; |);
+    footnote = (| cfg-font-normal with size = 12pt; |);
+  |)
+
+  % cfg-color: スライドの色使いに関する設定を引き渡す際に用いるレコード
+
+  % 楽をするために，まず最も基本となる foreground と background の色を設定
+  let color-bg = SlydifiColor.html-color 0xFFFFFF
+  let color-fg = SlydifiColor.html-color 0x000000
+
+  % 様々な色を設定
+  let cfg-color = (|
+    % SLyDiFi の必須パラメータ
+    bg        = color-bg;
+    fg        = color-fg;
+    main-grid = SlydifiColor.inner-color color-bg color-fg 0.7;
+    sub-grid  = SlydifiColor.inner-color color-bg color-fg 0.9;
+    link      = SlydifiColor.html-color 0x8F3F71;
+    % Plain の独自パラメータ
+    title  = color-fg;
+    emph   = SlydifiColor.html-color 0xFF0027;
+    footer = SlydifiColor.inner-color color-bg color-fg 0.5;
+  |)
+
+  % cfg-spacing: スペーシングやなにかの長さに関する設定を引き渡す際に用いるレコード
+  let cfg-spacing = (|
+    % SLyDiFi 必須パラメータ
+    text-width  = cfg-paper#width -' 30pt *' 2.;
+    text-height = cfg-paper#height -' 15pt *' 2.;
+    text-horizontal-margin = 30pt;
+    text-vertical-margin = 10pt;
+    header-basepos = 3pt;  % header について，上にどれだけ余白を取るか（上基準）
+    footer-basepos = 24pt;  % footer をどの位置から始めるか（上基準）
+    main-grid   = 50pt;
+    sub-grid    = 10pt;
+    bg-gr-start-point = 0pt;  % background graphics の phantom inline-boxes をどこに置くか（paragraph-margin を変にいじらない限り，基本は 0pt で OK）
+    % Plain の独自パラメータ
+    title-padding-lower-line = 20pt;  % タイトルの下線と本文の間隔
+  |)
+
+  let-mutable is-first-page <- true
+  let-mutable is-draft-mode <- false
+
+  % }}}
+
+  % 便利な関数 {{{
+
+  % 紙面の大きさを1としたときの相対長さ．絶対座標指定時に組み合わせると便利
+  let relwid relx = cfg-paper#width *' relx
+  let relht rely = cfg-paper#height *' rely
+
+  % }}}
+
+  % document command {{{
+  let document record inner=
+
+    % draft-mode の設定を格納しておく
+    let () = is-draft-mode <- record#draft-mode in
+
+    % header の設定
+    let header pbinfo = block-nil in
+
+    % footer の設定
+    let footer pbinfo =
+      let ctx = SlydifiScheme.get-standard-context cfg-text cfg-color cfg-paper#width
+        |> SlydifiScheme.set-font-config cfg-text#footer
+        |> set-text-color cfg-color#footer
+      in
+      let it-pageno = embed-string (arabic pbinfo#page-number) in
+      let it-count = match get-cross-reference `pagecount` with
+        | None -> {??}
+        | Some(i) -> embed-string i
+      in
+      line-break true true ctx (inline-fil ++ (read-inline ctx {#it-pageno;/#it-count;}) ++ inline-skip 20pt)
+    in
+
+    SlydifiScheme.document-scheme cfg-paper cfg-text cfg-color cfg-spacing header footer record inner
+
+  % }}}
+
+  % +make-title(||) command {{{
+
+  % title config
+  % 消す予定
+  let-block ctx +make-title record =
+
+    % title, author, date の全てを background graphics として描画する．
+    % （そうすることで，テキストの位置を絶対座標で配置できる）
+    let bg-graphics =
+      let title-xmin = relwid 0.1 in
+      let title-ymin = relht 0.45 in
+      let title-mgn = 24pt in
+
+      let gr-title =
+        let ctx-title = ctx |> SlydifiScheme.set-font-config cfg-text#slide-title
+                            |> set-text-color cfg-color#title
+        in
+        let bbs-title ctx =
+          record#title |> List.map (fun it ->
+            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
+        in
+        let ib-title = embed-block-top ctx-title (relwid 0.8)
+          (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
+        in
+        SlydifiScheme.put-text (title-xmin, title-ymin +' title-mgn) (0., 0.) ib-title
+      in
+
+      let gr-author =
+        let ctx-author = ctx |> SlydifiScheme.set-font-config cfg-text#slide-author
+                             |> set-text-color cfg-color#title
+        in
+        let bbs-author ctx =
+          record#author |> List.map (fun it ->
+            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
+        in
+        let ib-author = embed-block-top ctx-author (relwid 0.8)
+          (fun ctx -> (bbs-author ctx |> List.fold-left (+++) block-nil))
+        in
+        SlydifiScheme.put-text (title-xmin, title-ymin -' title-mgn) (0., 1.) ib-author
+      in
+
+      let gr-date =
+        let ctx-date = ctx |> SlydifiScheme.set-font-config cfg-text#slide-date
+                           |> set-text-color cfg-color#title
+        in
+        let bbs-date ctx =
+          record#date |> List.map (fun it ->
+            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
+        in
+        let ib-date = embed-block-top ctx-date (relwid 0.8)
+          (fun ctx -> (bbs-date ctx |> List.fold-left (+++) block-nil))
+        in
+        SlydifiScheme.put-text (title-xmin, (relht 0.2) -' title-mgn) (0., 1.) ib-date
+      in
+
+      [ gr-title; gr-author; gr-date; ]
+    in
+
+    SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode
+      bg-graphics ctx block-nil
+
+  % }}}
+
+  % +section{||}<> command {{{
+
+  let-block ctx +section its bt =
+
+    % make-title 同様にすべての情報を bg として記述する
+    let bg-graphics =
+      let gr-section-title =
+        let ctx-title = ctx |> SlydifiScheme.set-font-config cfg-text#section-title
+                            |> set-text-color cfg-color#title
+        in
+        let bbs-title ctx =
+          its |> List.map (fun it ->
+            line-break true true ctx (inline-fil ++ read-inline ctx it ++ inline-fil))
+        in
+        let ib-title = embed-block-top ctx-title (relwid 0.8)
+          (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
+        in
+        let title-mgn = 24pt in
+        SlydifiScheme.put-text ((relwid 0.5), (relht 0.5)) (0.5, 0.5) ib-title
+      in
+
+      [
+        gr-section-title;
+      ]
+    in
+
+    (SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode
+      bg-graphics ctx block-nil)
+        +++ (read-block ctx bt)
+
+  % }}}
+
+  % +frame{}<> command {{{
+
+  let-block ctx +frame title inner =
+
+    let bb-title =
+      let ctx-title = ctx
+        |> SlydifiScheme.set-font-config cfg-text#frame-title
+        |> set-text-color cfg-color#title
+        |> set-paragraph-margin 0pt cfg-spacing#title-padding-lower-line in
+      let ib-title = read-inline ctx-title title in
+      line-break true true ctx-title (ib-title ++ inline-fil)
+    in
+
+    let bg-graphics = [] in
+    let ht = cfg-spacing#text-height -' (get-natural-length bb-title) in
+    let bb-inner = read-block ctx inner in
+
+    SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode bg-graphics
+      ctx (bb-title +++ bb-inner)
+
+  let-block ctx +frame-nt inner =
+    let bg-graphics = [] in
+    let bb-inner = read-block ctx inner in
+    SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode bg-graphics ctx bb-inner
+
+  % }}}
+
+  % インラインテキスト装飾 {{{
+
+  let-inline ctx \emph it =
+    let ctx2 = ctx |> set-text-color cfg-color#emph
+                   |> SlydifiScheme.set-font-config cfg-text#emph
+    in
+    (read-inline ctx2 it)
+
+  let-inline ctx \textbf it =
+    let ctx2 = ctx |> SlydifiScheme.set-font-config cfg-text#emph in
+    (read-inline ctx2 it)
+
+  let-inline ctx \link ?:it url =
+    SlydifiScheme.ic-link cfg-color cfg-text ctx it url
+
+  % }}}
+
+  % 画像追加 {{{
+
+  let-inline ctx \fig-right =
+    SlydifiScheme.fig-right cfg-paper#width cfg-spacing#text-horizontal-margin ctx
+
+  % }}}
+
+  % +listing{} command {{{
+
+  let-block +listing item = '< +genlisting(label-bullet)(item); >
+
+  % }}}
+
+  % \footnote{} command {{{
+
+  let-inline ctx \footnotetext ref-label it =
+    let bbf num =
+      let it-num = embed-string (arabic num) in
+      let ctx =
+        ctx |> set-font-size (cfg-text#footnote#size *' 0.9)
+            |> set-leading (cfg-text#footnote#size *' 1.2)
+            |> set-paragraph-margin (cfg-text#footnote#size *' 0.5) (cfg-text#footnote#size *' 0.5)
+          %temporary
+      in
+        line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
+    in
+      FootnoteScheme.main ctx (Some(ref-label)) (fun _ -> inline-nil) bbf
+
+  let-inline ctx \footnotemark ref-label =
+    let size = get-font-size ctx in
+    let ctx =
+      ctx |> set-font-size (size *' 0.75)
+          |> set-manual-rising (size *' 0.25)
+    in
+    let ctx =
+      ctx |> set-font-size (size *' 0.75)
+          |> set-manual-rising (size *' 0.25)
+    in
+    match FootnoteScheme.get-footnote-num ref-label with
+    | Some(n) ->
+      let it-num = embed-string n in
+      read-inline ctx {\*#it-num;}
+    | _ ->
+      read-inline ctx {\*?}
+
+  let-inline ctx \footnote it =
+    let size = get-font-size ctx in
+    let ibf num =
+      let it-num = embed-string (arabic num) in
+      let ctx =
+        ctx |> set-font-size (size *' 0.75)
+            |> set-manual-rising (size *' 0.25)
+      in
+        read-inline ctx {\*#it-num;}
+    in
+    let bbf num =
+      let it-num = embed-string (arabic num) in
+      let ctx =
+        ctx |> set-font-size (cfg-text#footnote#size *' 0.9)
+            |> set-leading (cfg-text#footnote#size *' 1.2)
+            |> set-paragraph-margin (cfg-text#footnote#size *' 0.5) (cfg-text#footnote#size *' 0.5)
+          %temporary
+      in
+        line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
+    in
+      FootnoteScheme.main ctx None ibf bbf
+
+  % }}}
+
+end

@@ -280,17 +280,15 @@ end = struct
         let ctx-title = ctx |> SlydifiScheme.set-font-config cfg-text#section-title
                             |> set-text-color cfg-color#title
         in
-        let l = get-font-size ctx-title *' 0.5 in
         let bbs-title ctx =
           its |> List.map (fun it ->
-            line-break true true (ctx |> set-paragraph-margin l l)
-              (read-inline ctx it ++ inline-fil))
+            line-break true true ctx (read-inline ctx it ++ inline-fil))
         in
         let ib-title = embed-block-top ctx-title (relwid 0.8)
           (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
         in
         let title-mgn = 24pt in
-        SlydifiScheme.put-text ((relwid 0.1) +' title-mgn, (relwid 0.45) +' title-mgn) (0., 0.) ib-title
+        SlydifiScheme.put-text ((relwid 0.1) +' title-mgn, (relht 0.45) +' title-mgn) (0., 0.) ib-title
       in
 
       let sec-title-xmin = relwid 0.1 in
