@@ -81,7 +81,8 @@ module SlydifiScheme: sig
       text-height: length;
       text-horizontal-margin: length;
       text-vertical-margin: length;
-      footer-height: length;
+      header-basepos: length;
+      footer-basepos: length;
       bg-gr-start-point: length;
     |)
     constraint 'record :: (|draft-mode: bool;|)
@@ -118,9 +119,9 @@ module SlydifiScheme: sig
   direct \br: [] inline-cmd
   direct \text-color: [color; inline-text] inline-cmd
 
-  val ic-link: 'a -> 'b -> context -> inline-text option -> string -> inline-boxes
-    constraint 'a :: (| link: color; |)
-    constraint 'b :: (|mono: config-font;|)
+  val ic-link: 'config-color -> 'config-text -> context -> inline-text option -> string -> inline-boxes
+    constraint 'config-color :: (| link: color; |)
+    constraint 'config-text :: (|mono: config-font;|)
 
 end = struct
 
@@ -206,9 +207,9 @@ end = struct
 
     let pagepartsf pbinfo =
       (|
-      header-origin  = (0pt, 3pt);
+      header-origin  = (0pt, cfg-spacing#header-basepos);
       header-content = header pbinfo;
-      footer-origin  = (0pt, cfg-paper#height -' cfg-spacing#footer-height);
+      footer-origin  = (0pt, cfg-paper#height -' cfg-spacing#footer-basepos);
       footer-content = footer pbinfo;
       |)
     in

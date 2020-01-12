@@ -3,78 +3,90 @@
 @require: math
 @require: list
 @require: annot
-@import: ../slydifi
-@import: ../functions/color
-@import: ../functions/enumitem
-@import: ../functions/footnote
+@require: slydifi/slydifi
+@require: slydifi/functions/color
+@require: slydifi/functions/enumitem
+@require: slydifi/functions/footnote
 
+% SLyDiFi with Akasaka theme.
 module SlydifiAkasaka : sig
-
   % Signature {{{
+
   val document: 'a -> block-text -> document
     constraint 'a :: (|
+      % SLyDiFi の必須パラメータ
       draft-mode: bool;
+      % Akasaka theme の独自パラメータ
       header-text: inline-text;
     |)
 
-  direct +section : [inline-text list; block-text] block-cmd
-  direct +frame : [inline-text; block-text] block-cmd
-  direct +frame-nt : [block-text] block-cmd
-  direct \emph : [inline-text] inline-cmd
-  direct \textbf : [inline-text] inline-cmd
-  direct \link : [inline-text?; string] inline-cmd
-  direct +listing : [itemize] block-cmd
+  % frame 作成用のコマンド群
   direct +make-title : ['a] block-cmd
     constraint 'a :: (|
       title: inline-text list;
       author: inline-text list;
       date: inline-text list;
     |)
+  direct +section : [inline-text list; block-text] block-cmd
+  direct +frame : [inline-text; block-text] block-cmd
+  direct +frame-nt : [block-text] block-cmd
+
+  % テキスト修飾
+  direct \emph : [inline-text] inline-cmd
+  direct \textbf : [inline-text] inline-cmd
+  direct \link : [inline-text?; string] inline-cmd
+
+  % 図表挿入
   direct \fig-right : [imginfo] inline-cmd
+
+  % 箇条書き
+  direct +listing : [itemize] block-cmd
+
+  % 脚注
   direct \footnote : [inline-text] inline-cmd
   direct \footnotetext : [string; inline-text] inline-cmd
   direct \footnotemark : [string] inline-cmd
 
   % }}}
-
 end = struct
 
   % 文書設定 {{{
-  % PowerPoint の文書サイズ (16:9) に合わせる
+
+  % cfg-paper: 紙面の設定を引き渡す際に用いるレコード
+  % 下では PowerPoint の文書サイズ (16:9) に合わせている
   let cfg-paper = (|
     width = 25.4cm;
     height = 14.29cm;
   |)
+  % もし beamer の 4:3 に合わせたければこっち
   % let cfg-paper = (|
   %   width = 12.8cm
   %   height = 9.6cm
   % |)
 
-  let cfg-text-normal = (|
+
+  % cfg-text: スライド中の書体に関する設定を引き渡す際に用いるレコード
+
+  % 楽をするために，まず通常フォント・見出し用フォントを設定
+  let cfg-font-normal = (|
     size = 18pt;
     font-latin = (`NotoSans-R`     , 1.0, 0.0);
     font-cjk   = (`NotoSansCJKjp-R`, 1.0, 0.0);
     par-margin-ratio = (0.6, 0.6);
     leading-ratio = 1.4;
   |)
-  let cfg-text-emph = (|
+  let cfg-font-emph = (|
     size = 18pt;
     font-latin = (`NotoSans-B`     , 1.0, 0.0);
     font-cjk   = (`NotoSansCJKjp-B`, 1.0, 0.0);
     par-margin-ratio = (0.6, 0.6);
     leading-ratio = 1.4;
   |)
+
+  % with 文を用いて，様々な文脈のフォント（書体，サイズ）を設定する
   let cfg-text = (|
-    normal = cfg-text-normal;
-    frame-title = (| cfg-text-emph with size = 28pt; |);
-    header = (| cfg-text-normal with size = 12pt; |);
-    footer = (| cfg-text-normal with size = 12pt; |);
-    slide-title = (| cfg-text-emph with size = 36pt; |);
-    slide-author = (| cfg-text-emph with size = 24pt; |);
-    slide-date = (| cfg-text-emph with size = 20pt; |);
-    slide-institute = (| cfg-text-normal with size = 20pt; |);
-    section-title = (| cfg-text-emph with size = 28pt; |);
-    footnote = (| cfg-text-normal with size = 12pt; |);
+    % SLyDiFi の必須パラメータ
+    normal = cfg-font-normal;
     mono = (|
       size = 18pt;
       font-latin = (`mplus-2m-r`, 1.0, 0.0);
@@ -82,56 +94,79 @@ end = struct
       par-margin-ratio = (0.65, 0.65);
       leading-ratio = 1.3;
     |);
+    % Akasaka 独自パラメータ
+    frame-title = (| cfg-font-emph with size = 28pt; |);
+    header = (| cfg-font-normal with size = 12pt; |);
+    footer = (| cfg-font-normal with size = 12pt; |);
+    slide-title = (| cfg-font-emph with size = 36pt; |);
+    slide-author = (| cfg-font-emph with size = 24pt; |);
+    slide-date = (| cfg-font-emph with size = 20pt; |);
+    section-title = (| cfg-font-emph with size = 28pt; |);
+    footnote = (| cfg-font-normal with size = 12pt; |);
   |)
 
+  % cfg-color: スライドの色使いに関する設定を引き渡す際に用いるレコード
+
+  % 楽をするために，まず最も基本となる foreground と background の色を設定
   let color-bg = SlydifiColor.html-color 0xEEEEEE
   let color-fg = SlydifiColor.html-color 0x000000
+
+  % 様々な色を設定
   let cfg-color = (|
+    % SLyDiFi の必須パラメータ
     bg        = color-bg;
     fg        = color-fg;
-    title     = SlydifiColor.html-color 0x555555;
-    emph      = SlydifiColor.html-color 0xFF0027;
-    link      = SlydifiColor.html-color 0x8F3F71;
-    header    = SlydifiColor.inner-color color-bg color-fg 0.5;
-    footer    = SlydifiColor.inner-color color-bg color-fg 0.5;
     main-grid = SlydifiColor.inner-color color-bg color-fg 0.7;
     sub-grid  = SlydifiColor.inner-color color-bg color-fg 0.9;
+    link      = SlydifiColor.html-color 0x8F3F71;
+    % Akasaka の独自パラメータ
+    title  = SlydifiColor.html-color 0x555555;
+    emph   = SlydifiColor.html-color 0xFF0027;
+    header = SlydifiColor.inner-color color-bg color-fg 0.5;
+    footer = SlydifiColor.inner-color color-bg color-fg 0.5;
   |)
 
+  % cfg-spacing: スペーシングやなにかの長さに関する設定を引き渡す際に用いるレコード
   let cfg-spacing = (|
-    header-height = 24pt;
-    footer-height = 24pt;
+    % SLyDiFi 必須パラメータ
+    text-width  = cfg-paper#width -' 30pt *' 2.;
+    text-height = cfg-paper#height -' 15pt *' 2.;
     text-horizontal-margin = 30pt;
     text-vertical-margin = 10pt;
-    text-height = cfg-paper#height -' cfg-text#normal#size *' 2.;
-    text-width  = cfg-paper#width -' 30pt *' 2.;
+    header-basepos = 3pt;  % header について，上にどれだけ余白を取るか（上基準）
+    footer-basepos = 24pt;  % footer をどの位置から始めるか（上基準）
     main-grid   = 50pt;
     sub-grid    = 10pt;
-    bg-gr-start-point = 0pt;
-    title-padding-lr = 12pt;  % 左右のパディング（紙面基準）
+    bg-gr-start-point = 0pt;  % background graphics の phantom inline-boxes をどこに置くか（paragraph-margin を変にいじらない限り，基本は 0pt で OK）
+    % Akasaka の独自パラメータ
+    title-padding-lr = 12pt;  % タイトルの左右のパディング（紙面基準）
     title-padding-upper-line = 5pt;  % タイトルの下線とタイトル文字の間隔
     title-padding-lower-line = 0pt;  % タイトルの下線と本文の間隔
     title-line-width = 3pt;  % タイトルの下線とタイトル文字の間隔
   |)
-
-  let relwid relx = cfg-paper#width *' relx
-  let relht rely = cfg-paper#height *' rely
-  let relpt relx rely = (relwid relx, relht rely)
-
-  let ctx-doc wid = SlydifiScheme.get-standard-context cfg-text cfg-color wid
 
   let-mutable is-first-page <- true
   let-mutable is-draft-mode <- false
 
   % }}}
 
+  % 便利な関数 {{{
+
+  % 紙面の大きさを1としたときの相対長さ．絶対座標指定時に組み合わせると便利
+  let relwid relx = cfg-paper#width *' relx
+  let relht rely = cfg-paper#height *' rely
+
+  % }}}
+
   % document command {{{
   let document record inner=
 
+    % draft-mode の設定を格納しておく
     let () = is-draft-mode <- record#draft-mode in
 
+    % header の設定
     let header pbinfo =
-      let ctx = ctx-doc cfg-paper#width
+      let ctx = SlydifiScheme.get-standard-context cfg-text cfg-color cfg-paper#width
         |> SlydifiScheme.set-font-config cfg-text#header
         |> set-text-color cfg-color#emph
       in
@@ -148,8 +183,9 @@ end = struct
       line-break true true ctx (inline-fil ++ ib ++ (inline-skip 3pt))
     in
 
+    % footer の設定
     let footer pbinfo =
-      let ctx = ctx-doc cfg-paper#width
+      let ctx = SlydifiScheme.get-standard-context cfg-text cfg-color cfg-paper#width
         |> SlydifiScheme.set-font-config cfg-text#footer
         |> set-text-color cfg-color#footer
       in
@@ -169,21 +205,14 @@ end = struct
 
   % title config
   % 消す予定
-  let title-xmax = relwid 0.1
-  let title-ymax = relht 0.45
-
-  let title-xmin = relwid 0.1
-  let title-ymin = relht 0.45
-  let title-width = relwid 0.8
-  let author-width = relwid 0.8
-  let date-ymin = relht 0.2
-  let title-mgn = 24pt
-
   let-block ctx +make-title record =
 
     % title, author, date の全てを background graphics として描画する．
     % （そうすることで，テキストの位置を絶対座標で配置できる）
     let bg-graphics =
+      let title-xmin = relwid 0.1 in
+      let title-ymin = relht 0.45 in
+      let title-mgn = 24pt in
 
       let rect-bg-title =
         fill cfg-color#title
@@ -198,7 +227,7 @@ end = struct
           record#title |> List.map (fun it ->
             line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
         in
-        let ib-title = embed-block-top ctx-title title-width
+        let ib-title = embed-block-top ctx-title (relwid 0.8)
           (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
         in
         SlydifiScheme.put-text (title-xmin, title-ymin +' title-mgn) (0., 0.) ib-title
@@ -212,7 +241,7 @@ end = struct
           record#author |> List.map (fun it ->
             line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
         in
-        let ib-author = embed-block-top ctx-author author-width
+        let ib-author = embed-block-top ctx-author (relwid 0.8)
           (fun ctx -> (bbs-author ctx |> List.fold-left (+++) block-nil))
         in
         SlydifiScheme.put-text (title-xmin, title-ymin -' title-mgn) (0., 1.) ib-author
@@ -226,23 +255,17 @@ end = struct
           record#date |> List.map (fun it ->
             line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
         in
-        let ib-date = embed-block-top ctx-date author-width
+        let ib-date = embed-block-top ctx-date (relwid 0.8)
           (fun ctx -> (bbs-date ctx |> List.fold-left (+++) block-nil))
         in
-        SlydifiScheme.put-text (title-xmin, date-ymin -' title-mgn) (0., 1.) ib-date
+        SlydifiScheme.put-text (title-xmin, (relht 0.2) -' title-mgn) (0., 1.) ib-date
       in
 
-      [
-        rect-bg-title;
-        gr-title;
-        gr-author;
-        gr-date;
-      ]
+      [ rect-bg-title; gr-title; gr-author; gr-date; ]
     in
 
     SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode
       bg-graphics ctx block-nil
-
 
   % }}}
 
@@ -262,10 +285,11 @@ end = struct
             line-break true true (ctx |> set-paragraph-margin l l)
               (read-inline ctx it ++ inline-fil))
         in
-        let ib-title = embed-block-top ctx-title title-width
+        let ib-title = embed-block-top ctx-title (relwid 0.8)
           (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
         in
-        SlydifiScheme.put-text (title-xmax +' title-mgn, title-ymax +' title-mgn) (0., 0.) ib-title
+        let title-mgn = 24pt in
+        SlydifiScheme.put-text ((relwid 0.1) +' title-mgn, (relwid 0.45) +' title-mgn) (0., 0.) ib-title
       in
 
       let sec-title-xmin = relwid 0.1 in
@@ -292,7 +316,6 @@ end = struct
     (SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode
       bg-graphics ctx block-nil)
         +++ (read-block ctx bt)
-
 
   % }}}
 
@@ -478,7 +501,3 @@ end = struct
   % }}}
 
 end
-
-
-
-
