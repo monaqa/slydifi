@@ -4,7 +4,7 @@
 @require: code
 @require: annot
 @require: list
-@import: ../slydifi/theme/hakodate
+@require: class-slydifi/theme/hakodate
 
 SlydifiHakodate.document(|
   draft-mode = false;

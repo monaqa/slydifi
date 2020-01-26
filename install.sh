@@ -1,4 +1,4 @@
 #!/bin/sh
 
-mkdir -p ~/.satysfi/dist/packages/slydifi
-cp -r `pwd`/slydifi ~/.satysfi/dist/packages/
+mkdir -p ~/.satysfi/dist/packages/class-slydifi
+cp -r `pwd`/src/* ~/.satysfi/dist/packages/class-slydifi/

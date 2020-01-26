@@ -3,10 +3,10 @@
 @require: math
 @require: list
 @require: annot
-@require: slydifi/slydifi
-@require: slydifi/functions/color
-@require: slydifi/functions/enumitem
-@require: slydifi/functions/footnote
+@require: class-slydifi/slydifi
+@require: class-slydifi/functions/color
+@require: class-slydifi/functions/enumitem
+@require: class-slydifi/functions/footnote
 
 % SLyDIFi with Hakodate theme.
 module SlydifiHakodate : sig

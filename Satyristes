@@ -1,0 +1,17 @@
+;; For Satyrographos 0.0.2 series
+(version 0.0.2)
+
+(library
+  (name "class-slydifi")
+  (version "0.1.0")
+  (sources
+    ((package "functions/color.satyh" "./src/functions/color.satyh")
+     (package "functions/enumitem.satyh" "./src/functions/enumitem.satyh")
+     (package "functions/footnote.satyh" "./src/functions/footnote.satyh")
+     (package "theme/akasaka.satyh" "./src/theme/akasaka.satyh")
+     (package "theme/hakodate.satyh" "./src/theme/hakodate.satyh")
+     (package "theme/plain.satyh" "./src/theme/plain.satyh")
+     (package "slydifi.satyh" "./src/slydifi.satyh")))
+  (opam "satysfi-class-slydifi.opam")
+  (dependencies ())
+  (compatibility ((satyrographos "0.0.1"))))
