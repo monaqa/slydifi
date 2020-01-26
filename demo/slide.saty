@@ -4,9 +4,9 @@
 @require: code
 @require: annot
 @require: list
-@import: ../slydifi/theme/plain
+@import: ../slydifi/theme/hakodate
 
-SlydifiPlain.document(|
+SlydifiHakodate.document(|
   draft-mode = false;
 |)'<
 
