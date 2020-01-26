@@ -47,3 +47,4 @@ end = struct
   let orange = rgb 1. 0.5 0.
   let blue   = rgb 0. 0. 1.
 end
+

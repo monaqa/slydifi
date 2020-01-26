@@ -275,3 +275,4 @@ let-block +enumerate item = '< +genlistings(enum-rule)(item); >
 
 let-inline \listing item = {\listing-from-block<+listing(item);>} 
 let-inline \enumerate item = {\listing-from-block<+enumerate(item);>} 
+

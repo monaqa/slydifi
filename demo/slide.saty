@@ -4,110 +4,68 @@
 @require: code
 @require: annot
 @require: list
-@import: ../slydifi
+@import: ../slydifi/theme/hakodate
 
-
-let-inline \jugem = {
-  寿限無寿限無，五劫の擦り切れ，
-  海砂利水魚の水行末雲来末風来末，
-  喰う寝る処に住む処，
-  藪柑子の藪柑子，
-  パイポ・パイポ・パイポのシューリンガン，
-  シューリンガンのグーリンダイ，
-  グーリンダイのポンポコピーのポンポコナーの，
-  長久命の長助．
-}
-
-let-inline \show-float n = embed-string (show-float n)
-
-let-inline \show-unexplode ns = embed-string (string-unexplode ns)
-
-in
-
-Slydifi.document(|
-  draft-mode = true;
-  fonts = (|
-    frame-title-cjk = `mplus-sans-b`;    % 自分が持っているフォントに変えること
-    normal-text-cjk  = `mplus-sans-r`;   % 自分が持っているフォントに変えること
-    frame-title-latin = `mplus-sans-b`;  % 自分が持っているフォントに変えること
-    normal-text-latin  = `mplus-sans-r`; % 自分が持っているフォントに変えること
-    mono-text-latin  = `mplus-mono-r`;   % 自分が持っているフォントに変えること
-    font-ratio-cjk = 1.0;
-  |);
+SlydifiHakodate.document(|
+  draft-mode = false;
 |)'<
 
-  +make-title<
-    +title{|\SLyDiFi; でらくらくスライド作成|}
-    +author{|monaqa|}
-    +date{|2019年8月3日|}
-  >
-
+  +make-title(|
+    title = {|\SLyDIFi; でらくらくスライド作成|};
+    author = {|monaqa|GitHub: \link(`https://github.com/monaqa`);|};
+    date = {|2020年1月12日|};
+  |);
 
   +section{|はじめに|}<
-    +frame{\SLyDiFi;: \SATySFi; のスライド作成用パッケージ}<
+    +frame{\SLyDIFi;: \SATySFi; のスライド作成用パッケージ}<
       +listing{
         * \emph{\SATySFi;} (\link(`https://github.com/gfngfn/SATySFi`);)
           ** 静的型付き関数型言語ベースの新たな組版処理システム
           ** 普通の文書作成時にはそこまで関数型言語を意識しなくてよい
-          ** パッケージをカスタマイズする際の構文は OCaml 風
+          ** パッケージの記述に用いる構文は OCaml 風
 
-        * \emph{\SLyDiFi;} (\link(`https://github.com/monaqa/slydifi`);)
+        * \emph{\SLyDIFi;} (\link(`https://github.com/monaqa/slydifi`);)
           ** \SATySFi; でスライドを作成することができる
           ** 実は既に先駆者がいる（\link?:({Steamer: Slide Presentation in SATySFi})(`https://github.com/konn/satysfi-steamer`);）
             *** Steamer とは page break 周りの実装を少しばかり変えている
       }
-      % +p{
-      %   \jugem;
-      % }
-    >
 
-    +frame{画像はりテスト
-    \fig-abs-pos
-    ((Slydifi.paper-width *' 0.9, Slydifi.paper-height *' 0.9))
-    (DummyBox(30pt, 30pt));
-    }<
-      +p{
-        \fig-right(DummyBox(100pt, 50pt));
-        いろんな画像が貼れる．JPEG と PDF に対応している他，\br;
-        \code(`DummyBox`); を用いてダミー画像を貼ることも出来る．
-      }
-      +listing{
-        * \code(`\insert-image`);: 本文中に画像を貼る．
-        * \code(`\fig-abs-pos`);: 絶対座標を指定して画像を貼る．
-        * \code(`\fig-right`);: コマンド挿入箇所の右端に画像を貼る．
-      }
-      % +centered-image(PDF(150pt, `./logo.pdf`, 1));
-      % +centered-image(JPEG(150pt, `./logo.jpg`));
-      +centered-image(DummyBox(500pt, 120pt));
-    >
-
-  >
-
-  +section{|機能一覧|}<
-    +frame{Listing command}<
-      +p{箇条書きコマンド．}
-      +listing{
-        * 箇条書きコマンドは以下の2種類が用意されている．
-          ** \code(`+listing`);: unordered listing（番号のない箇条書き）
-          ** \code(`+enumerate`);: ordered listing（番号のある箇条書き）
-            *** Ordered listing の場合，ネストの深さによってインデックスの体裁が変化していく．
-            *** 子の箇条書きを追加しても，親の番号はリセットされない．
-        * 箇条書きのラベルは，\SLyDiFi;用にカスタマイズされている．
-        * さらなるカスタマイズも，enumitem パッケージを用いれば難しくない．
-      }
-    >
-
-    +frame{Enumerate command}<
-      +p{箇条書きコマンド．}
-      +enumerate{
-        * 箇条書きコマンドは以下の2種類が用意されている．
-          ** \code(`+listing`);: unordered listing（番号のない箇条書き）
-          ** \code(`+enumerate`);: ordered listing（番号のある箇条書き）
-            *** Ordered listing の場合，ネストの深さによってインデックスの体裁が変化していく．
-            *** 子の箇条書きを追加しても，親の番号はリセットされない．
-        * 現にこのような場合でも，番号は保存されている．
-          ** もちろん，子の番号は親が変わればリセットされる．
-      }
     >
   >
+
+  +section{|\SLyDIFi; の機能|}<
+    +frame{フレーム作成}<
+      +listing{
+        * フレーム：スライド資料の1ページ1ページに値するもの
+        * \SLyDIFi; では3種類のフレームを区別する
+          ** 見出し：スライド全体の題目，発表者名などを載せるフレーム
+          ** セクション見出し：セクションのタイトルを載せる
+          ** 本文：通常のフレーム
+      }
+      +centered-image(DummyBox(660pt, 160pt));
+    >
+
+    +frame{テキストの記述}<
+      +p{以下のようなコマンドを用いてテキストを記述できる．}
+      +listing{
+        * \code(`+p{}`);: 段落
+        * \code(`+listing{}`);: 番号のない箇条書き
+        * \code(`+enumerate{}`);: 番号付きの箇条書き
+      }
+      +p{さらに，インラインテキストの中では以下のマークアップが使える．}
+      +listing{
+        * \code(`\emph{}`);: \emph{強調}
+        * \code(`\textbf{}`);: \textbf{太字}
+        * \code(`\text-color(){}`);: \text-color(SlydifiColor.html-color 0x42883B){文字色変更}
+        * \code(``\link?:({Hyper Link})(`url`)``);: \link?:({ハイパーリンク})(`https://github.com/gfngfn/SATySFi`);
+      }
+    >
+
+    +frame{図表の貼り付け}<
+    >
+  >
+
+  +section{|\SLyDIFi; のテーマのカスタマイズ|}<
+  >
+
 >
