@@ -4,22 +4,11 @@
 @require: list
 @require: annot
 @import: functions/color
+@import: functions/figbox
 % @import: functions/enumitem
 % @import: functions/footnote
 
 % global 型設定 {{{
-
-% imginfo 型．画像挿入に用いる．
-type imginfo =
-  | JPEG of length * string               % width * filepath
-  | PDF of length * string * int          % width * filepath * page-number
-  | Block of length * block-text          % width * text
-  | DummyBox of length * length           % width * height
-  | Shift of length * length * imginfo  % (x-shift , y-shift) * imginfo
-  | Phantom of imginfo
-
-let image-shift xshift yshift imginfo = Shift(xshift, yshift, imginfo)
-let image-phantom imginfo = Phantom(imginfo)
 
 % 紙面の設定を引き渡す際に用いるレコード型．
 type config-paper = (|
@@ -104,16 +93,6 @@ module SlydifiScheme: sig
       main-grid: length;
       sub-grid: length;
     |)
-
-  % val draw-dummy-box: length -> length -> (length * length) -> graphics list
-  % val insert-image: context -> imginfo -> inline-boxes
-  % val centered-image: context -> imginfo -> block-boxes
-  % val fig-abs-pos: context -> (length * length) -> imginfo -> inline-boxes
-  val fig-right: length -> length -> context -> imginfo -> inline-boxes
-  direct +centered-image : [imginfo] block-cmd
-  direct \insert-image : [imginfo] inline-cmd
-  direct \fig-abs-pos : [(length * length); imginfo] inline-cmd
-  direct +fig-abs-pos : [(length * length); imginfo] block-cmd
 
   direct +p : [inline-text] block-cmd
   direct \br: [] inline-cmd
@@ -329,61 +308,5 @@ end = struct
 
   % }}}
 
-  % graphics {{{
-
-  let draw-dummy-box wid ht (x, y) =
-    let rect-path = Gr.rectangle (x, y) (x +' wid, y +' ht) in
-    [(stroke 1pt SlydifiColor.black rect-path)]
-
-  let-rec insert-image ctx img-info =
-    match img-info with
-    | JPEG(wid, srcpath) ->
-        let img = load-image srcpath in
-        use-image-by-width img wid
-    | PDF(wid, srcpath, num) ->
-        let img = load-pdf-image srcpath num in
-        use-image-by-width img wid
-    | Block(wid, bt) ->
-        let ib = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
-        ib
-    | DummyBox(wid, ht) ->
-        inline-graphics wid ht 0pt (draw-dummy-box wid ht)
-    | Shift(xs, ys, inner-img-info) ->
-        let ib = insert-image ctx inner-img-info in
-        let (wid-ib, ht-ib, dp-ib) = get-natural-metrics ib in
-        inline-graphics wid-ib ht-ib dp-ib
-          (fun (x, y) -> [draw-text (x +' xs, y +' ys) ib])
-    | Phantom(inner-img-info) ->
-        let ib = insert-image ctx inner-img-info in
-        let (wid-ib, ht-ib, dp-ib) = get-natural-metrics ib in
-        inline-graphics wid-ib ht-ib 0pt (draw-dummy-box wid-ib ht-ib)
-
-  let-inline ctx \insert-image = insert-image ctx
-
-  let-block ctx +centered-image img-info = 
-    line-break true true ctx (inline-fil ++ (insert-image ctx img-info) ++ inline-fil)
-
-  let fig-abs-pos ctx pt img-info =
-    % DummyBox が inline-graphics を無用に2回使ってしまう
-    let ib = insert-image ctx img-info in
-    inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
-
-  let-inline ctx \fig-abs-pos = fig-abs-pos ctx
-
-  let-block ctx +fig-abs-pos pt img-info =
-    let it-gr = fig-abs-pos ctx pt img-info in
-    line-break true true ctx (it-gr ++ inline-fil)
-
-  let fig-right paper-width text-horizontal-margin ctx img-info =
-    let ib = insert-image ctx img-info in
-    let (ib-w, ib-h, ib-d) = get-natural-metrics ib in
-    inline-graphics 0pt 0pt 0pt (fun (x, y) ->
-      [
-        draw-text
-          (paper-width -' text-horizontal-margin -' ib-w,
-          y +' (ctx |> get-font-size) -' ib-h) ib
-      ])
-
-  % }}}
 
 end

@@ -34,9 +34,6 @@ module SlydifiPlain : sig
   direct \textbf : [inline-text] inline-cmd
   direct \link : [inline-text?; string] inline-cmd
 
-  % 図表挿入
-  direct \fig-right : [imginfo] inline-cmd
-
   % 箇条書き
   direct +listing : [itemize] block-cmd
 
@@ -315,13 +312,6 @@ end = struct
 
   let-inline ctx \link ?:it url =
     SlydifiScheme.ic-link cfg-color cfg-text ctx it url
-
-  % }}}
-
-  % 画像追加 {{{
-
-  let-inline ctx \fig-right =
-    SlydifiScheme.fig-right cfg-paper#width cfg-spacing#text-horizontal-margin ctx
 
   % }}}
 
