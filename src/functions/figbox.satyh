@@ -86,7 +86,7 @@ end = struct
       (draw-text (x +' (wid -' wid-ib-wid) *' 0.5, y -' dp +' 2pt) ib-wid);
     ]
 
-  let dummy-box ?:dp ht wid ctx =
+  let dummy-box ?:dp wid ht ctx =
     let dp = Option.from 0pt dp in
     inline-graphics wid ht dp (draw-dummy-box ctx wid ht dp)
 
@@ -129,7 +129,7 @@ end = struct
   let draft fb ctx =
     let ib = embed-figure ctx fb in
     let (wid, ht, dp) = get-natural-metrics ib in
-    dummy-box ?:dp ht wid ctx
+    dummy-box ?:dp wid ht ctx
 
   let shift xshift yshift fb ctx =
     let ib = embed-figure ctx fb in
