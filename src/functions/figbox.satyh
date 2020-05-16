@@ -3,13 +3,15 @@
 @require: option
 @require: color
 
-module FigureBox : sig
+module FigBox : sig
 
   type t
 
   val include-image : int?-> length -> string -> t
   val include-image-with-height : int?-> length -> string -> t
-  val dummy: length -> length -> t
+  val dummy-box: length ?-> length -> length -> t
+  % val textbox: length -> inline-text -> t
+  % val textblock: length -> block-text -> t
 
   val hconcat : t list -> t
   val vconcat : t list -> t
@@ -17,6 +19,8 @@ module FigureBox : sig
   val hmargin : length -> t -> t
   val vmargin : length -> t -> t
   val hvmargin : length -> t -> t
+  val draft: t -> t
+  val shift: length -> length -> t -> t
 
   direct +fig-center : [t] block-cmd
   direct \fig-on-right : [t] inline-cmd
@@ -30,10 +34,10 @@ end = struct
 
   type t = context -> inline-boxes
 
-  % FigureBox.t を inline-boxes 型に変換する．
+  % FigBox.t を inline-boxes 型に変換する．
   let embed-figure ctx fb = fb ctx
 
-  % 画像読み込み {{{
+  % FigBox.t 型の新規作成 {{{
 
   % ユーザが画像を読み込むときに使える統一的な関数．
   % 拡張子を判別してヴァリアントを変える．
@@ -61,27 +65,33 @@ end = struct
     let scale = ht /' ht-norm in
     include-image ?:pg (1pt *' scale) pth ctx
 
-  let show-length len = embed-string (arabic (round (len /' 1pt)) ^ `pt`)
+  % 小数点第二位まで表示
+  let show-length len =
+    let times-100 = round ((len /' 1pt) *. 100.) in
+    let exp = (float times-100) /. 100. in
+    embed-string (show-float exp ^ `pt`)
 
-  let draw-dummy-box ctx ht wid (x, y) =
+  let draw-dummy-box ctx wid ht dp (x, y) =
     let ctx = ctx |> set-font-size ((get-font-size ctx) *' 0.4) in
     let ib-wid = read-inline ctx (show-length wid) in
     let (wid-ib-wid, _, _) = get-natural-metrics ib-wid in
-    let ib-ht = read-inline ctx (show-length ht) in
+    let ib-ht = read-inline ctx (show-length (ht +' dp)) in
     let (_, ht-ib-ht, _) = get-natural-metrics ib-ht in
-    let rect-path = Gr.rectangle (x, y) (x +' wid, y +' ht) in
+    let rect-path = Gr.rectangle (x, y -' dp) (x +' wid, y +' ht) in
     [
       (stroke 1pt Color.black rect-path);
-      (stroke 1pt Color.black (Gr.line (0pt, 0pt) (wid, ht) |> shift-path (x, y)));
-      (stroke 1pt Color.black (Gr.line (wid, 0pt) (0pt, ht) |> shift-path (x, y)));
-      (draw-text (x +' 2pt, y +' (ht -' ht-ib-ht) *' 0.5) ib-ht);
-      (draw-text (x +' (wid -' wid-ib-wid) *' 0.5, y +' 2pt) ib-wid);
+      (stroke 1pt Color.black (Gr.line (0pt, 0pt -' dp) (wid, ht) |> shift-path (x, y)));
+      (stroke 1pt Color.black (Gr.line (wid, 0pt -' dp) (0pt, ht) |> shift-path (x, y)));
+      (draw-text (x +' 2pt, y +' (ht -' dp -' ht-ib-ht) *' 0.5) ib-ht);
+      (draw-text (x +' (wid -' wid-ib-wid) *' 0.5, y -' dp +' 2pt) ib-wid);
     ]
 
-  let dummy ht wid ctx = inline-graphics wid ht 0pt (draw-dummy-box ctx ht wid)
+  let dummy-box ?:dp ht wid ctx =
+    let dp = Option.from 0pt dp in
+    inline-graphics wid ht dp (draw-dummy-box ctx wid ht dp)
   % }}}
 
-  % FigureBox の変換 {{{
+  % FigBox の変換 {{{
 
   let hconcat fblst ctx =
     let iblst = fblst |> List.map (embed-figure ctx) in
@@ -102,7 +112,22 @@ end = struct
   let vmargin len = margin 0pt 0pt len len
   let hvmargin len = margin len len len len
 
+  let draft fb ctx =
+    let ib = embed-figure ctx fb in
+    let (wid, ht, dp) = get-natural-metrics ib in
+    dummy-box ?:dp ht wid ctx
+
+  let shift xshift yshift fb ctx =
+    let ib = embed-figure ctx fb in
+    let (wid, ht, dp) = get-natural-metrics ib in
+    inline-graphics wid ht dp (fun (x, y) -> [
+      draw-text (x +' xshift, y +' yshift) ib
+    ])
+
+
   % }}}
+
+  % Commands {{{
 
   let-block ctx +fig-center fb =
     let ib-fig = embed-figure ctx fb in
@@ -147,5 +172,6 @@ end = struct
     inline-graphics wid ht-inner dp-inner
       (fun (x, y) -> [draw-text (x, y -' dp-inner) ib])
 
+  % }}}
 
 end
