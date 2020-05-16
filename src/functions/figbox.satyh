@@ -10,8 +10,8 @@ module FigBox : sig
   val include-image : int?-> length -> string -> t
   val include-image-with-height : int?-> length -> string -> t
   val dummy-box: length ?-> length -> length -> t
-  % val textbox: length -> inline-text -> t
-  % val textblock: length -> block-text -> t
+  val textbox: (context -> context)?-> length -> inline-text -> t
+  val textblock: (context -> context)?-> length -> block-text -> t
 
   val hconcat : t list -> t
   val vconcat : t list -> t
@@ -89,6 +89,20 @@ end = struct
   let dummy-box ?:dp ht wid ctx =
     let dp = Option.from 0pt dp in
     inline-graphics wid ht dp (draw-dummy-box ctx wid ht dp)
+
+  let textbox ?:ctxf wid it ctx =
+    let ctxf = Option.from (fun x -> x) ctxf in
+    embed-block-bottom (ctxf ctx) wid (
+      fun ctx -> line-break false false ctx
+        (read-inline ctx it ++ inline-fil)
+    )
+
+  let textblock ?:ctxf wid bt ctx =
+    let ctxf = Option.from (fun x -> x) ctxf in
+    embed-block-bottom (ctxf ctx) wid (
+      fun ctx -> read-block ctx bt
+    )
+
   % }}}
 
   % FigBox の変換 {{{
