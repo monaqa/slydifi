@@ -1,5 +1,7 @@
 @require: list
+@require: gr
 @require: option
+@require: color
 
 module FigureBox : sig
 
@@ -7,6 +9,7 @@ module FigureBox : sig
 
   val include-image : int?-> length -> string -> t
   val include-image-with-height : int?-> length -> string -> t
+  val dummy: length -> length -> t
 
   val hconcat : t list -> t
   val vconcat : t list -> t
@@ -17,28 +20,53 @@ module FigureBox : sig
   direct +fig-center : [t] block-cmd
   direct \fig-on-right : [t] inline-cmd
   direct +fig-on-right : [length?; t; block-text] block-cmd
+  direct \fig-abs-pos : [(length * length); t] inline-cmd
+  direct +fig-abs-pos : [(length * length); t] block-cmd
+
+  direct \fig-inline : [float?; t] inline-cmd
 
 end = struct
 
-  type t =
+  type embeded-fig =
     | Empty
     | PDF of length * string * int
     | JPEG of length * string
+    | DummyBox of length * length
     | InlineBoxes of inline-boxes
 
+  type t = context -> embeded-fig
+
   % FigureBox.t を inline-boxes 型に変換する．
-  let to-inline-box fb =
-    match fb with
+  let show-length len = embed-string (arabic (round (len /' 1pt)) ^ `pt`)
+
+  let draw-dummy-box ctx ht wid (x, y) =
+    let ctx = ctx |> set-font-size ((get-font-size ctx) *' 0.4) in
+    let ib-wid = read-inline ctx (show-length wid) in
+    let (wid-ib-wid, _, _) = get-natural-metrics ib-wid in
+    let ib-ht = read-inline ctx (show-length ht) in
+    let (_, ht-ib-ht, _) = get-natural-metrics ib-ht in
+    let rect-path = Gr.rectangle (x, y) (x +' wid, y +' ht) in
+    [
+      (stroke 1pt Color.black rect-path);
+      (stroke 1pt Color.black (Gr.line (0pt, 0pt) (wid, ht) |> shift-path (x, y)));
+      (stroke 1pt Color.black (Gr.line (wid, 0pt) (0pt, ht) |> shift-path (x, y)));
+      (draw-text (x +' 2pt, y +' (ht -' ht-ib-ht) *' 0.5) ib-ht);
+      (draw-text (x +' (wid -' wid-ib-wid) *' 0.5, y +' 2pt) ib-wid);
+    ]
+
+  let to-inline-box ctx fb =
+    match (fb ctx) with
     | Empty -> inline-nil
     | PDF(wid, pth, pg) -> use-image-by-width (load-pdf-image pth pg) wid
     | JPEG(wid, pth) -> use-image-by-width (load-image pth) wid
+    | DummyBox(ht, wid) -> inline-graphics wid ht 0pt (draw-dummy-box ctx ht wid)
     | InlineBoxes(ib) -> ib
 
   % 画像読み込み {{{
 
   % ユーザが画像を読み込むときに使える統一的な関数．
   % 拡張子を判別してヴァリアントを変える．
-  let include-image ?:pg wid pth =
+  let include-image ?:pg wid pth ctx =
     let pg = Option.from 1 pg in
     let sep-pat = regexp-of-string `\.` in
     let splitlst = (split-on-regexp sep-pat pth) in
@@ -55,44 +83,45 @@ end = struct
         let () = display-message (`Failed to include image: [` ^ pth ^ `]`) in
         Empty
 
-  let include-image-with-height ?:pg ht pth =
+  let include-image-with-height ?:pg ht pth ctx =
     let pg = Option.from 1 pg in
-    let ib = to-inline-box (include-image ?:pg 1pt pth) in
+    let ib = to-inline-box ctx (include-image ?:pg 1pt pth) in
     let (_, ht-norm, _) = get-natural-metrics ib in
     let scale = ht /' ht-norm in
-    include-image ?:pg (1pt *' scale) pth
+    include-image ?:pg (1pt *' scale) pth ctx
 
+  let dummy ht wid ctx = DummyBox(ht, wid)
   % }}}
 
   % FigureBox の変換 {{{
 
-  let hconcat fblst =
-    let iblst = fblst |> List.map to-inline-box in
+  let hconcat fblst ctx =
+    let iblst = fblst |> List.map (to-inline-box ctx) in
     let ib = iblst |> List.fold-left (++) inline-nil in
     InlineBoxes(ib)
 
-  let vconcat fblst =
-    let iblst = fblst |> List.map to-inline-box in
+  let vconcat fblst ctx =
+    let iblst = fblst |> List.map (to-inline-box ctx) in
     InlineBoxes(line-stack-bottom iblst)
 
-  let hmargin len fb =
-    let ib = (inline-skip len) ++ (to-inline-box fb) ++ (inline-skip len) in
+  let hmargin len fb ctx =
+    let ib = (inline-skip len) ++ (to-inline-box ctx fb) ++ (inline-skip len) in
     InlineBoxes(ib)
 
-  let vmargin len fb =
+  let vmargin len fb ctx =
     let vphantom = inline-graphics 0pt len 0pt (fun (_, _) -> []) in
-    InlineBoxes(line-stack-bottom [vphantom; to-inline-box fb; vphantom])
+    InlineBoxes(line-stack-bottom [vphantom; to-inline-box ctx fb; vphantom])
 
   let margin len fb = hmargin len (vmargin len fb)
 
   % }}}
 
   let-block ctx +fig-center fb =
-    let ib-fig = to-inline-box fb in
+    let ib-fig = to-inline-box ctx fb in
     line-break false false ctx (inline-fil ++ ib-fig ++ inline-fil)
 
   let-inline ctx \fig-on-right fb =
-    let ib = to-inline-box fb in
+    let ib = to-inline-box ctx fb in
     let (wid, ht, dp) = get-natural-metrics ib in
     inline-graphics 0pt 0pt 0pt (fun (x, y) -> [
       draw-text
@@ -103,12 +132,32 @@ end = struct
 
   let-block ctx +fig-on-right ?:margin fb bt =
     let margin = Option.from 20pt margin in
-    let (ib-wid, _, _) = get-natural-metrics (to-inline-box fb) in
+    let (ib-wid, _, _) = get-natural-metrics (to-inline-box ctx fb) in
     let ib-fig = read-inline ctx {\fig-on-right(fb);} in
     let twid = get-text-width ctx in
     let wid = (get-text-width ctx) -' ib-wid -' margin in
     let ib-content = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
     line-break false false ctx (ib-fig ++ ib-content)
+
+  let fig-abs-pos ctx pt fb =
+    let ib = to-inline-box ctx fb in
+    inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
+
+  let-inline ctx \fig-abs-pos = fig-abs-pos ctx
+
+  let-block ctx +fig-abs-pos pt fb =
+    let it-gr = fig-abs-pos ctx pt fb in
+    line-break false false ctx (it-gr ++ inline-fil)
+
+  let-inline ctx \fig-inline ?:align fb =
+    let align = Option.from 0. align in
+    let ib = to-inline-box ctx fb in
+    let fsize = get-font-size ctx in
+    let (wid, ht, dp) = get-natural-metrics ib in
+    let ht-inner = ht *' (1. -. align) +' fsize *' align in
+    let dp-inner = 0pt *' (1. -. align) +' (ht -' fsize) *' align in
+    inline-graphics wid ht-inner dp-inner
+      (fun (x, y) -> [draw-text (x, y -' dp-inner) ib])
 
 
 end
