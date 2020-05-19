@@ -29,6 +29,8 @@ module SlydifiHakodate : sig
   direct +frame : [inline-text; block-text] block-cmd
   direct +frame-nt : [block-text] block-cmd
 
+  direct +multiframe : [int; inline-text; block-text] block-cmd
+
   % テキスト修飾
   direct \emph : [inline-text] inline-cmd
   direct \textbf : [inline-text] inline-cmd
@@ -358,6 +360,54 @@ end = struct
     let bg-graphics = [] in
     let bb-inner = read-block ctx inner in
     SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode bg-graphics ctx bb-inner
+
+  % }}}
+
+  % +multiframe{}<> command {{{
+
+  let-block ctx +multiframe n-layer title inner =
+    let itlst = [title;] in
+    let btlst = [inner;] in
+
+    let frame-f itlst btlst =
+      let deco (x, y) wid hgt dpt =
+        let path1 =
+          let xL = x -' cfg-spacing#text-horizontal-margin +' cfg-spacing#title-padding-lr in
+          let yB = y in
+          let xR = xL +' cfg-paper#width -' cfg-spacing#title-padding-lr *' 2.0 in
+          let yT = yB +' cfg-spacing#title-line-width in
+          Gr.rectangle (xL, yT) (xR, yB)
+        in
+        [ (fill cfg-color#title path1); ]
+      in
+
+      let bb-title =
+        let ctx-title = ctx
+          |> SlydifiScheme.set-font-config cfg-text#frame-title
+          |> set-text-color cfg-color#title
+          |> set-paragraph-margin 0pt cfg-spacing#title-padding-lower-line in
+        let ib-title = read-inline ctx-title (Option.from {} (itlst |> List.nth 0)) in
+        block-frame-breakable ctx-title
+            (
+              cfg-spacing#title-padding-lr -' cfg-spacing#text-horizontal-margin,
+              cfg-spacing#title-padding-lr,
+              0pt,
+              cfg-spacing#title-padding-upper-line +' cfg-spacing#title-line-width
+            )
+              (deco, deco, deco, deco)
+                (fun ctx ->
+                  line-break true true ctx (ib-title ++ inline-fil)
+                )
+      in
+
+      let bg-graphics = [] in
+      let ht = cfg-spacing#text-height -' (get-natural-length bb-title) in
+      let bb-inner = read-block ctx (Option.from '<> (btlst |> List.nth 0)) in
+
+      SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode bg-graphics
+        ctx (bb-title +++ bb-inner)
+    in
+    SlydifiScheme.frame-scheme-overlay ctx n-layer frame-f itlst btlst
 
   % }}}
 

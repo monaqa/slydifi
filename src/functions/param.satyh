@@ -1,0 +1,89 @@
+@require: base/ref
+
+module Param : sig
+
+  % 3 つの要素の直積．
+  % - デフォルト値
+  % - ユーザが定義した値（無いこともあるので 'a option）
+  % - mutable かどうかを表す bool．
+  type 'a t
+
+  % デフォルト値を指定して make
+  val make: 'a -> 'a t
+
+  % 要素/情報の取得．
+  val get : 'a t -> 'a
+  val get-default: 'a t -> 'a
+  val get-custom: 'a t -> 'a option
+  val is-mutable: 'a t -> bool
+  val has-changed: 'a t -> bool
+
+  val set : 'a -> 'a t -> unit
+  val fix: 'a t -> unit
+  val unfix: 'a t -> unit
+  val discard : 'a t -> unit
+
+  direct +set-param : ['a t; 'a] block-cmd
+  direct \set-param : ['a t; 'a] inline-cmd
+
+end = struct
+
+  type 'a t = 'a * (('a option) ref) * (bool ref)
+
+  let make value = (value, Ref.make None, Ref.make true)
+
+  let get-default param =
+    let (default, custom-opt, mutable) = param in
+    default
+
+  let get-custom param =
+    let (default, custom-opt, mutable) = param in
+    Ref.get custom-opt
+
+  let is-mutable param =
+    let (default, custom-opt, mutable) = param in
+    Ref.get mutable
+
+  let get param =
+    let (default, custom-opt, mutable) = param in
+    match Ref.get custom-opt with
+    | Some(custom) -> custom
+    | None -> default
+
+  let has-changed param =
+    let (default, custom-opt, mutable) = param in
+    match Ref.get custom-opt with
+    | Some(custom) -> true
+    | None -> false
+
+  let set value param =
+    let (default, custom-opt, mutable) = param in
+    if Ref.get mutable then
+      custom-opt |> Ref.set (Some(value))
+    else
+      display-message `[WARN] Failed to change a parameter (immutable).`
+
+  let fix param =
+    let (default, custom-opt, mutable) = param in
+    mutable |> Ref.set false
+
+  let unfix param = 
+    let (default, custom-opt, mutable) = param in
+    mutable |> Ref.set true
+
+  let discard param =
+    let (default, custom-opt, mutable) = param in
+    if Ref.get mutable then
+      custom-opt |> Ref.set None
+    else
+      display-message `[WARN] Failed to change a parameter (immutable).`
+
+  let-block ctx +set-param param value =
+    let () = set value param in
+    block-nil
+
+  let-inline ctx \set-param param value =
+    let () = set value param in
+    inline-nil
+end
+

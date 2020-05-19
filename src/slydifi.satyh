@@ -5,8 +5,8 @@
 @require: annot
 @import: functions/color
 @import: functions/figbox
-% @import: functions/enumitem
-% @import: functions/footnote
+@import: functions/param
+@import: functions/footnote
 
 % global 型設定 {{{
 
@@ -51,6 +51,8 @@ let-inline ctx \SLyDIFi =
 
 module SlydifiScheme: sig
 
+  val layer : int Param.t
+
   val set-font-config : config-font -> context -> context
 
   val get-standard-context : 'config-text -> 'config-color -> length -> context
@@ -94,9 +96,16 @@ module SlydifiScheme: sig
       sub-grid: length;
     |)
 
+  val frame-scheme-overlay :
+    context -> int -> (inline-text list -> block-text list -> block-boxes)
+    -> inline-text list -> block-text list -> block-boxes
+
   direct +p : [inline-text] block-cmd
   direct \br: [] inline-cmd
   direct \text-color: [color; inline-text] inline-cmd
+
+  direct +p-ghost : [(int -> bool); inline-text] block-cmd
+  direct \show-layer : [] inline-cmd
 
   val ic-link: 'config-color -> 'config-text -> context -> inline-text option -> string -> inline-boxes
     constraint 'config-color :: (| link: color; |)
@@ -104,7 +113,10 @@ module SlydifiScheme: sig
 
 end = struct
 
-  % 共通の関数 {{{
+  % 共通の変数・関数 {{{
+
+  % Overlay 付きスライドにおけるレイヤー．
+  let layer = Param.make 0
 
   % フォントを一括で設定．
   % parameters
@@ -271,6 +283,17 @@ end = struct
         (inline-graphics 0pt 0pt 0pt (fun _ -> gr))) +++
           box-inner
 
+  % itlst: layer の値に応じて異なる「発火」を行いたいような inline-text のリスト．
+  % btlst: layer の値に応じて異なる「発火」を行いたいような block-text のリスト．
+  % itlst と btlst さえ与えられたらフレームが出来上がる，そんな関数．
+  let frame-scheme-overlay ctx n-layer frame-f itlst btlst =
+    let () = Param.discard layer in
+    let func n =
+      let () = layer |> Param.set n in
+      frame-f itlst btlst
+    in
+    range 1 n-layer |> List.map func |> List.fold-left (+++) block-nil
+
   % let align-block-middle ctx ht bb-inner =
   %   let placeholder-length = length-max 0pt (ht -' (get-natural-length bb-inner)) *' 0.5 in
   %   let ctx2 = ctx |> set-paragraph-margin 0pt 0pt in
@@ -286,6 +309,9 @@ end = struct
   let-block ctx +p it =
     line-break true true ctx
       (read-inline ctx it ++ inline-fil)
+
+  let-block +p-ghost nf it = if (nf (Param.get layer)) then '<+p(it);> else '<>
+  let-inline \show-layer = embed-string (arabic (Param.get layer))
 
   let-inline ctx \br = discretionary (- 1000) inline-nil inline-fil inline-nil
 

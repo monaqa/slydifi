@@ -88,4 +88,13 @@ SlydifiHakodate.document(|
   +section{|\SLyDIFi; のテーマのカスタマイズ|}<
   >
 
+  +section{|\SLyDIFi; でオーバーレイ|}<
+
+    +multiframe(3){オーバーレイ}<
+      +p{こんなことができる．今は \show-layer; 枚目のスライド}
+      +p-ghost(fun n -> (if n == 2 then false else true)){1, 3 枚目のときのみ表示される段落．}
+    >
+
+  >
+
 >
