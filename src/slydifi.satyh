@@ -100,12 +100,16 @@ module SlydifiScheme: sig
     context -> int -> (inline-text list -> block-text list -> block-boxes)
     -> inline-text list -> block-text list -> block-boxes
 
-  direct +p : [inline-text] block-cmd
+  direct +p : [(int -> bool)?; inline-text] block-cmd
   direct \br: [] inline-cmd
   direct \text-color: [color; inline-text] inline-cmd
 
-  direct +p-ghost : [(int -> bool); inline-text] block-cmd
   direct \show-layer : [] inline-cmd
+  val l-when: int -> int -> bool
+  val l-elsewhen: int -> int -> bool
+  val l-before: int -> int -> bool
+  val l-after: int -> int -> bool
+  val l-during: int -> int -> int -> bool
 
   val ic-link: 'config-color -> 'config-text -> context -> inline-text option -> string -> inline-boxes
     constraint 'config-color :: (| link: color; |)
@@ -306,12 +310,20 @@ end = struct
 
   % 段落，インラインテキスト修飾 {{{
 
-  let-block ctx +p it =
-    line-break true true ctx
-      (read-inline ctx it ++ inline-fil)
+  let-block ctx +p ?:nf it =
+    let nf = Option.from (fun _ -> true) nf in
+    if (nf (Param.get layer)) then
+      line-break true true ctx
+        (read-inline ctx it ++ inline-fil)
+    else block-nil
 
-  let-block +p-ghost nf it = if (nf (Param.get layer)) then '<+p(it);> else '<>
   let-inline \show-layer = embed-string (arabic (Param.get layer))
+
+  let l-when n n-layer = (n-layer == n)
+  let l-elsewhen n n-layer = not (n-layer == n)
+  let l-before n n-layer = (n-layer <= n)
+  let l-after n n-layer = (n-layer >= n)
+  let l-during m n n-layer = (n-layer >= m) && (n-layer <= n)
 
   let-inline ctx \br = discretionary (- 1000) inline-nil inline-fil inline-nil
 
