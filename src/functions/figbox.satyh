@@ -5,16 +5,19 @@
 
 module FigBox : sig
 
+  % context を与えて "箱" になるもの．
   type t
 
+  % FigBox.t の新規作成
   val include-image : int?-> length -> string -> t
   val include-image-with-height : int?-> length -> string -> t
   val dummy-box: length ?-> length -> length -> t
   val textbox: (context -> context)?-> length -> inline-text -> t
   val textblock: (context -> context)?-> length -> block-text -> t
 
-  val hconcat : t list -> t
-  val vconcat : t list -> t
+  % FigBox.t の変換
+  val hconcat : float?-> t list -> t
+  val vconcat : float?-> t list -> t
   val margin : length -> length -> length -> length -> t -> t
   val hmargin : length -> t -> t
   val vmargin : length -> t -> t
@@ -22,12 +25,12 @@ module FigBox : sig
   val draft: t -> t
   val shift: length -> length -> t -> t
 
+  % 箱を挿入するためのコマンド
   direct +fig-center : [t] block-cmd
   direct \fig-on-right : [t] inline-cmd
   direct +fig-on-right : [length?; t; block-text] block-cmd
   direct \fig-abs-pos : [(length * length); t] inline-cmd
   direct +fig-abs-pos : [(length * length); t] block-cmd
-
   direct \fig-inline : [float?; t] inline-cmd
 
 end = struct
@@ -35,6 +38,7 @@ end = struct
   type t = context -> inline-boxes
 
   % FigBox.t を inline-boxes 型に変換する．
+  % embe-math みたいな interface にしたかった．
   let embed-figure ctx fb = fb ctx
 
   % FigBox.t 型の新規作成 {{{
@@ -107,14 +111,6 @@ end = struct
 
   % FigBox の変換 {{{
 
-  let hconcat fblst ctx =
-    let iblst = fblst |> List.map (embed-figure ctx) in
-    iblst |> List.fold-left (++) inline-nil
-
-  let vconcat fblst ctx =
-    let iblst = fblst |> List.map (embed-figure ctx) in
-    line-stack-bottom iblst
-
   let margin left right top bot fb ctx =
     let ib =
       let top-mgn = inline-graphics 0pt top 0pt (fun (_, _) -> []) in
@@ -138,6 +134,44 @@ end = struct
       draw-text (x +' xshift, y +' yshift) ib
     ])
 
+  let get-max-metrics iblst =
+    let metrics-lst = iblst |> List.map (get-natural-metrics) in
+    let max-metrics (wid1, ht1, dp1) (wid2, ht2, dp2) =
+      let max a b = if a >' b then a else b in
+      ( max wid1 wid2, max ht1 ht2, max dp1 dp2)
+    in
+    metrics-lst |> List.fold-left max-metrics (0pt, 0pt, 0pt)
+
+  % 高さ ht, 深さ dp になるように ib にマージンをつける．
+  % al が 0.0 のときは下揃え． 1.0 のときは上揃え．
+  let valign ht dp al ib =
+    let (_, ht-ib, dp-ib) = get-natural-metrics ib in
+    let diff = (ht +' dp) -' (ht-ib +' dp-ib) in
+    % margin 0pt 0pt (diff *' (1. -. al)) (diff *' al) fb ctx
+    let top-mgn = inline-graphics 0pt (diff *' (1. -. al)) 0pt (fun (_, _) -> []) in
+    let bot-mgn = inline-graphics 0pt (diff *' al) 0pt (fun (_, _) -> []) in
+    line-stack-bottom [top-mgn; ib; bot-mgn]
+
+  % 幅 wid になるように ib にマージンをつける．
+  % al が 0.0 のときは左揃え． 1.0 のときは右揃え．
+  let halign wid al ib =
+    let (wid-ib, _, _) = get-natural-metrics ib in
+    let diff = wid -' wid-ib in
+    inline-skip (diff *' al) ++ ib ++ inline-skip (diff *' (1. -. al))
+
+  let hconcat ?:al fblst ctx =
+    let al = Option.from 0. al in
+    let iblst = fblst |> List.map (embed-figure ctx) in
+    let (_, ht, dp) = get-max-metrics iblst in
+    let iblst-aligned = iblst |> List.map (valign ht dp al) in
+    iblst-aligned |> List.fold-left (++) inline-nil
+
+  let vconcat ?:al fblst ctx =
+    let al = Option.from 0. al in
+    let iblst = fblst |> List.map (embed-figure ctx) in
+    let (wid, _, _) = get-max-metrics iblst in
+    let iblst-aligned = iblst |> List.map (halign wid al) in
+    line-stack-bottom iblst-aligned
 
   % }}}
 
