@@ -95,6 +95,8 @@ module SlydifiScheme: sig
   direct +p : [(int -> bool)?; inline-text] block-cmd
   direct \br: [] inline-cmd
   direct \text-color: [(int -> bool)?; color; inline-text] inline-cmd
+  % 上から順に出す．
+  direct +show-in-order: [block-text list] block-cmd
 
   val ic-link: 'config-color -> 'config-text -> context -> inline-text option -> string -> inline-boxes
     constraint 'config-color :: (| link: color; |)
@@ -277,7 +279,7 @@ end = struct
 
   let-block ctx +p ?:dcf it =
     let dcf = Option.from (fun _ -> true) dcf in
-    SlydifiOverlay.phantom-block dcf (line-break true true ctx (read-inline ctx it ++ inline-fil))
+    SlydifiOverlay.ghost-block dcf (line-break true true ctx (read-inline ctx it ++ inline-fil))
 
   let-inline ctx \br = discretionary (- 1000) inline-nil inline-fil inline-nil
 
@@ -299,5 +301,13 @@ end = struct
       | Some(v) -> v
     in
     read-inline ctx-link {\href(url){#text;}}
+
+  % overlay
+  let-block ctx +show-in-order btlst =
+    let ghost-btlst = btlst |> List.mapi ( fun idx bt ->(
+      let dcf = SlydifiOverlay.after (idx + 1) in
+      SlydifiOverlay.ghost-block dcf (read-block ctx bt)))
+    in
+    ghost-btlst |> List.fold-left (+++) block-nil
 
 end

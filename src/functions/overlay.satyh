@@ -21,15 +21,21 @@ module SlydifiOverlay : sig
   % そうでなければ inline-nil/block-nil を返す．
   val ghost-inline : (int -> bool) -> inline-boxes -> inline-boxes
   val ghost-block : (int -> bool) -> block-boxes -> block-boxes
+  direct \ghost : [(int -> bool); inline-text] inline-cmd
+  direct +ghost : [(int -> bool); block-text] block-cmd
 
   % 第一引数に現在のレイヤー番号を渡して得られる bool が true なら第2引数を描画．
   % そうでなければ第2引数に与えられたものと同じ大きさの空白を返す．
   val phantom-inline : (int -> bool) -> inline-boxes -> inline-boxes
   val phantom-block : (int -> bool) -> block-boxes -> block-boxes
+  direct \phantom : [(int -> bool); inline-text] inline-cmd
+  direct +phantom : [(int -> bool); block-text] block-cmd
 
   % 第一引数 (display condition) に現在のレイヤー番号を渡して得られる bool が true なら第2引数を描画．
   % そうでなければ inline-nil/block-nil を返す．
   val select : (int -> bool) -> 'a -> 'a -> 'a
+  direct \select : [(int -> bool); inline-text; inline-text] inline-cmd
+  direct +select : [(int -> bool); block-text; block-text] block-cmd
 
   % 現在のレイヤー番号を描画する．
   direct \show-layer : [] inline-cmd
@@ -40,7 +46,7 @@ module SlydifiOverlay : sig
   val till: int -> int -> bool
   val after: int -> int -> bool
   val during: int -> int -> int -> bool
-
+  val in-case: int list -> int -> bool
 
 end = struct
 
@@ -100,10 +106,24 @@ end = struct
 
   let-inline \show-layer = embed-string (arabic (Param.get layer))
 
+  let-inline ctx \ghost dcf it = ghost-inline dcf (read-inline ctx it)
+  let-block ctx +ghost dcf bt = ghost-block dcf (read-block ctx bt)
+
+  let-inline ctx \phantom dcf it = phantom-inline dcf (read-inline ctx it)
+  let-block ctx +phantom dcf bt = phantom-block dcf (read-block ctx bt)
+
+  let-inline \select dcf it-true it-false = (select dcf it-true it-false)
+  let-block +select dcf bt-true bt-false = (select dcf bt-true bt-false)
+
   let only n n-layer = (n-layer == n)
   let elsewhen n n-layer = not (n-layer == n)
   let till n n-layer = (n-layer <= n)
   let after n n-layer = (n-layer >= n)
   let during m n n-layer = (n-layer >= m) && (n-layer <= n)
+
+  let in-case nlst n-layer =
+    nlst |> List.map (fun n -> n-layer == n)
+         |> List.fold-left ( || ) false
+
 
 end
