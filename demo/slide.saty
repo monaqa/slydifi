@@ -90,14 +90,14 @@ SlydifiHakodate.document(|
 
   +section{|\SLyDIFi; でオーバーレイ|}<
 
-    +multiframe(4){オーバーレイの例}<
-      +p{この段落は常に表示される．今は \show-layer; 枚目のスライド}
-      +p?:(SlydifiScheme.l-before 2){
+    +multiframe(4){オーバーレイの例 (\show-layer;/4)}<
+      +p{この段落は常に表示される．}
+      +p?:(SlydifiOverlay.till 2){
         オプション引数を指定して，今何枚目かに応じて表示を出し分けられる．
-        この段落は 1, 2 枚目のときのみ表示される段落．
+        この段落は 1, 2 枚目のとき\text-color?:(SlydifiOverlay.only 2)(SlydifiColor.red){のみ}表示される段落．
       }
-      +p?:(SlydifiScheme.l-during 2 3){これは 2, 3 枚目のときのみ表示される段落．}
-      +p?:(SlydifiScheme.l-elsewhen 2){これは 2枚目以外のときに表示される段落．}
+      +p?:(SlydifiOverlay.during 2 3){これは 2, 3 枚目のときのみ表示される段落．}
+      +p?:(SlydifiOverlay.elsewhen 2){これは 2枚目以外のときに表示される段落．}
     >
 
   >

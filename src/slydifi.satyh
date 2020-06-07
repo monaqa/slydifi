@@ -1,4 +1,3 @@
-% vim: foldmethod=marker
 @require: gr
 @require: math
 @require: list
@@ -7,8 +6,9 @@
 @import: functions/figbox
 @import: functions/param
 @import: functions/footnote
+@import: functions/overlay
 
-% global 型設定 {{{
+% global 型設定
 
 % 紙面の設定を引き渡す際に用いるレコード型．
 type config-paper = (|
@@ -33,8 +33,6 @@ type page-info = (|
 % header と footer の型．
 type headerfooter = page-info -> block-boxes
 
-% }}}
-
 let-inline ctx \SLyDIFi =
   let size = get-font-size ctx in
   let f = read-inline ctx in
@@ -50,8 +48,6 @@ let-inline ctx \SLyDIFi =
   script-guard Latin (no-break ib)
 
 module SlydifiScheme: sig
-
-  val layer : int Param.t
 
   val set-font-config : config-font -> context -> context
 
@@ -96,20 +92,9 @@ module SlydifiScheme: sig
       sub-grid: length;
     |)
 
-  val frame-scheme-overlay :
-    context -> int -> (inline-text list -> block-text list -> block-boxes)
-    -> inline-text list -> block-text list -> block-boxes
-
   direct +p : [(int -> bool)?; inline-text] block-cmd
   direct \br: [] inline-cmd
-  direct \text-color: [color; inline-text] inline-cmd
-
-  direct \show-layer : [] inline-cmd
-  val l-when: int -> int -> bool
-  val l-elsewhen: int -> int -> bool
-  val l-before: int -> int -> bool
-  val l-after: int -> int -> bool
-  val l-during: int -> int -> int -> bool
+  direct \text-color: [(int -> bool)?; color; inline-text] inline-cmd
 
   val ic-link: 'config-color -> 'config-text -> context -> inline-text option -> string -> inline-boxes
     constraint 'config-color :: (| link: color; |)
@@ -117,10 +102,7 @@ module SlydifiScheme: sig
 
 end = struct
 
-  % 共通の変数・関数 {{{
-
-  % Overlay 付きスライドにおけるレイヤー．
-  let layer = Param.make 0
+  % 共通の変数・関数
 
   % フォントを一括で設定．
   % parameters
@@ -174,9 +156,7 @@ end = struct
     let ypos = pointy +' d -' (h +' d) *' yalign in
     draw-text (xpos, ypos) ib  % x, y に関わらず point の絶対座標で決める
 
-  % }}}
-
-  % document-scheme {{{
+  % document-scheme
 
   % document-scheme: document 関数の雛形．
   % parameters
@@ -222,9 +202,7 @@ end = struct
 
     page-break page pagecontf pagepartsf (bb-main +++ hook)
 
-  % }}}
-
-  % frame-scheme {{{
+  % frame-scheme
 
   let-rec range n1 n2 =
     let-rec aux min max =
@@ -287,17 +265,6 @@ end = struct
         (inline-graphics 0pt 0pt 0pt (fun _ -> gr))) +++
           box-inner
 
-  % itlst: layer の値に応じて異なる「発火」を行いたいような inline-text のリスト．
-  % btlst: layer の値に応じて異なる「発火」を行いたいような block-text のリスト．
-  % itlst と btlst さえ与えられたらフレームが出来上がる，そんな関数．
-  let frame-scheme-overlay ctx n-layer frame-f itlst btlst =
-    let () = Param.discard layer in
-    let func n =
-      let () = layer |> Param.set n in
-      frame-f itlst btlst
-    in
-    range 1 n-layer |> List.map func |> List.fold-left (+++) block-nil
-
   % let align-block-middle ctx ht bb-inner =
   %   let placeholder-length = length-max 0pt (ht -' (get-natural-length bb-inner)) *' 0.5 in
   %   let ctx2 = ctx |> set-paragraph-margin 0pt 0pt in
@@ -306,30 +273,20 @@ end = struct
   %   ) +++ bb-inner
 
 
-  % }}}
+  % 段落，インラインテキスト修飾
 
-  % 段落，インラインテキスト修飾 {{{
-
-  let-block ctx +p ?:nf it =
-    let nf = Option.from (fun _ -> true) nf in
-    if (nf (Param.get layer)) then
-      line-break true true ctx
-        (read-inline ctx it ++ inline-fil)
-    else block-nil
-
-  let-inline \show-layer = embed-string (arabic (Param.get layer))
-
-  let l-when n n-layer = (n-layer == n)
-  let l-elsewhen n n-layer = not (n-layer == n)
-  let l-before n n-layer = (n-layer <= n)
-  let l-after n n-layer = (n-layer >= n)
-  let l-during m n n-layer = (n-layer >= m) && (n-layer <= n)
+  let-block ctx +p ?:dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    SlydifiOverlay.phantom-block dcf (line-break true true ctx (read-inline ctx it ++ inline-fil))
 
   let-inline ctx \br = discretionary (- 1000) inline-nil inline-fil inline-nil
 
-  let-inline ctx \text-color clr it =
+  let-inline ctx \text-color ?:dcf clr it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let not-nf idx = not (dcf idx) in
     let ctx2 = ctx |> set-text-color clr in
-    (read-inline ctx2 it)
+    (SlydifiOverlay.ghost-inline dcf (read-inline ctx2 it))
+      ++ (SlydifiOverlay.ghost-inline not-nf (read-inline ctx it))
 
   let ic-link cfg-color cfg-text ctx it url =
     let ctx2 = ctx |> set-text-color cfg-color#link in
@@ -343,8 +300,5 @@ end = struct
       | Some(v) -> v
     in
     read-inline ctx-link {\href(url){#text;}}
-
-  % }}}
-
 
 end

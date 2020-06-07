@@ -1,0 +1,97 @@
+@require: list
+@import: param
+
+module SlydifiOverlay : sig
+
+  % val layer : int Param.t
+
+  val frame-scheme-overlay :
+    context -> int -> (inline-text list -> block-text list -> block-boxes)
+    -> inline-text list -> block-text list -> block-boxes
+
+  % display-condition: int -> bool
+  %   表示条件．
+  % 第一引数 (display condition) に現在のレイヤー番号を渡して得られる bool が true なら第2引数を描画．
+  % そうでなければ inline-nil/block-nil を返す．
+  val ghost-inline : (int -> bool) -> inline-boxes -> inline-boxes
+  val ghost-block : (int -> bool) -> block-boxes -> block-boxes
+
+  % 第一引数に現在のレイヤー番号を渡して得られる bool が true なら第2引数を描画．
+  % そうでなければ第2引数に与えられたものと同じ大きさの空白を返す．
+  val phantom-inline : (int -> bool) -> inline-boxes -> inline-boxes
+  val phantom-block : (int -> bool) -> block-boxes -> block-boxes
+
+  % 現在のレイヤー番号を描画する．
+  direct \show-layer : [] inline-cmd
+
+  % レイヤーの表示条件 (display-condition) を作成するのに便利な関数．
+  val only: int -> int -> bool
+  val elsewhen: int -> int -> bool
+  val till: int -> int -> bool
+  val after: int -> int -> bool
+  val during: int -> int -> int -> bool
+
+
+end = struct
+
+  % Overlay 付きスライドにおけるレイヤー．
+  let layer = Param.make 0
+
+  let-rec range n1 n2 =
+    let-rec aux min max =
+      if min == max  then [min] else min :: (aux (min + 1) max)
+    in
+    if n1 < n2 then (aux n1 n2) else (aux n2 n1)
+
+  % itlst: layer の値に応じて異なる「発火」を行いたいような inline-text のリスト．
+  % btlst: layer の値に応じて異なる「発火」を行いたいような block-text のリスト．
+  % itlst と btlst さえ与えられたらフレームが出来上がる，そんな関数．
+  let frame-scheme-overlay ctx n-layer frame-f itlst btlst =
+    let () = Param.discard layer in
+    let func n =
+      let () = layer |> Param.set n in
+      frame-f itlst btlst
+    in
+    range 1 n-layer |> List.map func |> List.fold-left (+++) block-nil
+
+
+  let make-phantom-inline ctx it =
+    let ib = read-inline ctx it in
+    let (wid, ht, dp) = get-natural-metrics ib in
+    inline-graphics wid ht dp (fun (x, y) -> [])
+
+  let make-phantom-block ctx bt =
+    let bb = read-block ctx bt in
+    let ht = get-natural-length bb in
+    block-skip ht
+
+  let ghost-inline dcf ib =
+    if (dcf (Param.get layer)) then ib else inline-nil
+
+  let ghost-block dcf bb =
+    if (dcf (Param.get layer)) then bb else block-nil
+
+  let phantom-inline dcf ib =
+    if (dcf (Param.get layer)) then ib
+    else
+      let (wid, ht, dp) = get-natural-metrics ib in
+      inline-graphics wid ht dp (fun (x, y) -> [])
+
+  % TODO: paragraph-margin がつくような block-boxes
+  % （今回は改ページがないので line-break + embed-block-top でいけるそうだが何故かうまくいかない）
+  let phantom-block dcf bb =
+    if (dcf (Param.get layer)) then bb
+    else
+      let ht = get-natural-length bb in
+      block-skip ht
+
+
+  let-inline \show-layer = embed-string (arabic (Param.get layer))
+
+  let only n n-layer = (n-layer == n)
+  let elsewhen n n-layer = not (n-layer == n)
+  let till n n-layer = (n-layer <= n)
+  let after n n-layer = (n-layer >= n)
+  let during m n n-layer = (n-layer >= m) && (n-layer <= n)
+
+end

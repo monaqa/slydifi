@@ -7,6 +7,7 @@
 @require: class-slydifi/functions/color
 @require: class-slydifi/functions/enumitem
 @require: class-slydifi/functions/footnote
+@require: class-slydifi/functions/overlay
 
 % SLyDIFi with Hakodate theme.
 module SlydifiHakodate : sig
@@ -407,7 +408,7 @@ end = struct
       SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode bg-graphics
         ctx (bb-title +++ bb-inner)
     in
-    SlydifiScheme.frame-scheme-overlay ctx n-layer frame-f itlst btlst
+    SlydifiOverlay.frame-scheme-overlay ctx n-layer frame-f itlst btlst
 
   % }}}
 
