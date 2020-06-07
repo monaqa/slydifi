@@ -2,6 +2,7 @@
 @require: gr
 @require: option
 @require: color
+@import: overlay
 
 module FigBox : sig
 
@@ -25,12 +26,17 @@ module FigBox : sig
   val draft: t -> t
   val shift: length -> length -> t -> t
 
-  % 箱を挿入するためのコマンド
+  % overlay
+  val ghost: (int -> bool) -> t -> t
+  val phantom: (int -> bool) -> t -> t
+  val select: (int -> bool) -> t -> t -> t
+
   direct +fig-center : [t] block-cmd
   direct \fig-on-right : [t] inline-cmd
   direct +fig-on-right : [length?; t; block-text] block-cmd
   direct \fig-abs-pos : [(length * length); t] inline-cmd
   direct +fig-abs-pos : [(length * length); t] block-cmd
+
   direct \fig-inline : [float?; t] inline-cmd
 
 end = struct
@@ -111,6 +117,14 @@ end = struct
 
   % FigBox の変換 {{{
 
+  let hconcat fblst ctx =
+    let iblst = fblst |> List.map (embed-figure ctx) in
+    iblst |> List.fold-left (++) inline-nil
+
+  let vconcat fblst ctx =
+    let iblst = fblst |> List.map (embed-figure ctx) in
+    line-stack-bottom iblst
+
   let margin left right top bot fb ctx =
     let ib =
       let top-mgn = inline-graphics 0pt top 0pt (fun (_, _) -> []) in
@@ -173,6 +187,18 @@ end = struct
     let iblst-aligned = iblst |> List.map (halign wid al) in
     line-stack-bottom iblst-aligned
 
+  % overlay
+
+  let ghost dcf fb ctx =
+    let ib = embed-figure ctx fb in
+    SlydifiOverlay.ghost-inline dcf ib
+
+  let phantom dcf fb ctx =
+    let ib = embed-figure ctx fb in
+    SlydifiOverlay.phantom-inline dcf ib
+
+  let select dcf fb-true fb-false ctx =
+    embed-figure ctx (SlydifiOverlay.select dcf fb-true fb-false)
   % }}}
 
   % Commands {{{
