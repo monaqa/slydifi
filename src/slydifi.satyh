@@ -283,10 +283,9 @@ end = struct
 
   let-inline ctx \text-color ?:dcf clr it =
     let dcf = Option.from (fun _ -> true) dcf in
-    let not-nf idx = not (dcf idx) in
-    let ctx2 = ctx |> set-text-color clr in
-    (SlydifiOverlay.ghost-inline dcf (read-inline ctx2 it))
-      ++ (SlydifiOverlay.ghost-inline not-nf (read-inline ctx it))
+    SlydifiOverlay.select dcf
+      (read-inline (ctx |> set-text-color clr) it)
+        (read-inline ctx it)
 
   let ic-link cfg-color cfg-text ctx it url =
     let ctx2 = ctx |> set-text-color cfg-color#link in

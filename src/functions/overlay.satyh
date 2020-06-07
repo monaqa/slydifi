@@ -3,8 +3,14 @@
 
 module SlydifiOverlay : sig
 
-  % val layer : int Param.t
+  val layer : int Param.t
 
+  % let frames = frame-scheme-overlay ctx n-layer frame-f itlst btlst
+  % の形で用いる．
+  % n-layer: オーバーレイを行いたいレイヤーの数．
+  % itlst: layer の値に応じて異なる「発火」を行いたいような inline-text のリスト．
+  % btlst: layer の値に応じて異なる「発火」を行いたいような block-text のリスト．
+  % frame-f: itlst と btlst さえ与えられたらフレームが出来上がるような関数．
   val frame-scheme-overlay :
     context -> int -> (inline-text list -> block-text list -> block-boxes)
     -> inline-text list -> block-text list -> block-boxes
@@ -20,6 +26,10 @@ module SlydifiOverlay : sig
   % そうでなければ第2引数に与えられたものと同じ大きさの空白を返す．
   val phantom-inline : (int -> bool) -> inline-boxes -> inline-boxes
   val phantom-block : (int -> bool) -> block-boxes -> block-boxes
+
+  % 第一引数 (display condition) に現在のレイヤー番号を渡して得られる bool が true なら第2引数を描画．
+  % そうでなければ inline-nil/block-nil を返す．
+  val select : (int -> bool) -> 'a -> 'a -> 'a
 
   % 現在のレイヤー番号を描画する．
   direct \show-layer : [] inline-cmd
@@ -45,7 +55,7 @@ end = struct
 
   % itlst: layer の値に応じて異なる「発火」を行いたいような inline-text のリスト．
   % btlst: layer の値に応じて異なる「発火」を行いたいような block-text のリスト．
-  % itlst と btlst さえ与えられたらフレームが出来上がる，そんな関数．
+  % frame-f: itlst と btlst さえ与えられたらフレームが出来上がるような関数．
   let frame-scheme-overlay ctx n-layer frame-f itlst btlst =
     let () = Param.discard layer in
     let func n =
@@ -85,6 +95,8 @@ end = struct
       let ht = get-natural-length bb in
       block-skip ht
 
+  let select dcf val-true val-false =
+    if (dcf (Param.get layer)) then val-true else val-false
 
   let-inline \show-layer = embed-string (arabic (Param.get layer))
 

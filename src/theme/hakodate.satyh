@@ -33,8 +33,8 @@ module SlydifiHakodate : sig
   direct +multiframe : [int; inline-text; block-text] block-cmd
 
   % テキスト修飾
-  direct \emph : [inline-text] inline-cmd
-  direct \textbf : [inline-text] inline-cmd
+  direct \emph : [(int -> bool)?; inline-text] inline-cmd
+  direct \textbf : [(int -> bool)?; inline-text] inline-cmd
   direct \link : [inline-text?; string] inline-cmd
 
   % 箇条書き
@@ -367,6 +367,11 @@ end = struct
   % +multiframe{}<> command {{{
 
   let-block ctx +multiframe n-layer title inner =
+    % let title =
+    %   let it-layer = embed-string (arabic n-layer) in
+    %   {#title; (\show-layer;/#it-layer;)}
+    % in
+
     let itlst = [title;] in
     let btlst = [inner;] in
 
@@ -414,14 +419,21 @@ end = struct
 
   % インラインテキスト装飾 {{{
 
-  let-inline ctx \emph it =
-    let ctx2 = ctx |> set-text-color cfg-color#emph
-                   |> SlydifiScheme.set-font-config cfg-text#emph
+  let-inline ctx \emph ?:dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ctx2 = SlydifiOverlay.select dcf
+      (ctx |> set-text-color cfg-color#emph
+           |> SlydifiScheme.set-font-config cfg-text#emph)
+        ctx
     in
     (read-inline ctx2 it)
 
-  let-inline ctx \textbf it =
-    let ctx2 = ctx |> SlydifiScheme.set-font-config cfg-text#emph in
+  let-inline ctx \textbf ?: dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ctx2 = SlydifiOverlay.select dcf
+      (ctx |> SlydifiScheme.set-font-config cfg-text#emph)
+        ctx
+    in
     (read-inline ctx2 it)
 
   let-inline ctx \link ?:it url =
