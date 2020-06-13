@@ -1,0 +1,225 @@
+@require: list
+@require: gr
+@require: option
+@require: color
+
+module FigBox : sig
+
+  % context を与えて "箱" になるもの．
+  type t
+
+  % FigBox.t の新規作成
+  val include-image : int?-> length -> string -> t
+  val include-image-with-height : int?-> length -> string -> t
+  val dummy-box: length ?-> length -> length -> t
+  val textbox: (context -> context)?-> length -> inline-text -> t
+  val textblock: (context -> context)?-> length -> block-text -> t
+
+  % FigBox.t の変換
+  val hconcat : float?-> t list -> t
+  val vconcat : float?-> t list -> t
+  val margin : length -> length -> length -> length -> t -> t
+  val hmargin : length -> t -> t
+  val vmargin : length -> t -> t
+  val hvmargin : length -> t -> t
+  val draft: t -> t
+  val shift: length -> length -> t -> t
+
+  % 箱を挿入するためのコマンド
+  direct +fig-center : [t] block-cmd
+  direct \fig-on-right : [t] inline-cmd
+  direct +fig-on-right : [length?; t; block-text] block-cmd
+  direct \fig-abs-pos : [(length * length); t] inline-cmd
+  direct +fig-abs-pos : [(length * length); t] block-cmd
+  direct \fig-inline : [float?; t] inline-cmd
+
+end = struct
+
+  type t = context -> inline-boxes
+
+  % FigBox.t を inline-boxes 型に変換する．
+  % embe-math みたいな interface にしたかった．
+  let embed-figure ctx fb = fb ctx
+
+  % FigBox.t 型の新規作成 {{{
+
+  % ユーザが画像を読み込むときに使える統一的な関数．
+  % 拡張子を判別してヴァリアントを変える．
+  let include-image ?:pg wid pth ctx =
+    let pg = Option.from 1 pg in
+    let sep-pat = regexp-of-string `\.` in
+    let splitlst = (split-on-regexp sep-pat pth) in
+    let (_, ext) = Option.from (0, ` `) (splitlst |> List.nth (List.length splitlst - 1)) in
+    match ext with
+    | `pdf`  -> use-image-by-width (load-pdf-image pth pg) wid
+    | `jpg`  -> use-image-by-width (load-image pth) wid
+    | `jpeg` -> use-image-by-width (load-image pth) wid
+    | `jpe`  -> use-image-by-width (load-image pth) wid
+    | `jfif` -> use-image-by-width (load-image pth) wid
+    | `jfi`  -> use-image-by-width (load-image pth) wid
+    | `jif`  -> use-image-by-width (load-image pth) wid
+    | _ ->
+        let () = display-message (`Failed to include image: [` ^ pth ^ `]`) in
+        inline-nil
+
+  let include-image-with-height ?:pg ht pth ctx =
+    let pg = Option.from 1 pg in
+    let ib = embed-figure ctx (include-image ?:pg 1pt pth) in
+    let (_, ht-norm, _) = get-natural-metrics ib in
+    let scale = ht /' ht-norm in
+    include-image ?:pg (1pt *' scale) pth ctx
+
+  % 小数点第二位まで表示
+  let show-length len =
+    let times-100 = round ((len /' 1pt) *. 100.) in
+    let exp = (float times-100) /. 100. in
+    embed-string (show-float exp ^ `pt`)
+
+  let draw-dummy-box ctx wid ht dp (x, y) =
+    let ctx = ctx |> set-font-size ((get-font-size ctx) *' 0.4) in
+    let ib-wid = read-inline ctx (show-length wid) in
+    let (wid-ib-wid, _, _) = get-natural-metrics ib-wid in
+    let ib-ht = read-inline ctx (show-length (ht +' dp)) in
+    let (_, ht-ib-ht, _) = get-natural-metrics ib-ht in
+    let rect-path = Gr.rectangle (x, y -' dp) (x +' wid, y +' ht) in
+    [
+      (stroke 1pt Color.black rect-path);
+      (stroke 1pt Color.black (Gr.line (0pt, 0pt -' dp) (wid, ht) |> shift-path (x, y)));
+      (stroke 1pt Color.black (Gr.line (wid, 0pt -' dp) (0pt, ht) |> shift-path (x, y)));
+      (draw-text (x +' 2pt, y +' (ht -' dp -' ht-ib-ht) *' 0.5) ib-ht);
+      (draw-text (x +' (wid -' wid-ib-wid) *' 0.5, y -' dp +' 2pt) ib-wid);
+    ]
+
+  let dummy-box ?:dp wid ht ctx =
+    let dp = Option.from 0pt dp in
+    inline-graphics wid ht dp (draw-dummy-box ctx wid ht dp)
+
+  let textbox ?:ctxf wid it ctx =
+    let ctxf = Option.from (fun x -> x) ctxf in
+    embed-block-bottom (ctxf ctx) wid (
+      fun ctx -> line-break false false ctx
+        (read-inline ctx it ++ inline-fil)
+    )
+
+  let textblock ?:ctxf wid bt ctx =
+    let ctxf = Option.from (fun x -> x) ctxf in
+    embed-block-bottom (ctxf ctx) wid (
+      fun ctx -> read-block ctx bt
+    )
+
+  % }}}
+
+  % FigBox の変換 {{{
+
+  let margin left right top bot fb ctx =
+    let ib =
+      let top-mgn = inline-graphics 0pt top 0pt (fun (_, _) -> []) in
+      let bot-mgn = inline-graphics 0pt bot 0pt (fun (_, _) -> []) in
+      line-stack-bottom [top-mgn; embed-figure ctx fb; bot-mgn] in
+    (inline-skip left) ++ ib ++ (inline-skip right)
+
+  let hmargin len = margin len len 0pt 0pt
+  let vmargin len = margin 0pt 0pt len len
+  let hvmargin len = margin len len len len
+
+  let draft fb ctx =
+    let ib = embed-figure ctx fb in
+    let (wid, ht, dp) = get-natural-metrics ib in
+    dummy-box ?:dp wid ht ctx
+
+  let shift xshift yshift fb ctx =
+    let ib = embed-figure ctx fb in
+    let (wid, ht, dp) = get-natural-metrics ib in
+    inline-graphics wid ht dp (fun (x, y) -> [
+      draw-text (x +' xshift, y +' yshift) ib
+    ])
+
+  let get-max-metrics iblst =
+    let metrics-lst = iblst |> List.map (get-natural-metrics) in
+    let max-metrics (wid1, ht1, dp1) (wid2, ht2, dp2) =
+      let max a b = if a >' b then a else b in
+      ( max wid1 wid2, max ht1 ht2, max dp1 dp2)
+    in
+    metrics-lst |> List.fold-left max-metrics (0pt, 0pt, 0pt)
+
+  % 高さ ht, 深さ dp になるように ib にマージンをつける．
+  % al が 0.0 のときは下揃え． 1.0 のときは上揃え．
+  let valign ht dp al ib =
+    let (_, ht-ib, dp-ib) = get-natural-metrics ib in
+    let diff = (ht +' dp) -' (ht-ib +' dp-ib) in
+    % margin 0pt 0pt (diff *' (1. -. al)) (diff *' al) fb ctx
+    let top-mgn = inline-graphics 0pt (diff *' (1. -. al)) 0pt (fun (_, _) -> []) in
+    let bot-mgn = inline-graphics 0pt (diff *' al) 0pt (fun (_, _) -> []) in
+    line-stack-bottom [top-mgn; ib; bot-mgn]
+
+  % 幅 wid になるように ib にマージンをつける．
+  % al が 0.0 のときは左揃え． 1.0 のときは右揃え．
+  let halign wid al ib =
+    let (wid-ib, _, _) = get-natural-metrics ib in
+    let diff = wid -' wid-ib in
+    inline-skip (diff *' al) ++ ib ++ inline-skip (diff *' (1. -. al))
+
+  let hconcat ?:al fblst ctx =
+    let al = Option.from 0. al in
+    let iblst = fblst |> List.map (embed-figure ctx) in
+    let (_, ht, dp) = get-max-metrics iblst in
+    let iblst-aligned = iblst |> List.map (valign ht dp al) in
+    iblst-aligned |> List.fold-left (++) inline-nil
+
+  let vconcat ?:al fblst ctx =
+    let al = Option.from 0. al in
+    let iblst = fblst |> List.map (embed-figure ctx) in
+    let (wid, _, _) = get-max-metrics iblst in
+    let iblst-aligned = iblst |> List.map (halign wid al) in
+    line-stack-bottom iblst-aligned
+
+  % }}}
+
+  % Commands {{{
+
+  let-block ctx +fig-center fb =
+    let ib-fig = embed-figure ctx fb in
+    line-break false false ctx (inline-fil ++ ib-fig ++ inline-fil)
+
+  let-inline ctx \fig-on-right fb =
+    let ib = embed-figure ctx fb in
+    let (wid, ht, dp) = get-natural-metrics ib in
+    inline-graphics 0pt 0pt 0pt (fun (x, y) -> [
+      draw-text
+        (x +' (get-text-width ctx) -' wid,
+        y +' (ctx |> get-font-size) -' ht)
+          ib
+    ])
+
+  let-block ctx +fig-on-right ?:margin fb bt =
+    let margin = Option.from 20pt margin in
+    let (ib-wid, _, _) = get-natural-metrics (embed-figure ctx fb) in
+    let ib-fig = read-inline ctx {\fig-on-right(fb);} in
+    let twid = get-text-width ctx in
+    let wid = (get-text-width ctx) -' ib-wid -' margin in
+    let ib-content = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
+    line-break false false ctx (ib-fig ++ ib-content)
+
+  let fig-abs-pos ctx pt fb =
+    let ib = embed-figure ctx fb in
+    inline-graphics 0pt 0pt 0pt (fun _ -> [draw-text pt ib])
+
+  let-inline ctx \fig-abs-pos = fig-abs-pos ctx
+
+  let-block ctx +fig-abs-pos pt fb =
+    let it-gr = fig-abs-pos ctx pt fb in
+    line-break false false ctx (it-gr ++ inline-fil)
+
+  let-inline ctx \fig-inline ?:align fb =
+    let align = Option.from 0. align in
+    let ib = embed-figure ctx fb in
+    let fsize = get-font-size ctx in
+    let (wid, ht, dp) = get-natural-metrics ib in
+    let ht-inner = ht *' (1. -. align) +' fsize *' align in
+    let dp-inner = 0pt *' (1. -. align) +' (ht -' fsize) *' align in
+    inline-graphics wid ht-inner dp-inner
+      (fun (x, y) -> [draw-text (x, y -' dp-inner) ib])
+
+  % }}}
+
+end

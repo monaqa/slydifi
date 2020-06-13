@@ -6,6 +6,10 @@
 @require: list
 @require: class-slydifi/theme/hakodate
 
+open FigBox
+
+in
+
 SlydifiHakodate.document(|
   draft-mode = false;
 |)'<
@@ -42,7 +46,6 @@ SlydifiHakodate.document(|
           ** セクション見出し：セクションのタイトルを載せる
           ** 本文：通常のフレーム
       }
-      +centered-image(DummyBox(660pt, 160pt));
     >
 
     +frame{テキストの記述}<
@@ -61,7 +64,24 @@ SlydifiHakodate.document(|
       }
     >
 
-    +frame{図表の貼り付け}<
+    +frame{図表の貼り付け（`FigBox` モジュール）}<
+      +listing{
+        * 例： \code(``+fig-center(FigBox.include-image 200pt `path/to/image.jpg`);``);
+          ** \code(`FigBox.include-image`);：画像 (PDF/JPEG) を指定幅で読み込む
+          ** \code(`+fig-center`);：読み込んだ図を中央揃えで配置
+      }
+
+      +fig-on-right(dummy-box 100pt 200pt)<
+        +listing{
+          * その他にも様々な読み込み用の関数や配置コマンドが用意されている
+            ** `dummy-box`：指定されたサイズのダミーボックス
+            ** `hmargin`：水平方向に指定された量の余白を付ける
+            ** `\fig-inline`：テキスト中\fig-inline?:(0.5)(dummy-box 60pt 30pt |> hmargin 5pt);に画像を出力
+            ** `+fig-on-right`：画像を右に，本文を左に配置
+
+        }
+      >
+
     >
   >
 
