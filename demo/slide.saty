@@ -102,8 +102,8 @@ SlydifiHakodate.document(|
       +p?:(in-case [1; 4]){④ これは 1, 4 枚目のときのみ表示される段落．}
       +p{下の図は 2 枚目以降2枚表示される．}
       +fig-center(
-        hconcat [
-          dummy-box 200pt 100pt |> hmargin 10pt;
+        hconcat ?:0.5 [
+          dummy-box 200pt 50pt |> hmargin 10pt;
           dummy-box 150pt 100pt |> hmargin 10pt |> phantom (after 2)
         ]
       );
