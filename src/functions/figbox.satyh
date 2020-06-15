@@ -41,7 +41,7 @@ module FigBox : sig
 
   direct +fig-center : [t] block-cmd
   direct +fig-block : [float?; t] block-cmd
-  direct \fig-on-right : [t] inline-cmd
+  % direct \fig-on-right : [t] inline-cmd
   direct +fig-on-right : [length?; t; block-text] block-cmd
   direct \fig-abs-pos : [(length * length); t] inline-cmd
   direct +fig-abs-pos : [(length * length); t] block-cmd
@@ -276,23 +276,34 @@ end = struct
     line-break false false ctx ((inline-skip left-margin) ++ ib-fig ++ inline-fil)
 
   let-block +fig-center fb = '<
-      +fig-block?:(0.5)(fb);
-    >
+    +fig-block?:(0.5)(fb);
+  >
 
-  let-inline ctx \fig-on-right fb =
-    let ib = embed-figure ctx fb in
-    let (wid, ht, dp) = get-natural-metrics ib in
-    inline-graphics 0pt 0pt 0pt (fun (x, y) -> [
-      draw-text
-        (x +' (get-text-width ctx) -' wid,
-        y +' (ctx |> get-font-size) -' ht)
-          ib
-    ])
+  % let-inline ctx \fig-on-right fb =
+  %   let ib = embed-figure ctx fb in
+  %   let (wid, ht, dp) = get-natural-metrics ib in
+  %   let ib-mark =
+  %     inline-graphics 0pt 0pt 0pt (fun (x, y) -> [
+  %       draw-text
+  %         (x +' (get-text-width ctx) -' wid,
+  %         y +' (ctx |> get-font-size) -' ht)
+  %           ib
+  %     ])
+  %   in
+  %   ib-mark
 
   let-block ctx +fig-on-right ?:margin fb bt =
     let margin = Option.from 20pt margin in
-    let (ib-wid, _, _) = get-natural-metrics (embed-figure ctx fb) in
-    let ib-fig = read-inline ctx {\fig-on-right(fb);} in
+    let (ib-wid, ib-ht, ib-dp) = get-natural-metrics (embed-figure ctx fb) in
+    let ib-fig =
+      let ib = embed-figure ctx fb in
+      inline-graphics 0pt 0pt 0pt (fun (x, y) -> [
+        draw-text
+          (x +' (get-text-width ctx) -' ib-wid,
+          y +' (ctx |> get-font-size) -' ib-ht)
+            ib
+      ])
+    in
     let twid = get-text-width ctx in
     let wid = (get-text-width ctx) -' ib-wid -' margin in
     let ib-content = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in

@@ -71,16 +71,6 @@ end = struct
     range 1 n-layer |> List.map func |> List.fold-left (+++) block-nil
 
 
-  let make-phantom-inline ctx it =
-    let ib = read-inline ctx it in
-    let (wid, ht, dp) = get-natural-metrics ib in
-    inline-graphics wid ht dp (fun (x, y) -> [])
-
-  let make-phantom-block ctx bt =
-    let bb = read-block ctx bt in
-    let ht = get-natural-length bb in
-    block-skip ht
-
   let ghost-inline dcf ib =
     if (dcf (Param.get layer)) then ib else inline-nil
 
