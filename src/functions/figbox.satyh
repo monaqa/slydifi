@@ -26,6 +26,8 @@ module FigBox : sig
   val draft: t -> t
   val shift: length -> length -> t -> t
   val gap: length -> t
+  val glass-box: (float * float)?-> length -> length -> t -> t
+  val frame: length -> color -> t -> t
 
   % overlay
   val ghost: (int -> bool) -> t -> t
@@ -198,11 +200,12 @@ end = struct
 
   let gap len = Gap(len)
 
+  let max-length a b = if a >' b then a else b
+
   let get-max-metrics iblst =
     let metrics-lst = iblst |> List.map (get-natural-metrics) in
     let max-metrics (wid1, ht1, dp1) (wid2, ht2, dp2) =
-      let max a b = if a >' b then a else b in
-      ( max wid1 wid2, max ht1 ht2, max dp1 dp2)
+      ( max-length wid1 wid2, max-length ht1 ht2, max-length dp1 dp2)
     in
     metrics-lst |> List.fold-left max-metrics (0pt, 0pt, 0pt)
 
@@ -240,6 +243,31 @@ end = struct
       let (wid, _, _) = get-max-metrics iblst in
       let iblst-aligned = iblst |> List.map (halign wid al) in
       line-stack-bottom iblst-aligned
+    in
+    Box(embedf)
+
+  let glass-box ?:als wid ht fb =
+    let embedf ctx =
+      let (h-al, v-al) = Option.from (0.5, 0.5) als in
+      let ib-fig = embed-figure ctx fb in
+      let (wid-fig, ht-fig, dp-fig) = get-natural-metrics ib-fig in
+      let left-mgn = (max-length 0pt (wid -' wid-fig)) *' h-al in
+      let right-mgn = (max-length 0pt (wid -' wid-fig)) *' (1. -. h-al) in
+      let top-mgn = (ht -' ht-fig) *' (1. -. v-al) in
+      let bot-mgn = (ht -' ht-fig) *' v-al in
+      let fb = margin left-mgn right-mgn top-mgn bot-mgn fb in
+      embed-figure ctx fb
+    in
+    Box(embedf)
+
+  let frame thk clr fb =
+    let embedf ctx =
+      let ib-fig = embed-figure ctx fb in
+      let (wid, ht, dp) = get-natural-metrics ib-fig in
+      inline-graphics wid ht dp (fun (x, y) -> [
+        draw-text (x, y) ib-fig;
+        stroke thk clr (Gr.rectangle (x, y -' dp) (x +' wid, y +' ht));
+      ])
     in
     Box(embedf)
 
