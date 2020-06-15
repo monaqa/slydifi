@@ -32,7 +32,15 @@ module FigBox : sig
   val phantom: (int -> bool) -> t -> t
   val select: (int -> bool) -> t -> t -> t
 
+  % align
+  val align-left : float
+  val align-center : float
+  val align-right : float
+  val align-top : float
+  val align-bottom : float
+
   direct +fig-center : [t] block-cmd
+  direct +fig-block : [float?; t] block-cmd
   direct \fig-on-right : [t] inline-cmd
   direct +fig-on-right : [length?; t; block-text] block-cmd
   direct \fig-abs-pos : [(length * length); t] inline-cmd
@@ -61,6 +69,14 @@ end = struct
             inline-skip l
           else
             inline-graphics 0pt l 0pt (fun (x, y) -> [])
+
+  % 定数
+
+  let align-left   = 0.0
+  let align-right  = 1.0
+  let align-center = 0.5
+  let align-top    = 1.0
+  let align-bottom = 0.0
 
   % FigBox.t 型の新規作成 {{{
 
@@ -252,9 +268,16 @@ end = struct
 
   % Commands {{{
 
-  let-block ctx +fig-center fb =
+  let-block ctx +fig-block ?:al fb =
+    let al = Option.from 0.5 al in
     let ib-fig = embed-figure ctx fb in
-    line-break false false ctx (inline-fil ++ ib-fig ++ inline-fil)
+    let (wid-fig, _, _) = get-natural-metrics ib-fig in
+    let left-margin = ((get-text-width ctx) -' wid-fig) *' al in
+    line-break false false ctx ((inline-skip left-margin) ++ ib-fig ++ inline-fil)
+
+  let-block +fig-center fb = '<
+      +fig-block?:(0.5)(fb);
+    >
 
   let-inline ctx \fig-on-right fb =
     let ib = embed-figure ctx fb in
