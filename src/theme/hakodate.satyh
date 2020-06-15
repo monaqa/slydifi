@@ -5,7 +5,8 @@
 @require: annot
 @require: class-slydifi/slydifi
 @require: class-slydifi/functions/color
-@require: class-slydifi/functions/enumitem
+% @require: class-slydifi/functions/enumitem
+@require: enumitem/enumitem
 @require: class-slydifi/functions/footnote
 @require: class-slydifi/functions/overlay
 
@@ -443,7 +444,7 @@ end = struct
 
   % +listing{} command {{{
 
-  let label-dia ctx idx =
+  let label-dia (idx :: _) ctx =
     let path (x, y) =
       let yc = y +' cfg-text#normal#size *' 0.3 in
       let north = yc +' cfg-text#normal#size *' 0.25 in
@@ -459,7 +460,7 @@ end = struct
     let gr (x, y) = [fill cfg-color#title (path (x, y))] in
     inline-graphics 8pt 8pt 0pt (gr) ++ inline-skip 8pt
 
-  let label-tria ctx idx =
+  let label-tria (idx :: _) ctx =
     let path (x, y) =
       let yc = y +' cfg-text#normal#size *' 0.3 in
       let xl = x in
@@ -474,7 +475,7 @@ end = struct
     let gr (x, y) = [fill cfg-color#title (path (x, y))] in
     inline-graphics 8pt 8pt 0pt (gr) ++ inline-skip 8pt
 
-  let label-circ ctx idx =
+  let label-circ (idx :: _) ctx =
     let path (x, y) =
       let cx = x +' cfg-text#normal#size *' 0.3 in
       let cy = y +' cfg-text#normal#size *' 0.3 in
@@ -484,13 +485,43 @@ end = struct
     let gr (x, y) = [fill cfg-color#title (path (x, y))] in
     inline-graphics 8pt 8pt 0pt (gr) ++ inline-skip 8pt
 
-  let label-rule depth =
-    match depth with
-    | 0 -> label-dia
-    | 1 -> label-tria
-    | _ -> label-circ
+  let label-rule idxlst =
+    match (List.length idxlst) with
+    | 1 -> label-dia idxlst
+    | 2 -> label-tria idxlst
+    | _ -> label-circ idxlst
 
-  let-block +listing item = '< +genlistings(label-rule)(item); >
+  let-rec power-float-int r m =
+    match m with
+    | 0 -> 1.
+    | _ -> (power-float-int r (m - 1)) *. r
+
+  let max-float f1 f2 = if (1pt *' f1) >' (1pt *' f2) then f1 else f2
+
+  let hakodate-item ctx depth ib-label text =
+    let shrink-ratio =
+      max-float (power-float-int 0.95 depth) 0.85
+    in
+    let ctx-item =
+      let fsize = (get-font-size ctx) *' shrink-ratio in
+      ctx |> set-font-size fsize
+          % |> set-paragraph-margin (fsize *' 0.75) (fsize *' 0.75)
+    in
+    let text-indent =
+      let fsize = get-font-size ctx-item in
+      fsize *' (1.2 *. (float depth))
+    in
+    let ib-text =
+      let index-width = get-natural-width ib-label in
+      let item-text-width = (get-text-width ctx) -' text-indent -' index-width in
+      embed-block-top ctx-item item-text-width (fun ctx ->
+        line-break true true ctx (read-inline ctx text ++ inline-fil)
+      )
+    in
+    line-break true true ctx-item
+      ((inline-skip text-indent) ++ ib-label ++ ib-text)
+
+  let-block +listing item = '< +genlisting(label-rule)(hakodate-item)(item); >
 
   % }}}
 
