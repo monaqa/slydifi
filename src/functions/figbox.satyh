@@ -25,6 +25,7 @@ module FigBox : sig
   val hvmargin : length -> t -> t
   val draft: t -> t
   val shift: length -> length -> t -> t
+  val gap: length -> t
 
   % overlay
   val ghost: (int -> bool) -> t -> t
@@ -41,39 +42,59 @@ module FigBox : sig
 
 end = struct
 
-  type t = context -> inline-boxes
+  type t =
+    | Box of context -> inline-boxes
+    | Gap of length
 
   % FigBox.t を inline-boxes 型に変換する．
   % embe-math みたいな interface にしたかった．
-  let embed-figure ctx fb = fb ctx
+  let embed-figure ctx fb =
+    match fb with
+      | Box(embedf) -> embedf ctx
+      | Gap(l) -> inline-nil
+
+  let embed-gap is-horizontal ctx fb =
+    match fb with
+      | Box(embedf) -> embedf ctx
+      | Gap(l) ->
+          if is-horizontal then
+            inline-skip l
+          else
+            inline-graphics 0pt l 0pt (fun (x, y) -> [])
 
   % FigBox.t 型の新規作成 {{{
 
   % ユーザが画像を読み込むときに使える統一的な関数．
   % 拡張子を判別してヴァリアントを変える．
-  let include-image ?:pg wid pth ctx =
-    let pg = Option.from 1 pg in
-    let sep-pat = regexp-of-string `\.` in
-    let splitlst = (split-on-regexp sep-pat pth) in
-    let (_, ext) = Option.from (0, ` `) (splitlst |> List.nth (List.length splitlst - 1)) in
-    match ext with
-    | `pdf`  -> use-image-by-width (load-pdf-image pth pg) wid
-    | `jpg`  -> use-image-by-width (load-image pth) wid
-    | `jpeg` -> use-image-by-width (load-image pth) wid
-    | `jpe`  -> use-image-by-width (load-image pth) wid
-    | `jfif` -> use-image-by-width (load-image pth) wid
-    | `jfi`  -> use-image-by-width (load-image pth) wid
-    | `jif`  -> use-image-by-width (load-image pth) wid
-    | _ ->
-        let () = display-message (`Failed to include image: [` ^ pth ^ `]`) in
-        inline-nil
+  let include-image ?:pg wid pth =
+    let embedf ctx =
+      let pg = Option.from 1 pg in
+      let sep-pat = regexp-of-string `\.` in
+      let splitlst = (split-on-regexp sep-pat pth) in
+      let (_, ext) = Option.from (0, ` `) (splitlst |> List.nth (List.length splitlst - 1)) in
+      match ext with
+      | `pdf`  -> use-image-by-width (load-pdf-image pth pg) wid
+      | `jpg`  -> use-image-by-width (load-image pth) wid
+      | `jpeg` -> use-image-by-width (load-image pth) wid
+      | `jpe`  -> use-image-by-width (load-image pth) wid
+      | `jfif` -> use-image-by-width (load-image pth) wid
+      | `jfi`  -> use-image-by-width (load-image pth) wid
+      | `jif`  -> use-image-by-width (load-image pth) wid
+      | _ ->
+          let () = display-message (`Failed to include image: [` ^ pth ^ `]`) in
+          inline-nil
+    in
+    Box(embedf)
 
-  let include-image-with-height ?:pg ht pth ctx =
-    let pg = Option.from 1 pg in
-    let ib = embed-figure ctx (include-image ?:pg 1pt pth) in
-    let (_, ht-norm, _) = get-natural-metrics ib in
-    let scale = ht /' ht-norm in
-    include-image ?:pg (1pt *' scale) pth ctx
+  let include-image-with-height ?:pg ht pth =
+    let embedf ctx = 
+      let pg = Option.from 1 pg in
+      let ib = embed-figure ctx (include-image ?:pg 1pt pth) in
+      let (_, ht-norm, _) = get-natural-metrics ib in
+      let scale = ht /' ht-norm in
+      embed-figure ctx (include-image ?:pg (1pt *' scale) pth)
+    in
+    Box(embedf)
 
   % 小数点第二位まで表示
   let show-length len =
@@ -96,57 +117,70 @@ end = struct
       (draw-text (x +' (wid -' wid-ib-wid) *' 0.5, y -' dp +' 2pt) ib-wid);
     ]
 
-  let dummy-box ?:dp wid ht ctx =
-    let dp = Option.from 0pt dp in
-    inline-graphics wid ht dp (draw-dummy-box ctx wid ht dp)
+  let dummy-box ?:dp wid ht =
+    let embedf ctx =
+      let dp = Option.from 0pt dp in
+      inline-graphics wid ht dp (draw-dummy-box ctx wid ht dp)
+    in
+    Box(embedf)
 
-  let textbox ?:ctxf wid it ctx =
-    let ctxf = Option.from (fun x -> x) ctxf in
-    embed-block-bottom (ctxf ctx) wid (
-      fun ctx -> line-break false false ctx
-        (read-inline ctx it ++ inline-fil)
-    )
+  let textbox ?:ctxf wid it =
+    let embedf ctx =
+      let ctxf = Option.from (fun x -> x) ctxf in
+      embed-block-bottom (ctxf ctx) wid (
+        fun ctx -> line-break false false ctx
+          (read-inline ctx it ++ inline-fil)
+      )
+    in
+    Box(embedf)
 
-  let textblock ?:ctxf wid bt ctx =
-    let ctxf = Option.from (fun x -> x) ctxf in
-    embed-block-bottom (ctxf ctx) wid (
-      fun ctx -> read-block ctx bt
-    )
+  let textblock ?:ctxf wid bt =
+    let embedf ctx =
+      let ctxf = Option.from (fun x -> x) ctxf in
+      embed-block-bottom (ctxf ctx) wid (
+        fun ctx -> read-block ctx bt
+      )
+    in
+    Box(embedf)
 
   % }}}
 
   % FigBox の変換 {{{
 
-  let hconcat fblst ctx =
-    let iblst = fblst |> List.map (embed-figure ctx) in
-    iblst |> List.fold-left (++) inline-nil
-
-  let vconcat fblst ctx =
-    let iblst = fblst |> List.map (embed-figure ctx) in
-    line-stack-bottom iblst
-
-  let margin left right top bot fb ctx =
-    let ib =
-      let top-mgn = inline-graphics 0pt top 0pt (fun (_, _) -> []) in
-      let bot-mgn = inline-graphics 0pt bot 0pt (fun (_, _) -> []) in
-      line-stack-bottom [top-mgn; embed-figure ctx fb; bot-mgn] in
-    (inline-skip left) ++ ib ++ (inline-skip right)
+  let margin left right top bot fb =
+    let embedf ctx =
+      let ib =
+        let top-mgn = inline-graphics 0pt top 0pt (fun (_, _) -> []) in
+        let bot-mgn = inline-graphics 0pt bot 0pt (fun (_, _) -> []) in
+        line-stack-bottom [top-mgn; embed-figure ctx fb; bot-mgn]
+      in
+      (inline-skip left) ++ ib ++ (inline-skip right)
+    in
+    Box(embedf)
 
   let hmargin len = margin len len 0pt 0pt
   let vmargin len = margin 0pt 0pt len len
   let hvmargin len = margin len len len len
 
-  let draft fb ctx =
-    let ib = embed-figure ctx fb in
-    let (wid, ht, dp) = get-natural-metrics ib in
-    dummy-box ?:dp wid ht ctx
+  let draft fb =
+    let embedf ctx =
+      let ib = embed-figure ctx fb in
+      let (wid, ht, dp) = get-natural-metrics ib in
+      embed-figure ctx (dummy-box ?:dp wid ht)
+    in
+    Box(embedf)
 
-  let shift xshift yshift fb ctx =
-    let ib = embed-figure ctx fb in
-    let (wid, ht, dp) = get-natural-metrics ib in
-    inline-graphics wid ht dp (fun (x, y) -> [
-      draw-text (x +' xshift, y +' yshift) ib
-    ])
+  let shift xshift yshift fb =
+    let embedf ctx =
+      let ib = embed-figure ctx fb in
+      let (wid, ht, dp) = get-natural-metrics ib in
+      inline-graphics wid ht dp (fun (x, y) -> [
+        draw-text (x +' xshift, y +' yshift) ib
+      ])
+    in
+    Box(embedf)
+
+  let gap len = Gap(len)
 
   let get-max-metrics iblst =
     let metrics-lst = iblst |> List.map (get-natural-metrics) in
@@ -173,32 +207,47 @@ end = struct
     let diff = wid -' wid-ib in
     inline-skip (diff *' al) ++ ib ++ inline-skip (diff *' (1. -. al))
 
-  let hconcat ?:al fblst ctx =
-    let al = Option.from 0. al in
-    let iblst = fblst |> List.map (embed-figure ctx) in
-    let (_, ht, dp) = get-max-metrics iblst in
-    let iblst-aligned = iblst |> List.map (valign ht dp al) in
-    iblst-aligned |> List.fold-left (++) inline-nil
+  let hconcat ?:al fblst =
+    let embedf ctx =
+      let al = Option.from 0. al in
+      let iblst = fblst |> List.map (embed-gap true ctx) in
+      let (_, ht, dp) = get-max-metrics iblst in
+      let iblst-aligned = iblst |> List.map (valign ht dp al) in
+      iblst-aligned |> List.fold-left (++) inline-nil
+    in
+    Box(embedf)
 
-  let vconcat ?:al fblst ctx =
-    let al = Option.from 0. al in
-    let iblst = fblst |> List.map (embed-figure ctx) in
-    let (wid, _, _) = get-max-metrics iblst in
-    let iblst-aligned = iblst |> List.map (halign wid al) in
-    line-stack-bottom iblst-aligned
+  let vconcat ?:al fblst =
+    let embedf ctx =
+      let al = Option.from 0. al in
+      let iblst = fblst |> List.map (embed-gap false ctx) in
+      let (wid, _, _) = get-max-metrics iblst in
+      let iblst-aligned = iblst |> List.map (halign wid al) in
+      line-stack-bottom iblst-aligned
+    in
+    Box(embedf)
 
   % overlay
 
-  let ghost dcf fb ctx =
-    let ib = embed-figure ctx fb in
-    SlydifiOverlay.ghost-inline dcf ib
+  let ghost dcf fb =
+    let embedf ctx =
+      let ib = embed-figure ctx fb in
+      SlydifiOverlay.ghost-inline dcf ib
+    in
+    Box(embedf)
 
-  let phantom dcf fb ctx =
-    let ib = embed-figure ctx fb in
-    SlydifiOverlay.phantom-inline dcf ib
+  let phantom dcf fb =
+    let embedf ctx =
+      let ib = embed-figure ctx fb in
+      SlydifiOverlay.phantom-inline dcf ib
+    in
+    Box(embedf)
 
-  let select dcf fb-true fb-false ctx =
-    embed-figure ctx (SlydifiOverlay.select dcf fb-true fb-false)
+  let select dcf fb-true fb-false =
+    let embedf ctx =
+      embed-figure ctx (SlydifiOverlay.select dcf fb-true fb-false)
+    in
+    Box(embedf)
   % }}}
 
   % Commands {{{
