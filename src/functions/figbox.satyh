@@ -13,7 +13,8 @@ module FigBox : sig
   val include-image : int?-> length -> string -> t
   val include-image-with-height : int?-> length -> string -> t
   val dummy-box: length ?-> length -> length -> t
-  val textbox: (context -> context)?-> length -> inline-text -> t
+  val textbox: (context -> context)?-> inline-text -> t
+  val textbox-with-width: (context -> context)?-> length -> inline-text -> t
   val textblock: (context -> context)?-> length -> block-text -> t
 
   % FigBox.t の変換
@@ -142,7 +143,14 @@ end = struct
     in
     Box(embedf)
 
-  let textbox ?:ctxf wid it =
+  let textbox ?:ctxf it =
+    let embedf ctx =
+      let ctxf = Option.from (fun x -> x) ctxf in
+          read-inline (ctxf ctx) it
+    in
+    Box(embedf)
+
+  let textbox-with-width ?:ctxf wid it =
     let embedf ctx =
       let ctxf = Option.from (fun x -> x) ctxf in
       embed-block-bottom (ctxf ctx) wid (
