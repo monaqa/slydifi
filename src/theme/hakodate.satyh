@@ -1,26 +1,78 @@
-% vim: foldmethod=marker
 @require: gr
 @require: math
 @require: list
 @require: annot
 @require: class-slydifi/slydifi
 @require: class-slydifi/functions/color
-% @require: class-slydifi/functions/enumitem
 @require: enumitem/enumitem
 @require: class-slydifi/functions/footnote
 @require: class-slydifi/functions/overlay
 
 % SLyDIFi with Hakodate theme.
 module SlydifiHakodate : sig
-  % Signature {{{
 
+% configs
+  val cfg-paper: (|
+    width: length;
+    height: length;
+  |)
+
+  val cfg-text: (|
+    normal: config-font;
+    mono : config-font;
+    emph : config-font;
+    frame-title : config-font;
+    header : config-font;
+    footer : config-font;
+    slide-title : config-font;
+    slide-author : config-font;
+    slide-date : config-font;
+    section-title : config-font;
+    footnote : config-font;
+    quote : config-font;
+  |)
+
+  val cfg-color: (|
+    bg        : color;
+    fg        : color;
+    main-grid : color;
+    sub-grid  : color;
+    link      : color;
+    % Hakodate の独自パラメータ
+    title  : color;
+    emph   : color;
+    header : color;
+    footer : color;
+    quote  : color;
+    quote-line : color;
+  |)
+
+  val cfg-spacing : (|
+    % SLyDIFi 必須パラメータ
+    text-width  : length;
+    text-height : length;
+    text-horizontal-margin : length;
+    text-vertical-margin : length;
+    header-basepos : length;
+    footer-basepos : length;
+    main-grid   : length;
+    sub-grid    : length;
+    bg-gr-start-point : length;
+    % Hakodate の独自パラメータ
+    title-padding-lr : length;
+    title-padding-upper-line : length;
+    title-padding-lower-line : length;
+    title-line-width : length;
+  |)
+
+% document
   val document: 'a -> block-text -> document
     constraint 'a :: (|
       % SLyDIFi の必須パラメータ
       draft-mode: bool;
     |)
 
-  % frame 作成用のコマンド群
+% frame 作成用のコマンド群
   direct +make-title : ['a] block-cmd
     constraint 'a :: (|
       title: inline-text list;
@@ -30,26 +82,33 @@ module SlydifiHakodate : sig
   direct +section : [inline-text list; block-text] block-cmd
   direct +frame : [inline-text; block-text] block-cmd
   direct +frame-nt : [block-text] block-cmd
-
   direct +multiframe : [int; inline-text; block-text] block-cmd
 
-  % テキスト修飾
+% テキスト修飾
+  % インラインテキスト修飾
   direct \emph : [(int -> bool)?; inline-text] inline-cmd
   direct \textbf : [(int -> bool)?; inline-text] inline-cmd
   direct \link : [inline-text?; string] inline-cmd
 
+  % 引用
+  direct +quote : [block-text] block-cmd
+
   % 箇条書き
-  direct +listing : [itemize] block-cmd
+  direct +listing : [int?; itemize] block-cmd
+  direct \listing : [int?; itemize] inline-cmd
+  val label-dia  : int list -> context -> inline-boxes
+  val label-tria : int list -> context -> inline-boxes
+  val label-circ : int list -> context -> inline-boxes
+  val label-rule : int list -> context -> inline-boxes
 
   % 脚注
   direct \footnote : [inline-text] inline-cmd
   direct \footnotetext : [string; inline-text] inline-cmd
   direct \footnotemark : [string] inline-cmd
 
-  % }}}
 end = struct
 
-  % 文書設定 {{{
+% 文書設定
 
   % cfg-paper: 紙面の設定を引き渡す際に用いるレコード
   % 下では PowerPoint の文書サイズ (16:9) に合わせている
@@ -103,6 +162,7 @@ end = struct
     slide-date = (| cfg-font-emph with size = 18pt; |);
     section-title = (| cfg-font-emph with size = 28pt; |);
     footnote = (| cfg-font-normal with size = 12pt; |);
+    quote = (| cfg-font-normal with size = 18pt; |)
   |)
 
   % cfg-color: スライドの色使いに関する設定を引き渡す際に用いるレコード
@@ -124,6 +184,8 @@ end = struct
     emph   = SlydifiColor.html-color 0xCC241D;
     header = SlydifiColor.inner-color color-bg color-fg 0.5;
     footer = SlydifiColor.inner-color color-bg color-fg 0.5;
+    quote  = SlydifiColor.inner-color color-bg color-fg 0.2;
+    quote-line = SlydifiColor.inner-color color-bg color-fg 0.8;
   |)
 
   % cfg-spacing: スペーシングやなにかの長さに関する設定を引き渡す際に用いるレコード
@@ -148,17 +210,13 @@ end = struct
   let-mutable is-first-page <- true
   let-mutable is-draft-mode <- false
 
-  % }}}
-
-  % 便利な関数 {{{
+% 便利な関数
 
   % 紙面の大きさを1としたときの相対長さ．絶対座標指定時に組み合わせると便利
   let relwid relx = cfg-paper#width *' relx
   let relht rely = cfg-paper#height *' rely
 
-  % }}}
-
-  % document command {{{
+% document command
   let document record inner=
 
     % draft-mode の設定を格納しておく
@@ -183,9 +241,7 @@ end = struct
 
     SlydifiScheme.document-scheme cfg-paper cfg-text cfg-color cfg-spacing header footer record inner
 
-  % }}}
-
-  % +make-title(||) command {{{
+% +make-title(||) command
 
   % title config
   % 消す予定
@@ -262,9 +318,7 @@ end = struct
     SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode
       bg-graphics ctx block-nil
 
-  % }}}
-
-  % +section{||}<> command {{{
+% +section{||}<> command
 
   let-block ctx +section its bt =
 
@@ -315,9 +369,7 @@ end = struct
       bg-graphics ctx block-nil)
         +++ (read-block ctx bt)
 
-  % }}}
-
-  % +frame{}<> command {{{
+% +frame{}<> command
 
   let-block ctx +frame title inner =
 
@@ -363,9 +415,7 @@ end = struct
     let bb-inner = read-block ctx inner in
     SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode bg-graphics ctx bb-inner
 
-  % }}}
-
-  % +multiframe{}<> command {{{
+% +multiframe{}<> command
 
   let-block ctx +multiframe n-layer title inner =
     % let title =
@@ -416,9 +466,7 @@ end = struct
     in
     SlydifiOverlay.frame-scheme-overlay ctx n-layer frame-f itlst btlst
 
-  % }}}
-
-  % インラインテキスト装飾 {{{
+% インラインテキスト装飾
 
   let-inline ctx \emph ?:dcf it =
     let dcf = Option.from (fun _ -> true) dcf in
@@ -432,7 +480,7 @@ end = struct
   let-inline ctx \textbf ?: dcf it =
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 = SlydifiOverlay.select dcf
-      (ctx |> SlydifiScheme.set-font-config cfg-text#emph)
+      (ctx |> SlydifiScheme.set-fonts cfg-text#emph)
         ctx
     in
     (read-inline ctx2 it)
@@ -440,9 +488,23 @@ end = struct
   let-inline ctx \link ?:it url =
     SlydifiScheme.ic-link cfg-color cfg-text ctx it url
 
-  % }}}
+  let-block ctx +quote bt =
+    let deco (x, y) w h d =
+      [
+        fill cfg-color#quote-line (Gr.rectangle (x, y) (x +' 6pt, y +' h))
+      ]
+    in
+    block-frame-breakable ctx (20pt, 0pt, 10pt, 10pt)
+      (deco, deco, deco, deco)
+        (fun ctx -> (
+          let ctx2 = ctx
+            |> set-text-color cfg-color#quote
+            |> SlydifiScheme.set-font-config cfg-text#quote
+          in
+          (read-block ctx2 bt)
+        ))
 
-  % +listing{} command {{{
+% +listing{} command
 
   let label-dia (idx :: _) ctx =
     let path (x, y) =
@@ -491,6 +553,12 @@ end = struct
     | 2 -> label-tria idxlst
     | _ -> label-circ idxlst
 
+  let gen-label-rule d idxlst =
+    match (List.length idxlst + d - 1) with
+    | 1 -> label-dia idxlst
+    | 2 -> label-tria idxlst
+    | _ -> label-circ idxlst
+
   let-rec power-float-int r m =
     match m with
     | 0 -> 1.
@@ -498,9 +566,9 @@ end = struct
 
   let max-float f1 f2 = if (1pt *' f1) >' (1pt *' f2) then f1 else f2
 
-  let hakodate-item ctx depth ib-label text =
+  let gen-hakodate-item d ctx depth ib-label text =
     let shrink-ratio =
-      max-float (power-float-int 0.95 depth) 0.85
+      max-float (power-float-int 0.95 (depth + d - 1)) 0.85
     in
     let ctx-item =
       let fsize = (get-font-size ctx) *' shrink-ratio in
@@ -521,11 +589,17 @@ end = struct
     line-break true true ctx-item
       ((inline-skip text-indent) ++ ib-label ++ ib-text)
 
-  let-block +listing item = '< +genlisting(label-rule)(hakodate-item)(item); >
+  let hakodate-item = gen-hakodate-item 1
 
-  % }}}
+  let-block ctx +listing ?:depth item =
+    let depth = depth |> Option.from 1 in
+    read-block ctx '< +genlisting(gen-label-rule depth)(gen-hakodate-item depth)(item); >
 
-  % \footnote{} command {{{
+  let-inline ctx \listing ?:depth item =
+    let depth = depth |> Option.from 1 in
+    read-inline ctx {\listing-from-block<+listing?:(depth)(item);>}
+
+% \footnote{} command
 
   let-inline ctx \footnotetext ref-label it =
     let bbf num =
@@ -578,8 +652,6 @@ end = struct
         line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
     in
       FootnoteScheme.main ctx None ibf bbf
-
-  % }}}
 
 end
 

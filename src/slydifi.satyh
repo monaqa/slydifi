@@ -50,6 +50,7 @@ let-inline ctx \SLyDIFi =
 module SlydifiScheme: sig
 
   val set-font-config : config-font -> context -> context
+  val set-fonts       : config-font -> context -> context
 
   val get-standard-context : 'config-text -> 'config-color -> length -> context
     constraint 'config-text :: (|normal: config-font;|)
@@ -95,8 +96,13 @@ module SlydifiScheme: sig
   direct +p : [(int -> bool)?; inline-text] block-cmd
   direct \br: [] inline-cmd
   direct \text-color: [(int -> bool)?; color; inline-text] inline-cmd
+  direct \uline : [(int -> bool)?; inline-text] inline-cmd
+  direct \strike : [(int -> bool)?; inline-text] inline-cmd
   % 上から順に出す．
   direct +show-in-order: [block-text list] block-cmd
+
+  direct \ctx : [(int -> bool)?; (context -> context); inline-text] inline-cmd
+  direct +ctx : [(int -> bool)?; (context -> context); block-text] block-cmd
 
   val ic-link: 'config-color -> 'config-text -> context -> inline-text option -> string -> inline-boxes
     constraint 'config-color :: (| link: color; |)
@@ -120,6 +126,12 @@ end = struct
         |> set-font HanIdeographic cfg-font#font-cjk
         |> set-paragraph-margin    par-margin-upper par-margin-lower
         |> set-leading             (cfg-font#size *' cfg-font#leading-ratio)
+
+  % 書体のみを設定．
+  let set-fonts cfg-font ctx =
+    ctx |> set-font Latin          cfg-font#font-latin
+        |> set-font Kana           cfg-font#font-cjk
+        |> set-font HanIdeographic cfg-font#font-cjk
 
   % standard な context を設定
   let get-standard-context cfg-text cfg-color wid =
@@ -288,6 +300,44 @@ end = struct
     SlydifiOverlay.select dcf
       (read-inline (ctx |> set-text-color clr) it)
         (read-inline ctx it)
+
+  let-inline ctx \uline ?:dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ib = read-inline ctx it in
+    let pad (x, y) w h d =
+      SlydifiOverlay.select dcf (
+        [
+          stroke 1pt (get-text-color ctx)
+            (Gr.line (x, y -' d) (x +' w, y  -' d))
+        ]
+      )(
+        []
+      )
+    in
+    inline-frame-breakable (0pt, 0pt, 0pt, 0pt) (pad, pad, pad, pad) ib
+
+  let-inline ctx \strike ?:dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ib = read-inline ctx it in
+    let pad (x, y) w h d =
+      SlydifiOverlay.select dcf (
+        let h-base = get-font-size ctx *' 0.3 in
+        [
+          stroke 1pt (get-text-color ctx)
+            (Gr.line (x, y +' h-base) (x +' w, y +' h-base))
+        ]
+      )(
+        []
+      )
+    in
+    inline-frame-breakable (0pt, 0pt, 0pt, 0pt) (pad, pad, pad, pad) ib
+
+  let-inline ctx \ctx ?:dcf ctxf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    read-inline (SlydifiOverlay.select dcf (ctxf ctx) ctx) it
+  let-block  ctx +ctx ?:dcf ctxf bt =
+    let dcf = Option.from (fun _ -> true) dcf in
+    read-block (SlydifiOverlay.select dcf (ctxf ctx) ctx) bt
 
   let ic-link cfg-color cfg-text ctx it url =
     let ctx2 = ctx |> set-text-color cfg-color#link in
