@@ -29,6 +29,7 @@ module FigBox : sig
   val gap: length -> t
   val glass-box: (float * float)?-> length -> length -> t -> t
   val frame: length -> color -> t -> t
+  val bgcolor: color -> t -> t
 
   % overlay
   val ghost: (int -> bool) -> t -> t
@@ -55,23 +56,19 @@ end = struct
 
   type t =
     | Box of context -> inline-boxes
-    | Gap of length
+    | AxisDependingBox of bool -> context -> inline-boxes
 
   % FigBox.t を inline-boxes 型に変換する．
   % embe-math みたいな interface にしたかった．
   let embed-figure ctx fb =
     match fb with
       | Box(embedf) -> embedf ctx
-      | Gap(l) -> inline-nil
+      | AxisDependingBox(embedf) -> inline-nil
 
   let embed-gap is-horizontal ctx fb =
     match fb with
       | Box(embedf) -> embedf ctx
-      | Gap(l) ->
-          if is-horizontal then
-            inline-skip l
-          else
-            inline-graphics 0pt l 0pt (fun (x, y) -> [])
+      | AxisDependingBox(embedf) -> embedf is-horizontal ctx
 
   % 定数
 
@@ -206,7 +203,14 @@ end = struct
     in
     Box(embedf)
 
-  let gap len = Gap(len)
+  let gap len =
+    let embedf is-horizontal ctx =
+      if is-horizontal then
+        inline-skip len
+      else
+        inline-graphics 0pt len 0pt (fun (x, y) -> [])
+    in
+    AxisDependingBox(embedf)
 
   let max-length a b = if a >' b then a else b
 
@@ -275,6 +279,17 @@ end = struct
       inline-graphics wid ht dp (fun (x, y) -> [
         draw-text (x, y) ib-fig;
         stroke thk clr (Gr.rectangle (x, y -' dp) (x +' wid, y +' ht));
+      ])
+    in
+    Box(embedf)
+
+  let bgcolor clr fb =
+    let embedf ctx =
+      let ib-fig = embed-figure ctx fb in
+      let (wid, ht, dp) = get-natural-metrics ib-fig in
+      inline-graphics wid ht dp (fun (x, y) -> [
+        fill clr (Gr.rectangle (x, y -' dp) (x +' wid, y +' ht));
+        draw-text (x, y) ib-fig;
       ])
     in
     Box(embedf)
