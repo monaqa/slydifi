@@ -61,7 +61,7 @@ module SlydifiScheme: sig
 
   val document-scheme :
     config-paper -> 'config-text -> 'config-color -> 'config-spacing
-    -> headerfooter -> headerfooter -> 'record -> block-text -> document
+    -> headerfooter -> headerfooter -> block-text -> document
     constraint 'config-text :: (| normal: config-font; |)
     constraint 'config-color :: (|fg: color;|)
     constraint 'config-spacing :: (|
@@ -73,7 +73,6 @@ module SlydifiScheme: sig
       footer-basepos: length;
       bg-gr-start-point: length;
     |)
-    constraint 'record :: (|draft-mode: bool;|)
 
   % val align-block-middle : context -> length -> block-boxes -> block-boxes
 
@@ -182,7 +181,7 @@ end = struct
   %   footer: ヘッダに関する情報．
   %   record: document で設定する config. レコード型． draft-mode は必須．
   %   inner: 本文．
-  let document-scheme cfg-paper cfg-text cfg-color cfg-spacing header footer record inner =
+  let document-scheme cfg-paper cfg-text cfg-color cfg-spacing header footer inner =
 
     let page = UserDefinedPaper (cfg-paper#width, cfg-paper#height) in
 

@@ -172,7 +172,7 @@ end = struct
       line-break true true ctx (inline-fil ++ (read-inline ctx {#it-pageno;/#it-count;}) ++ inline-skip 20pt)
     in
 
-    SlydifiScheme.document-scheme cfg-paper cfg-text cfg-color cfg-spacing header footer record inner
+    SlydifiScheme.document-scheme cfg-paper cfg-text cfg-color cfg-spacing header footer inner
 
   % }}}
 
