@@ -4,6 +4,7 @@
 @require: code
 @require: annot
 @require: list
+@require: class-slydifi/functions/figbox
 @require: class-slydifi/theme/hakodate
 
 open FigBox
