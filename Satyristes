@@ -8,6 +8,7 @@
     ((package "functions/color.satyh" "./src/functions/color.satyh")
      (package "functions/enumitem.satyh" "./src/functions/enumitem.satyh")
      (package "functions/footnote.satyh" "./src/functions/footnote.satyh")
+     (package "functions/figbox.satyh" "./src/functions/figbox.satyh")
      (package "theme/akasaka.satyh" "./src/theme/akasaka.satyh")
      (package "theme/hakodate.satyh" "./src/theme/hakodate.satyh")
      (package "theme/plain.satyh" "./src/theme/plain.satyh")
