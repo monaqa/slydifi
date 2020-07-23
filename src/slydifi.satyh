@@ -103,10 +103,6 @@ module SlydifiScheme: sig
   direct \ctx : [(int -> bool)?; (context -> context); inline-text] inline-cmd
   direct +ctx : [(int -> bool)?; (context -> context); block-text] block-cmd
 
-  val ic-link: 'config-color -> 'config-text -> context -> inline-text option -> string -> inline-boxes
-    constraint 'config-color :: (| link: color; |)
-    constraint 'config-text :: (|mono: config-font;|)
-
 end = struct
 
   % 共通の変数・関数
@@ -334,22 +330,10 @@ end = struct
   let-inline ctx \ctx ?:dcf ctxf it =
     let dcf = Option.from (fun _ -> true) dcf in
     read-inline (SlydifiOverlay.select dcf (ctxf ctx) ctx) it
+
   let-block  ctx +ctx ?:dcf ctxf bt =
     let dcf = Option.from (fun _ -> true) dcf in
     read-block (SlydifiOverlay.select dcf (ctxf ctx) ctx) bt
-
-  let ic-link cfg-color cfg-text ctx it url =
-    let ctx2 = ctx |> set-text-color cfg-color#link in
-    let ctx-link = match it with
-      | None    -> ctx2 |> set-font-config cfg-text#mono
-                        |> set-font-size (get-font-size ctx)
-      | Some(v) -> ctx2
-    in
-    let text = match it with
-      | None    -> (embed-string url)
-      | Some(v) -> v
-    in
-    read-inline ctx-link {\href(url){#text;}}
 
   % overlay
   let-block ctx +show-in-order btlst =

@@ -19,7 +19,6 @@ module SlydifiAkasaka : sig
 
   val cfg-text: (|
     normal: config-font;
-    mono : config-font;
     emph : config-font;
     frame-title : config-font;
     header : config-font;
@@ -36,7 +35,6 @@ module SlydifiAkasaka : sig
     fg        : color;
     main-grid : color;
     sub-grid  : color;
-    link      : color;
     % Hakodate の独自パラメータ
     title  : color;
     emph   : color;
@@ -86,7 +84,6 @@ module SlydifiAkasaka : sig
   % テキスト修飾
   direct \emph : [(int -> bool)?; inline-text] inline-cmd
   direct \textbf : [(int -> bool)?; inline-text] inline-cmd
-  direct \link : [inline-text?; string] inline-cmd
 
   % 箇条書き
   direct +listing : [itemize] block-cmd
@@ -135,13 +132,6 @@ end = struct
   let cfg-text = (|
     % SLyDIFi の必須パラメータ
     normal = cfg-font-normal;
-    mono = (|
-      size = 18pt;
-      font-latin = (`mplus-2m-r`, 1.0, 0.0);
-      font-cjk   = (`mplus-2m-r`, 1.0, 0.0);
-      par-margin-ratio = (0.6, 0.6);
-      leading-ratio = 1.4;
-    |);
     % Akasaka 独自パラメータ
     emph = cfg-font-emph;
     frame-title = (| cfg-font-emph with size = 28pt; |);
@@ -167,7 +157,6 @@ end = struct
     fg        = color-fg;
     main-grid = SlydifiColor.inner-color color-bg color-fg 0.7;
     sub-grid  = SlydifiColor.inner-color color-bg color-fg 0.9;
-    link      = SlydifiColor.html-color 0x8F3F71;
     % Akasaka の独自パラメータ
     title  = SlydifiColor.html-color 0x555555;
     emph   = SlydifiColor.html-color 0xFF0027;
@@ -474,10 +463,6 @@ end = struct
         ctx
     in
     (read-inline ctx2 it)
-
-  let-inline ctx \link ?:it url =
-    SlydifiScheme.ic-link cfg-color cfg-text ctx it url
-
 
 % +listing{} command
 

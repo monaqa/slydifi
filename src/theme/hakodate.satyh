@@ -497,7 +497,17 @@ end = struct
     (read-inline ctx2 it)
 
   let-inline ctx \link ?:it url =
-    SlydifiScheme.ic-link cfg-color cfg-text ctx it url
+    let ctx2 = ctx |> set-text-color cfg-color#link in
+    let ctx-link = match it with
+      | None    -> ctx2 |> SlydifiScheme.set-font-config cfg-text#mono
+                        |> set-font-size (get-font-size ctx)
+      | Some(v) -> ctx2
+    in
+    let text = match it with
+      | None    -> (embed-string url)
+      | Some(v) -> v
+    in
+    read-inline ctx-link {\href(url){#text;}}
 
   let-block ctx +quote bt =
     let deco (x, y) w h d =
