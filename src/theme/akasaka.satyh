@@ -1,4 +1,3 @@
-% vim: foldmethod=marker
 @require: gr
 @require: math
 @require: list
@@ -10,14 +9,66 @@
 
 % SLyDIFi with Akasaka theme.
 module SlydifiAkasaka : sig
-  % Signature {{{
+% Signature
+
+% configs
+  val cfg-paper: (|
+    width: length;
+    height: length;
+  |)
+
+  val cfg-text: (|
+    normal: config-font;
+    mono : config-font;
+    emph : config-font;
+    frame-title : config-font;
+    header : config-font;
+    footer : config-font;
+    slide-title : config-font;
+    slide-author : config-font;
+    slide-date : config-font;
+    section-title : config-font;
+    footnote : config-font;
+  |)
+
+  val cfg-color: (|
+    bg        : color;
+    fg        : color;
+    main-grid : color;
+    sub-grid  : color;
+    link      : color;
+    % Hakodate の独自パラメータ
+    title  : color;
+    emph   : color;
+    header : color;
+    footer : color;
+  |)
+
+  val cfg-spacing : (|
+    % SLyDIFi 必須パラメータ
+    text-width  : length;
+    text-height : length;
+    text-horizontal-margin : length;
+    text-vertical-margin : length;
+    header-basepos : length;
+    footer-basepos : length;
+    main-grid   : length;
+    sub-grid    : length;
+    bg-gr-start-point : length;
+    % Hakodate の独自パラメータ
+    title-padding-lr : length;
+    title-padding-upper-line : length;
+    title-padding-lower-line : length;
+    title-line-width : length;
+  |)
+
 
   val document: 'a -> block-text -> document
     constraint 'a :: (|
       % SLyDIFi の必須パラメータ
       draft-mode: bool;
       % Akasaka theme の独自パラメータ
-      header-text: inline-text;
+      header-text: inline-text option;
     |)
 
   % frame 作成用のコマンド群
@@ -30,10 +81,11 @@ module SlydifiAkasaka : sig
   direct +section : [inline-text list; block-text] block-cmd
   direct +frame : [inline-text; block-text] block-cmd
   direct +frame-nt : [block-text] block-cmd
+  direct +multiframe : [int; inline-text; block-text] block-cmd
 
   % テキスト修飾
-  direct \emph : [inline-text] inline-cmd
-  direct \textbf : [inline-text] inline-cmd
+  direct \emph : [(int -> bool)?; inline-text] inline-cmd
+  direct \textbf : [(int -> bool)?; inline-text] inline-cmd
   direct \link : [inline-text?; string] inline-cmd
 
   % 箇条書き
@@ -44,10 +96,9 @@ module SlydifiAkasaka : sig
   direct \footnotetext : [string; inline-text] inline-cmd
   direct \footnotemark : [string] inline-cmd
 
-  % }}}
 end = struct
 
-  % 文書設定 {{{
+% 文書設定
 
   % cfg-paper: 紙面の設定を引き渡す際に用いるレコード
   % 下では PowerPoint の文書サイズ (16:9) に合わせている
@@ -146,17 +197,15 @@ end = struct
   let-mutable is-first-page <- true
   let-mutable is-draft-mode <- false
 
-  % }}}
 
-  % 便利な関数 {{{
+% 便利な関数
 
   % 紙面の大きさを1としたときの相対長さ．絶対座標指定時に組み合わせると便利
   let relwid relx = cfg-paper#width *' relx
   let relht rely = cfg-paper#height *' rely
 
-  % }}}
 
-  % document command {{{
+% document command
   let document record inner=
 
     % draft-mode の設定を格納しておく
@@ -164,21 +213,24 @@ end = struct
 
     % header の設定
     let header pbinfo =
-      let ctx = SlydifiScheme.get-standard-context cfg-text cfg-color cfg-paper#width
-        |> SlydifiScheme.set-font-config cfg-text#header
-        |> set-text-color cfg-color#header
-      in
-      let ib-top = read-inline ctx record#header-text in
-      let (wid-top, ht-top, dp-top) = get-natural-metrics ib-top in
-      let margin = 3pt in
-      let ib = inline-graphics (wid-top +' margin *' 2.0) (ht-top +' margin *' 2.0) (dp-top +' margin *' 2.0) (fun (x, y) -> [
-        (fill Color.white (
-          Gr.rectangle (x -' margin, y -' margin)
-            (x +' wid-top +' margin, y +' ht-top +' margin)));
-            (draw-text (x, y) ib-top)  % x, y に関わらず point の絶対座標で決める
-      ])
-      in
-      line-break true true ctx (inline-fil ++ ib ++ (inline-skip 3pt))
+      match record#header-text with
+      | None -> block-nil
+      | Some(header-text) ->
+          let ctx = SlydifiScheme.get-standard-context cfg-text cfg-color cfg-paper#width
+            |> SlydifiScheme.set-font-config cfg-text#header
+            |> set-text-color cfg-color#header
+          in
+          let ib-top = read-inline ctx header-text in
+          let (wid-top, ht-top, dp-top) = get-natural-metrics ib-top in
+          let margin = 3pt in
+          let ib = inline-graphics (wid-top +' margin *' 2.0) (ht-top +' margin *' 2.0) (dp-top +' margin *' 2.0) (fun (x, y) -> [
+            (fill Color.white (
+              Gr.rectangle (x -' margin, y -' margin)
+                (x +' wid-top +' margin, y +' ht-top +' margin)));
+                (draw-text (x, y) ib-top)  % x, y に関わらず point の絶対座標で決める
+          ])
+          in
+          line-break true true ctx (inline-fil ++ ib ++ (inline-skip 3pt))
     in
 
     % footer の設定
@@ -197,9 +249,8 @@ end = struct
 
     SlydifiScheme.document-scheme cfg-paper cfg-text cfg-color cfg-spacing header footer inner
 
-  % }}}
 
-  % +make-title(||) command {{{
+% +make-title(||) command
 
   % title config
   % 消す予定
@@ -265,9 +316,8 @@ end = struct
     SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode
       bg-graphics ctx block-nil
 
-  % }}}
 
-  % +section{||}<> command {{{
+% +section{||}<> command
 
   let-block ctx +section its bt =
 
@@ -313,9 +363,8 @@ end = struct
       bg-graphics ctx block-nil)
         +++ (read-block ctx bt)
 
-  % }}}
 
-  % +frame{}<> command {{{
+% +frame{}<> command
 
   let-block ctx +frame title inner =
 
@@ -361,26 +410,76 @@ end = struct
     let bb-inner = read-block ctx inner in
     SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode bg-graphics ctx bb-inner
 
-  % }}}
+  let-block ctx +multiframe n-layer title inner =
 
-  % インラインテキスト装飾 {{{
+    let itlst = [title;] in
+    let btlst = [inner;] in
 
-  let-inline ctx \emph it =
-    let ctx2 = ctx |> set-text-color cfg-color#emph
-                   |> SlydifiScheme.set-font-config cfg-text#emph
+    let frame-f itlst btlst =
+      let deco (x, y) wid hgt dpt =
+        let path1 =
+          let xL = x -' cfg-spacing#text-horizontal-margin +' cfg-spacing#title-padding-lr in
+          let yB = y in
+          let xR = xL +' cfg-paper#width -' cfg-spacing#title-padding-lr *' 2.0 in
+          let yT = yB +' cfg-spacing#title-line-width in
+          Gr.rectangle (xL, yT) (xR, yB)
+        in
+        [ (fill cfg-color#title path1); ]
+      in
+
+      let bb-title =
+        let ctx-title = ctx
+          |> SlydifiScheme.set-font-config cfg-text#frame-title
+          |> set-text-color cfg-color#title
+          |> set-paragraph-margin 0pt cfg-spacing#title-padding-lower-line in
+        let ib-title = read-inline ctx-title (Option.from {} (itlst |> List.nth 0)) in
+        block-frame-breakable ctx-title
+            (
+              cfg-spacing#title-padding-lr -' cfg-spacing#text-horizontal-margin,
+              cfg-spacing#title-padding-lr,
+              0pt,
+              cfg-spacing#title-padding-upper-line +' cfg-spacing#title-line-width
+            )
+              (deco, deco, deco, deco)
+                (fun ctx ->
+                  line-break true true ctx (ib-title ++ inline-fil)
+                )
+      in
+
+      let bg-graphics = [] in
+      let ht = cfg-spacing#text-height -' (get-natural-length bb-title) in
+      let bb-inner = read-block ctx (Option.from '<> (btlst |> List.nth 0)) in
+
+      SlydifiScheme.frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode bg-graphics
+        ctx (bb-title +++ bb-inner)
+    in
+    SlydifiOverlay.frame-scheme-overlay ctx n-layer frame-f itlst btlst
+
+
+% インラインテキスト装飾
+
+  let-inline ctx \emph ?:dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ctx2 = SlydifiOverlay.select dcf
+      (ctx |> set-text-color cfg-color#emph
+           |> SlydifiScheme.set-fonts cfg-text#emph)
+        ctx
     in
     (read-inline ctx2 it)
 
-  let-inline ctx \textbf it =
-    let ctx2 = ctx |> SlydifiScheme.set-font-config cfg-text#emph in
+  let-inline ctx \textbf ?:dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ctx2 = SlydifiOverlay.select dcf
+      (ctx |> SlydifiScheme.set-fonts cfg-text#emph)
+        ctx
+    in
     (read-inline ctx2 it)
 
   let-inline ctx \link ?:it url =
     SlydifiScheme.ic-link cfg-color cfg-text ctx it url
 
-  % }}}
 
-  % +listing{} command {{{
+% +listing{} command
 
   let label-dia ctx idx =
     let path (x, y) =
@@ -431,9 +530,8 @@ end = struct
 
   let-block +listing item = '< +genlistings(label-rule)(item); >
 
-  % }}}
 
-  % \footnote{} command {{{
+% \footnote{} command
 
   let-inline ctx \footnotetext ref-label it =
     let bbf num =
@@ -487,6 +585,5 @@ end = struct
     in
       FootnoteScheme.main ctx None ibf bbf
 
-  % }}}
 
 end
