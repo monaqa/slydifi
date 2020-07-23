@@ -27,6 +27,7 @@ module FigBox : sig
   val draft: t -> t
   val shift: length -> length -> t -> t
   val gap: length -> t
+  val sep: length?-> color?-> length -> t
   val glass-box: (float * float)?-> length -> length -> t -> t
   val frame: length -> color -> t -> t
   val bgcolor: color -> t -> t
@@ -47,6 +48,7 @@ module FigBox : sig
   direct +fig-block : [float?; t] block-cmd
   % direct \fig-on-right : [t] inline-cmd
   direct +fig-on-right : [length?; t; block-text] block-cmd
+  direct +fig-on-left : [length?; t; block-text] block-cmd
   direct \fig-abs-pos : [(length * length); t] inline-cmd
   direct +fig-abs-pos : [(length * length); t] block-cmd
 
@@ -212,6 +214,22 @@ end = struct
     in
     AxisDependingBox(embedf)
 
+  let sep ?:lwid ?:clr len =
+    let lwid = lwid |> Option.from 0.5pt in
+    let clr = clr |> Option.from (Color.black) in
+    let embedf is-horizontal ctx =
+      if is-horizontal then
+        inline-graphics 0pt len 0pt (fun (x, y) -> [
+          stroke lwid clr (Gr.line (x, y) (x, y +' len))
+        ])
+      else
+        inline-graphics len 0pt 0pt (fun (x, y) -> [
+          stroke lwid clr (Gr.line (x, y) (x +' len, y))
+        ])
+    in
+    AxisDependingBox(embedf)
+
+
   let max-length a b = if a >' b then a else b
 
   let get-max-metrics iblst =
@@ -345,9 +363,9 @@ end = struct
 
   let-block ctx +fig-on-right ?:margin fb bt =
     let margin = Option.from 20pt margin in
-    let (ib-wid, ib-ht, ib-dp) = get-natural-metrics (embed-figure ctx fb) in
+    let ib = embed-figure ctx fb in
+    let (ib-wid, ib-ht, ib-dp) = get-natural-metrics ib in
     let ib-fig =
-      let ib = embed-figure ctx fb in
       inline-graphics 0pt 0pt 0pt (fun (x, y) -> [
         draw-text
           (x +' (get-text-width ctx) -' ib-wid,
@@ -359,6 +377,20 @@ end = struct
     let wid = (get-text-width ctx) -' ib-wid -' margin in
     let ib-content = embed-block-top ctx wid (fun ctx -> read-block ctx bt) in
     line-break false false ctx (ib-fig ++ ib-content)
+
+  let-block ctx +fig-on-left ?:margin fb bt =
+    let margin = Option.from 20pt margin in
+    let ib = embed-figure ctx fb in
+    let (ib-wid, ib-ht, ib-dp) = get-natural-metrics ib in
+    let pads = (ib-wid +' margin, 0pt, 0pt, 0pt) in
+    let deco (x, y) w h d =
+      [ draw-text (x, y +' h -' ib-ht) ib ]
+    in
+    let ib-content =
+      block-frame-breakable ctx pads (deco, deco, deco, deco)
+        (fun ctx -> read-block ctx bt)
+    in
+    ib-content
 
   let fig-abs-pos ctx pt fb =
     let ib = embed-figure ctx fb in
