@@ -1,0 +1,416 @@
+@require: annot
+@require: list
+@require: easytable/easytable
+@import: slydifi-theme-document
+
+let-inline \link url = {
+  \ctx(fun ctx ->
+  ctx |> set-text-color (SlydifiColor.html-color 0x0366D6)
+      |> set-font Latin (`lmmono`, 1., 0.)
+  ){\Annot.href(url)(embed-string url);}
+}
+let-inline \href url it = {
+  \ctx(fun ctx ->
+    ctx |> set-text-color (SlydifiColor.html-color 0x0366D6)
+  ){\Annot.href(url)(it);}
+}
+
+open FigBox
+open SlydifiOverlay
+open EasyTableAlias
+
+in
+
+SlydifiDocument.document(|
+  draft-mode = false;
+|)'<
+
++make-title(|
+  title = {|\SLyDIFi; ドキュメント|};
+  author = {
+    | monaqa
+    | GitHub: \link(`https://github.com/monaqa`);
+    |};
+  date = {|2020年7月23日|};
+|);
+
++section{|はじめに|}<%
+
+  +frame{\SLyDIFi; とは}<%
+    +p{
+      \SLyDIFi; は，\SATySFi;でプレゼンテーション用のスライドを作成するためのツール．
+      以下のような機能を備えている．
+    }
+    +listing{
+      * タイトルフレーム，セクションフレームなどを含めたスライドの作成
+      * スライド内でのインラインマークアップ
+      * 任意の位置への図版の挿入，整列
+      * オーバーレイ
+      * カスタマイズ可能なテーマ
+    }
+    +p{
+      このドキュメントも\SLyDIFi;を用いて書かれているが，
+      ドキュメント用にフォントサイズを縮めたスライドテーマを用いている．
+    }
+  >%
+
+>%
+
++section{|\SLyDIFi; の概要|}<%
+
+  +frame{パッケージ構成}<%
+    +p{
+      \SLyDIFi; は以下のヘッダファイルで構成されている．
+    }
+    +listing{
+      * `slydifi.satyh`: 共通処理やコマンドが書かれた `SlydifiScheme` モジュールを定義．
+
+      * `functions` ディレクトリ： すべてのテーマに共通の処理を機能ごとに分割して格納．
+        ここにあるものは基本的に `slydifi.satyh` ですべて import される．
+
+        ** `color.satyh`: 色の操作に関するモジュール `SlydifiColor` を定義．
+        ** `figbox.satyh`: 図版に関するモジュール `FigBox` を定義．
+        ** `footnote.satyh`: 脚注に関するモジュール `FootnoteScheme` を定義．
+        ** `overlay.satyh`: オーバーレイに関するモジュール `SlydifiOverlay` を定義．
+        ** `param.satyh`: 汎用パラメータに関するモジュール `Param` を定義．
+
+      * `theme` ディレクトリ：\SLyDIFi; のテーマを格納．内部で `slydifi.satyh` を読み込む．
+
+        ** `akasaka.satyh`
+        ** `hakodate.satyh`
+        ** `plain.satyh`
+
+    }
+  >%
+
+  +frame{パッケージのインポート}<%
+    +p{
+      基本的には， `theme` 内に入っているテーマファイルを読み込めばよい．
+    }
+    +code(```
+      @require: class-slydifi/theme/plain
+      % "plain" の部分を変えてテーマ変更が可能
+
+      SlydifiPlain.document(|  % テーマを変えるにはモジュール名の変更も必要
+      |) '<
+        （本文）
+      >
+
+    ```);
+    +p{
+      テーマはデフォルトで以下の三種類が用意されている．
+    }
+    +listing{
+      * `plain` (module name: `SlydifiPlain`):
+        最も簡素なテーマ．
+
+      * `hakodate` (module name: `SlydifiHakodate`):
+        \href(`https://github.com/gruvbox-community/gruvbox`){Gruvbox} の色をベースにしたテーマ．
+
+      * `akasaka` (module name: `SlydifiAkasaka`):
+        灰色のスタンダードなテーマ．
+    }
+  >%
+
+>%
+
++section{|\SLyDIFi;の基本機能|}<%
+
+  +frame{フレーム：スライドの1ページ}<%
+
+    +p{
+      フレームの作成には `+frame{ title }< inner >` を用いる．
+    }
+
+    +code(```
+      +frame{フレーム：スライドの1ページ}<
+        +p{
+          フレームの作成には `+frame` を用いる．
+        }
+        ...
+      >
+    ```);
+
+    +listing{
+      * `+frame` で囲った部分が出力される PDF の1ページになる．
+      * `+frame` の中にどれだけ多くの記述を入れても，
+        \uline{自動でのページ分割は行われない}．
+
+        ** 入り切らないブロックは描画領域からはみ出て見えなくなるだけ．
+        ** 「1枚のフレームでどの情報まで表示するか」という発表時の戦略に関わる部分は
+           手動で制御したほうが良い，という考えから．
+    }
+    
+
+  >%
+
+  +frame{章組み：タイトルフレーム}<%
+    +p{
+      タイトルフレームを挿入したい箇所に `+make-title(| configs |)` を入れる．
+    }
+    +code(```
+      +make-title(|
+        title = {|\SLyDIFi; ドキュメント|};
+        author = {
+          | monaqa
+          | GitHub: \link(`https://github.com/monaqa`);
+          |};
+        date = {|2020年7月23日|};
+      |);
+    ```);
+    +listing{
+      * 引数は `title`, `author`, `date` ラベルを持つレコード型であり，
+        対応する値はいずれも `inline-text list` 型．
+      * `|` で区切ることで，複数行にわたるタイトルや著者名を表示可能
+    }
+
+  >%
+
+  +frame{章組み：セクションフレーム}<%
+    +p{
+      `+section{| title |}< frames >` を使うと，冒頭にセクションフレームが追加される．
+    }
+    +code(```
+      +section{|\SLyDIFi;の基本機能|}<
+
+        +frame{フレーム：スライドの1ページ}< （内容） >
+        +frame{章組み：タイトルフレーム}< （内容） >
+        ...
+
+      >
+    ```);
+
+    +listing{
+      * 現時点では，セクション冒頭にセクション用のフレームが追加されるだけ．
+      * 将来的には以下のような機能を追加するかもしれない．
+        ** スライド冒頭の目次に反映させる（現在は自動目次機能そのものがない）
+        ** 各スライドのヘッダーやフッターにセクション名を表示する
+    }
+  >%
+
+  +frame{フレーム内の文書構造}<%
+
+    +listing{
+      * `+p{ inner text }` で段落を作成できる．
+      * `+listing{ * items }` で番号のない箇条書きを作成できる（`enumitem` パッケージを使用）．
+      * `+enumerate{ * items }` で番号付き箇条書きを作成できる（同上）．
+    }
+
+    +code(````
+    +frame{パッケージ構成}<
+      +p{
+        \SLyDIFi; は以下のヘッダファイルで構成されている．
+      }
+      +listing{
+        * `slydifi.satyh`: 共通処理やコマンドが書かれた
+          `SlydifiScheme` モジュールを定義．
+        * ...
+      }
+    >
+    ````);
+
+  >%
+
+  +frame{インラインマークアップ}<%
+    +p{
+      \SLyDIFi; ではいくつかのインラインマークアップを標準で提供．
+    }
+    +fig-center(
+      textbox {\easytable[l; l]{
+        | コマンド                     | 役割
+        | `\br;`                       | 強制改行
+        | `\emph{ text }`              | \emph{強調}（強調の方式はテーマにより異なる）
+        | `\text-color(color){ text }` | テキストの\text-color(Color.orange){色の変更}
+        | `\uline{ text }`             | テキストに\uline{下線を引く}
+        | `\strike{ text }`            | \strike{打ち消し線}
+        | `\ctx( ctx-func ){ text }`   | テキスト処理文脈の\ctx(set-font-size 20pt){部分的な}変更．
+        | `\SLyDIFi;`                  | 「\SLyDIFi;」と書きたいときに
+        |}} |> vmargin 10pt
+    );
+    +p{
+      スライドのテーマによっては，`\textbf` など上で述べた以外のコマンドを追加していることもある．
+      また， `annot` や `code` ライブラリで追加されるコマンドを用いることも可能．
+    }
+
+  >%
+
+>%
+
++section{|オーバーレイ|}<%
+
+  +frame{オーバーレイ}<%
+    +p{
+      1枚のフレームの中で，プレゼンターの操作によって初めはなかった文字が現れたり，
+      文字が順々に表示されたりすることがある．
+      このようなフレームの動きをオーバーレイと呼ぶ．
+      % PowerPoint においてこれはアニメーション機能により実現されるが，
+      % \LaTeX; の Beamer ではオーバーレイ (overlay) という機能を用いて実現される．
+      % \SLyDIFi; でも簡単なオーバーレイ機能を備えている．
+    }
+    +fig-on-right(
+      textblock ?:(set-font-size 12pt) 300pt '<
+        +code(```
+          +frame{タイトル}<
+            +p{1枚目と2枚目で表示される段落．}
+          >
+          +frame{タイトル}<
+            +p{1枚目と2枚目で表示される段落．}
+            +p{2枚目のみで表示される処理．}
+          >
+        ```);
+      >
+    )<%
+      +p{
+        最も単純なオーバーレイの実現方法としては，
+        右のコードのように一部が共通しているフレームを複数作成することが挙げられる．
+        しかしこの方法には以下の問題がある：
+        \listing{
+          * 同じ内容を2回書かなければならない
+          * 共通する部分を変更する際に複数箇所を編集する必要がある
+        }
+      }
+    >%
+
+  >%
+
+>%
+
++section{|図版の挿入|}<%
+
+  +frame{FigBox モジュール}<%
+
+    +p{
+      スライドというコンテンツでは，通常の文書以上に図版が重要な役割を持つ．
+      図版の大きさ，配置，余白の量がスライドの見た目に大きな影響を与え，
+      結果的に通常の文書よりも自由度の高い設定が求められることになる．
+    }
+    +p{
+      \SLyDIFi; では，カスタマイズしやすい図版の挿入を実現するために
+      `FigBox` モジュールを設け，独自のインターフェースを実装している．
+    }
+
+    +p{
+      以下では，プリアンブルにて `FigBox` モジュールを `open` しているものとする．
+    }
+
+    +code(```
+      open FigBox
+    ```);
+
+  >%
+
+  +frame{図の配置コマンド}<%
+    +p{
+      `FigBox.t` 型の値 `figbox` を指定して，以下のコマンドを用いることで図が挿入される．
+    }
+    +fig-center(
+      textbox {\easytable[l; lw 300pt]{
+        | コマンド | 役割
+        | `+fig-center(figbox);` | 中央揃えで配置
+        | `+fig-block?:(align)(figbox);` | align で指定した揃え方で表示（左右揃え）
+        | `+fig-on-right(figbox)< block >;`
+        | 本文(`block`)の横幅を `figbox` の横幅の分だけ短くし，
+          本文の右側に図を表示．
+        | `+fig-on-left(figbox)< block >;`
+        | 本文(`block`)の横幅を `figbox` の横幅の分だけ短くし，
+          本文の左側に図を表示．
+        | `+fig-abs-pos((x, y))(figbox);` | 絶対座標で配置
+        | `+fig-inline(figbox);` | インラインテキスト中に図を挿入
+        |}} |> vmargin 10pt
+    );
+  >%
+
+  +frame{「図」として配置可能なもの}<%
+    +p{
+      FigBox.t 型のコンテンツは以下のようにして作成する．
+      つまり，以下が「図」として配置可能なものの一覧である．
+    }
+
+    +fig-center(
+      textbox ?:(set-font-size 14pt) {\easytable[l; l]{
+        | コンテンツ | 関数
+        | JPEG 画像                   | ``include-image width `path/to/file.jpg` ``
+        | PDF （1ページ目）           | ``include-image width `path/to/file.pdf` ``
+        | PDF （${n} ページ目）       | ``include-image ?:n-page width `path/to/file.pdf` ``
+        | JPEG 画像（縦幅指定）       | ``include-image-with-height height `path/to/file.jpg` ``
+        | ダミーのブロック            | `dummy-box width height`
+        | インラインテキスト          | `textbox ?:(ctx-func) { text }`
+        | インラインテキスト（幅指定）| `textbox-with-width ?:(ctx-func) width { text }`
+        | ブロックテキスト            | `textblock ?:(ctx-func) width '< text >`
+        |}} |> vmargin 10pt
+    );
+
+  >%
+
+  +frame{図の結合}<%
+    +p{
+      複数の図を並べたい，という需要は少なくない．
+      \SLyDIFi; では複数の図を簡単に並べることができる．
+    }
+
+    +fig-center(
+      textbox ?:(set-font-size 14pt) {\easytable[l; l]{
+        | 内容 | 関数
+        | 図を横に並べる | `hconcat ?:(align) [ figbox-1; ...; figbox-n ]`
+        | 図を縦に並べる | `vconcat ?:(align) [ figbox-1; ...; figbox-n ]`
+        |}} |> vmargin 10pt
+    );
+
+    +listing{
+      * オプション引数 `align` に `float` 型の値を指定することで，揃え方を変更できる．
+        ** `0.0`: 左揃え/下揃え
+        ** `0.5`: 中央揃え
+        ** `1.0`: 右揃え/上揃え
+
+      * `gap` 関数を途中に挟むと，指定したぶんの余白が図と図の間に挿入される．
+
+        ** `hconcat` でも `vconcat` でも使える
+        ** 例：`hconcat [ figbox-1; gap 10pt; figbox-2; gap 5pt; figbox-3 ]`
+    }
+
+  >%
+
+  +frame{図の変換}<%
+    +p{
+      「縦に並べる」「指定した大きさのマージンを周囲に足す」
+      といった操作を図に加えたいこともある．
+      \SLyDIFi; では `figbox` を入力として新たな `figbox` を返す関数をいくつか用意しており，
+      既存の図から簡単にマージンなどの要素を加えた新たな図を作成できる．
+    }
+
+    +fig-center(
+      textbox ?:(set-font-size 14pt) {\easytable[l; l]{
+        | 変換内容 | 関数
+        | 左右に余白を追加                   | `figbox |> hmargin length`
+        | 上下に余白を追加                   | `figbox |> vmargin length`
+        | 上下左右に余白を追加               | `figbox |> hvmargin length`
+        | 上下左右に異なる大きさの余白を追加 | `figbox |> margin left right top bottom`
+        | フレーム（外枠）を描画             | `figbox |> frame line-width line-color`
+        | 図の背景色を設定                   | `figbox |> bgcolor color`
+        |}} |> vmargin 10pt
+    );
+
+    +listing{
+      * 複数の変換を組み合わせることも当然可能．
+        ** 例：``include-image 100pt `file.pdf` |> hvmargin 10pt |> frame 1pt Color.black``
+      * `hconcat` や `vconcat` と組み合わせることも当然可能．
+    }
+
+  >%
+
+  +frame{図のオーバーレイ表示}<%
+    +p{
+      図もオーバーレイに対応しており，特定のレイヤーに応じて図を出し分けることが可能．
+    }
+  >%
+
+>%
+
++section{|テーマの作成|}<%
+
+>%
+
+
+
+
+>
