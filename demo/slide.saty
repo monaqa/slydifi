@@ -4,14 +4,27 @@
 @require: code
 @require: annot
 @require: list
-@require: class-slydifi/theme/hakodate
+@require: class-slydifi/theme/plain
 
 open FigBox
 open SlydifiOverlay
 
+let-inline ctx \link ?:it url =
+  let ctx2 = ctx |> set-text-color (SlydifiColor.html-color 0x8F3F71) in
+  let ctx-link = match it with
+    | None    -> ctx2 |> set-font Latin (`lmmono`, 1.0, 0.0)
+                      |> set-font-size (get-font-size ctx)
+    | Some(v) -> ctx2
+  in
+  let text = match it with
+    | None    -> (embed-string url)
+    | Some(v) -> v
+  in
+  read-inline ctx-link {\href(url){#text;}}
+
 in
 
-SlydifiHakodate.document(|
+SlydifiPlain.document(|
   draft-mode = false;
 |)'<
 

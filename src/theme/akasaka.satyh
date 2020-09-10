@@ -4,7 +4,9 @@
 @require: annot
 @require: class-slydifi/slydifi
 @require: class-slydifi/functions/color
+@require: enumitem/enumitem
 @require: class-slydifi/functions/footnote
+@require: class-slydifi/functions/overlay
 
 % SLyDIFi with Akasaka theme.
 module SlydifiAkasaka : sig

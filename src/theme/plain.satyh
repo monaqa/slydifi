@@ -79,6 +79,7 @@ module SlydifiPlain : sig
 % テキスト修飾
   % インラインテキスト修飾
   direct \emph : [(int -> bool)?; inline-text] inline-cmd
+  direct \textbf : [(int -> bool)?; inline-text] inline-cmd
 
   % 箇条書き
   direct +listing : [itemize] block-cmd
@@ -369,6 +370,14 @@ end = struct
     let ctx2 = SlydifiOverlay.select dcf
       (ctx |> set-text-color cfg-color#emph
            |> SlydifiScheme.set-fonts cfg-text#emph)
+        ctx
+    in
+    (read-inline ctx2 it)
+
+  let-inline ctx \textbf ?:dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ctx2 = SlydifiOverlay.select dcf
+      (ctx |> SlydifiScheme.set-fonts cfg-text#emph)
         ctx
     in
     (read-inline ctx2 it)
