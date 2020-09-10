@@ -1,6 +1,6 @@
 @require: base/ref
 
-module Param : sig
+module SlydifiParam : sig
 
   % 3 つの要素の直積．
   % - デフォルト値

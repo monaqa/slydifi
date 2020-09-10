@@ -3,7 +3,7 @@
 
 module SlydifiOverlay : sig
 
-  val layer : int Param.t
+  val layer : int SlydifiParam.t
 
   % let frames = frame-scheme-overlay ctx n-layer frame-f itlst btlst
   % の形で用いる．
@@ -51,7 +51,7 @@ module SlydifiOverlay : sig
 end = struct
 
   % Overlay 付きスライドにおけるレイヤー．
-  let layer = Param.make 0
+  let layer = SlydifiParam.make 0
 
   let-rec range n1 n2 =
     let-rec aux min max =
@@ -63,22 +63,22 @@ end = struct
   % btlst: layer の値に応じて異なる「発火」を行いたいような block-text のリスト．
   % frame-f: itlst と btlst さえ与えられたらフレームが出来上がるような関数．
   let frame-scheme-overlay ctx n-layer frame-f itlst btlst =
-    let () = Param.discard layer in
+    let () = SlydifiParam.discard layer in
     let func n =
-      let () = layer |> Param.set n in
+      let () = layer |> SlydifiParam.set n in
       frame-f itlst btlst
     in
     range 1 n-layer |> List.map func |> List.fold-left (+++) block-nil
 
 
   let ghost-inline dcf ib =
-    if (dcf (Param.get layer)) then ib else inline-nil
+    if (dcf (SlydifiParam.get layer)) then ib else inline-nil
 
   let ghost-block dcf bb =
-    if (dcf (Param.get layer)) then bb else block-nil
+    if (dcf (SlydifiParam.get layer)) then bb else block-nil
 
   let phantom-inline dcf ib =
-    if (dcf (Param.get layer)) then ib
+    if (dcf (SlydifiParam.get layer)) then ib
     else
       let (wid, ht, dp) = get-natural-metrics ib in
       inline-graphics wid ht dp (fun (x, y) -> [])
@@ -86,15 +86,15 @@ end = struct
   % TODO: paragraph-margin がつくような block-boxes
   % （今回は改ページがないので line-break + embed-block-top でいけるそうだが何故かうまくいかない）
   let phantom-block dcf bb =
-    if (dcf (Param.get layer)) then bb
+    if (dcf (SlydifiParam.get layer)) then bb
     else
       let ht = get-natural-length bb in
       block-skip ht
 
   let select dcf val-true val-false =
-    if (dcf (Param.get layer)) then val-true else val-false
+    if (dcf (SlydifiParam.get layer)) then val-true else val-false
 
-  let-inline \show-layer = embed-string (arabic (Param.get layer))
+  let-inline \show-layer = embed-string (arabic (SlydifiParam.get layer))
 
   let-inline ctx \ghost dcf it = ghost-inline dcf (read-inline ctx it)
   let-block ctx +ghost dcf bt = ghost-block dcf (read-block ctx bt)
