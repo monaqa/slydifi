@@ -146,13 +146,8 @@ end = struct
   % is-first-page は，現在 first page かどうかを表す bool ref 型の変数．
   let clear-page-or-nil is-first-page =
     match !is-first-page with
-    | true ->
-        let () = display-message `hoge` in
-        let () = is-first-page <- false in
-        block-nil
-    | false ->
-        let () = display-message `fuga` in
-        clear-page
+    | true -> let () = is-first-page <- false in block-nil
+    | false -> clear-page
 
   % 絶対座標及び align を指定して inline-boxes を配置する．
   let put-text point align ib =
