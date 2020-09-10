@@ -349,15 +349,19 @@ SlydifiDocument.document(|
       簡単のためエイリアス的な関数をいくつか用意している．
       「${m}枚目から${n}枚目まで」のように比較的単純な条件であれば以下の関数を用いると楽．
     }
+    +p{
+      いずれも `SlydifiOverlay` モジュール中にあるため，
+      最初に `open SlydifiOverlay` を行うと良い．
+    }
     +fig-center(
-      textbox {\easytable[l; lw 400pt;]{
+      textbox {\easytable[l; l;]{
         | 関数                    | 挙動
         | `only N`                | N 番目のレイヤーでのみ成立
         | `elsewhen N`            | N 番目のレイヤー以外でのみ成立
         | `till N`                | N 番目のレイヤーまで成立
         | `after N`               | N 番目のレイヤー以降のみ成立
         | `during M N`            | M 番目から N 番目のレイヤーでのみ成立
-        | `in-case [N1; N2; ...]` | 与えた引数のリストに数字が入っているレイヤーのみ成立
+        | `in-case [N1; N2; ...]` | リストに数字が入っているレイヤーでのみ成立
         |}} |> vmargin 10pt
     );
   >%
@@ -491,13 +495,30 @@ SlydifiDocument.document(|
     +p{
       図もオーバーレイに対応しており，特定のレイヤーに応じて図を出し分けることが可能．
     }
+
+    +p{
+      表示条件を満たすときに図を表示し，それ以外のときは大きさを0にしたいときは
+      `ghost` 関数を用いて `figbox |> ghost (cond)` とする．
+    }
+
+    +p{
+      表示条件を満たすときに図を表示し，それ以外のときは図を不可視としたい
+      （すなわち，元の図と同じ大きさの透明の箱を置きたい）ときは
+      `phantom` 関数を用いて `figbox |> phantom (cond)` とする．
+    }
+
+    +p{
+      表示条件に応じて図を出し分けたいときは，
+      `select` 関数を用いて `select (cond) figbox-true figbox-false` とする．
+    }
   >%
 
 >%
 
-+section{|テーマの作成|}<%
-
->%
+% 未完成
+% +section{|テーマの作成|}<%
+% 
+% >%
 
 
 
