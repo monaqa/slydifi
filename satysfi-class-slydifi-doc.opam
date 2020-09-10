@@ -1,5 +1,5 @@
 opam-version: "2.0"
-name: "satysfi-class-slydifi"
+name: "satysfi-class-slydifi-doc"
 version: "0.2.0"
 synopsis: "A SATySFi document class for creating presentations slides"
 description: """A SATySFi document class for creating presentations slides."""
@@ -14,8 +14,8 @@ dev-repo: "git+https://github.com/monaqa/slydifi.git"
 depends: [
   "satysfi" {>= "0.0.5" & < "0.0.6"}
   "satyrographos" {>= "0.0.2" & < "0.0.3"}
-  "satysfi-enumitem" {>= "2.0.0"}
-  "satysfi-base" {>= "1.0.0"}
+  "satysfi-class-slydifi" {= "%{version}%"}
+  "satysfi-easytable" {>= "1.0.0"}
 ]
 build: [ ]
 install: [
