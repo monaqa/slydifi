@@ -126,6 +126,10 @@ Hakodate
 
   >
 
+使用するには `M+ フォント<https://mplus-fonts.osdn.jp/about.html>`_
+のインストールと，hash ファイルによる紐付けが必要です．
+このあたりはいずれ別途パッケージ化する予定．
+
 
 Akasaka
 ~~~~~~~
@@ -151,9 +155,23 @@ Akasaka
 
   >
 
+使用するには `Noto Sans <https://www.google.com/get/noto/>`_ 系のフォント
+（Noto Sans 及び Noto Sans CJK JP）
+のインストールと，hash ファイルによる紐付けが必要です．
+これは既に satyrographos に登録されており，以下のコマンドでインストール可能です::
+
+  opam install satysfi-fonts-noto-sans
+  opam install satysfi-fonts-noto-sans-cjk-jp
+  satyrographos install
+
+詳細は
+`SATySFi-fonts-noto-sans <https://github.com/zeptometer/SATySFi-fonts-noto-sans>`_
+及び
+`SATySFi-fonts-noto-sans-cjk-jp <https://github.com/zeptometer/SATySFi-fonts-noto-sans-cjk-jp>`_
+を参照．
+
 
 ToDo
 ====
 
-* オーバーレイ（アニメーション）機能
 * block 環境に相当するコマンド

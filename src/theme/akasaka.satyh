@@ -111,15 +111,15 @@ end = struct
   % 楽をするために，まず通常フォント・見出し用フォントを設定
   let cfg-font-normal = (|
     size = 18pt;
-    font-latin = (`NotoSans-R`     , 1.0, 0.0);
-    font-cjk   = (`NotoSansCJKjp-R`, 1.0, 0.0);
+    font-latin = (`fonts-noto-sans:NotoSans-Regular`, 1.0, 0.0);
+    font-cjk   = (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0);
     par-margin-ratio = (0.6, 0.6);
     leading-ratio = 1.4;
   |)
   let cfg-font-emph = (|
     size = 18pt;
-    font-latin = (`NotoSans-B`     , 1.0, 0.0);
-    font-cjk   = (`NotoSansCJKjp-B`, 1.0, 0.0);
+    font-latin = (`fonts-noto-sans:NotoSans-Bold`, 1.0, 0.0);
+    font-cjk   = (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Bold`, 1.0, 0.0);
     par-margin-ratio = (0.6, 0.6);
     leading-ratio = 1.4;
   |)
