@@ -4,7 +4,6 @@
 @require: annot
 @require: class-slydifi/slydifi
 @require: class-slydifi/functions/color
-@require: class-slydifi/functions/enumitem
 @require: class-slydifi/functions/footnote
 
 % SLyDIFi with Akasaka theme.
@@ -84,9 +83,6 @@ module SlydifiAkasaka : sig
   % テキスト修飾
   direct \emph : [(int -> bool)?; inline-text] inline-cmd
   direct \textbf : [(int -> bool)?; inline-text] inline-cmd
-
-  % 箇条書き
-  direct +listing : [itemize] block-cmd
 
   % 脚注
   direct \footnote : [inline-text] inline-cmd
@@ -506,14 +502,6 @@ end = struct
     in
     let gr (x, y) = [fill cfg-color#title (path (x, y))] in
     inline-graphics 8pt 8pt 0pt (gr) ++ inline-skip 8pt
-
-  let label-rule depth =
-    match depth with
-    | 0 -> label-dia
-    | 1 -> label-tria
-    | _ -> label-circ
-
-  let-block +listing item = '< +genlistings(label-rule)(item); >
 
 
 % \footnote{} command
