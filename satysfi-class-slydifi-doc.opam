@@ -17,10 +17,15 @@ depends: [
   "satysfi-class-slydifi" {= "%{version}%"}
   "satysfi-easytable" {>= "1.0.0"}
 ]
-build: [ ]
+build: [
+  ["satyrographos" "opam" "build"
+   "-name" "class-slydifi-doc"
+   "-prefix" "%{prefix}%"
+   "-script" "%{build}%/Satyristes"]
+]
 install: [
   ["satyrographos" "opam" "install"
-   "-name" "class-slydifi"
+   "-name" "class-slydifi-doc"
    "-prefix" "%{prefix}%"
    "-script" "%{build}%/Satyristes"]
 ]
