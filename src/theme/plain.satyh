@@ -1,6 +1,7 @@
 @require: gr
 @require: math
 @require: list
+@require: code
 @require: annot
 @require: class-slydifi/slydifi
 @require: class-slydifi/functions/color
@@ -207,6 +208,8 @@ end = struct
       in
       line-break true true ctx (inline-fil ++ (read-inline ctx {#it-pageno;/#it-count;}) ++ inline-skip 20pt)
     in
+
+    let inner = '< +ctx(set-code-text-command (command \code))(inner); > in
 
     SlydifiScheme.document-scheme cfg-paper cfg-text cfg-color cfg-spacing header footer inner
 
