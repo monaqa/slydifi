@@ -126,9 +126,9 @@ Hakodate
 
   >
 
-使用するには `M+ フォント<https://mplus-fonts.osdn.jp/about.html>`_
+使用するには `M+ フォント <https://mplus-fonts.osdn.jp/about.html>`_
 のインストールと，hash ファイルによる紐付けが必要です．
-このあたりはいずれ別途パッケージ化する予定．
+このあたりはいずれ別途パッケージ化するかもしれません．
 
 
 Akasaka
