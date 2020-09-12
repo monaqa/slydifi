@@ -38,7 +38,17 @@ SlydifiPlain.document(|
 
 ![slydifi-test](fig/slydifi-test.jpg)
 
-## デモ
+## Gitpodを使ったデモ
+
+[Gitpod](https://gitpod.io) を使って，SLyDIFi の使用感を試すことができます．
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/monaqa/slydifi)
+
+`demo/demo.saty` を自由に編集し，ターミナル上で `satysfi demo/demo.saty` とすることでPDF (`demo/demo.pdf`) を生成できます．
+[SATySFi の docker image](https://github.com/amutake/satysfi-docker) を使用しているため，
+`opam` / `satyrographos` コマンドで他のパッケージを入れることもできます．
+
+
 
 
 ## SLyDIFi でできること
