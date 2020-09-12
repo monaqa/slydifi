@@ -32,4 +32,5 @@
   (opam "satysfi-class-slydifi-doc.opam")
   (dependencies
     (
+     (class-slydifi ())
      (easytable ()))))
