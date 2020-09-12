@@ -1,9 +1,8 @@
 % -*- coding: utf-8 -*-
-% vim:foldmethod=marker:
 
 @require: annot
 @require: list
-@require: class-slydifi/theme/plain
+@require: class-slydifi/theme/hakodate
 
 open FigBox
 open SlydifiOverlay
@@ -23,7 +22,7 @@ let-inline ctx \link ?:it url =
 
 in
 
-SlydifiPlain.document(|
+SlydifiHakodate.document(|
   draft-mode = false;
 |)'<
 
