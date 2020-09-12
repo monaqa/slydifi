@@ -18,9 +18,9 @@ SlydifiPlain.document(|
     date = {|2020年9月12日|};
   |);
 
-  +section{|Section Name|}<%
+  +section{|Example Section|}<%
   % 複数行にまたがるセクション名は以下のようにします
-  % +section{|長い名前のセクション名が続く|Section Name|}<%
+  % +section{|ものすごく長い長い名前の|セクション|}<%
 
     +frame{普通のスライド}<%
       +p{
@@ -49,10 +49,14 @@ SlydifiPlain.document(|
       +p{
         `FigBox` モジュールの関数・コマンドで自由に図を挿入しよう．
       }
+      +code(```
+      +fig-center(include-image 300pt `../fig/slydifi-test.jpg`);
+      ```);
+      +fig-center(include-image 300pt `../fig/slydifi-test.jpg`);
       +p{
         その他にも様々な関数・コマンドが用意されている．
         様々な関数を使いこなせば，
-        次ページのような多少複雑な配置も構造的に配置可能．
+        次ページにあるような多少複雑な配置も構造的に配置可能．
       }
     >%
 
@@ -75,12 +79,12 @@ SlydifiPlain.document(|
             textblock 390pt '<   % 任意のブロックテキストをボックス化する
               +p{
                 デフォルトで3種類用意されている．
-                自作も可能．
+                一応，自作も可能．
               }
               +p{
-                ただしいきなり自作はちょっと大変なので，
+                いきなり自作は少し大変なので，
                 まずは既存のヘッダファイルをコピーして
-                フォント設定などを変更することから初めてみよう．
+                フォント設定などを変更する所から始めるといい．
               }
             >;
             gap 10pt;                                              % hconcat の中では水平方向の余白となる
@@ -94,6 +98,44 @@ SlydifiPlain.document(|
         ]
       );
     >%
+
+    +multiframe(4){オーバーレイ}<%
+
+      +p{
+        \SLyDIFi; では簡素なオーバーレイ機能を搭載している．
+      }
+
+      +p?:(after 2){
+        オーバーレイ機能を使うと，
+        スライドのコンテンツを順に出現させたり，
+        スライドの一部を途中で\emph?:(only 3){強調}したりすることが可能となる．
+        例えば…
+      }
+
+      +ghost(after 3)<
+        +code(```
+        +p?:(only 4){
+          `+p` や `\emph` といったコマンドでは，
+          オプション引数に `int -> bool` 型の関数を入れる．
+        }
+        ```);
+      >
+
+      +p?:(only 4){
+        `+p` や `\emph` といったコマンドでは，
+        オプション引数に `int -> bool` 型の関数を入れる．
+      }
+
+
+      +fig-abs-pos((290pt, 370pt))(
+        textbox {このスライドもオーバーレイを使っています}
+          |> hvmargin 3pt
+          |> bgcolor (Color.gray 0.9)
+          |> ghost (in-case [2; 4;])
+      );
+
+    >%
+
   >%
 
 >
