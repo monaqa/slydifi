@@ -48,8 +48,7 @@ SlydifiPlain.document(|
 [SATySFi の docker image](https://github.com/amutake/satysfi-docker) を使用しているため，
 `opam` / `satyrographos` コマンドで他のパッケージを入れることもできます．
 
-
-
+![gitpod-demo-gif](https://user-images.githubusercontent.com/48883418/93006630-8d70c200-f599-11ea-8777-d3d5afbacf25.gif)
 
 ## SLyDIFi でできること
 
@@ -93,11 +92,11 @@ SLyDIFi はテーマの変更に対応しています．
 
 装飾のないシンプルなテーマ．
 
-[plain-title](fig/plain-title.jpg)
+![plain-title](fig/plain-title.jpg)
 
-[plain-section](fig/plain-section.jpg)
+![plain-section](fig/plain-section.jpg)
 
-[plain-frame](fig/plain-frame.jpg)
+![plain-frame](fig/plain-frame.jpg)
 
 以下のように記述すれば用いることが出来ます:
 
@@ -118,11 +117,11 @@ SlydifiPlain.document(|
 [Gruvbox](https://github.com/gruvbox-community/gruvbox)
 の色をベースにしたテーマ．
 
-[hakodate-title](fig/hakodate-title.jpg)
+![hakodate-title](fig/hakodate-title.jpg)
 
-[hakodate-section](fig/hakodate-section.jpg)
+![hakodate-section](fig/hakodate-section.jpg)
 
-[hakodate-frame](fig/hakodate-frame.jpg)
+![hakodate-frame](fig/hakodate-frame.jpg)
 
 以下のように記述すれば用いることが出来ます:
 
@@ -147,11 +146,11 @@ SlydifiHakodate.document(|
 
 灰色のスタンダードなテーマ．
 
-[akasaka-title](fig/akasaka-title.jpg)
+![akasaka-title](fig/akasaka-title.jpg)
 
-[akasaka-section](fig/akasaka-section.jpg)
+![akasaka-section](fig/akasaka-section.jpg)
 
-[akasaka-frame](fig/akasaka-frame.jpg)
+![akasaka-frame](fig/akasaka-frame.jpg)
 
 以下のように記述すれば用いることが出来ます:
 
