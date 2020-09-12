@@ -1,25 +1,8 @@
-% -*- coding: utf-8 -*-
-% vim:foldmethod=marker:
-
-@require: annot
-@require: list
 @require: class-slydifi/theme/plain
+@require: color
 
-open FigBox
-open SlydifiOverlay
-
-let-inline ctx \link ?:it url =
-  let ctx2 = ctx |> set-text-color (SlydifiColor.html-color 0x8F3F71) in
-  let ctx-link = match it with
-    | None    -> ctx2 |> set-font Latin (`lmmono`, 1.0, 0.0)
-                      |> set-font-size (get-font-size ctx)
-    | Some(v) -> ctx2
-  in
-  let text = match it with
-    | None    -> (embed-string url)
-    | Some(v) -> v
-  in
-  read-inline ctx-link {\href(url){#text;}}
+open FigBox  % 図の挿入に必要
+open SlydifiOverlay  % オーバーレイに必要
 
 in
 
@@ -28,117 +11,89 @@ SlydifiPlain.document(|
 |)'<
 
   +make-title(|
-    title = {|\SLyDIFi; でらくらくスライド作成|};
-    author = {|monaqa|GitHub: \link(`https://github.com/monaqa`);|};
-    date = {|2020年1月12日|};
+    title = {|\SLyDIFi; デモ|};  % slide title
+    % 複数行にまたがるタイトルを書く場合は以下のようにします
+    % title = {|長い名前のタイトルが続く|\SLyDIFi; デモ|};
+    author = {| Your Name |};  % fill your name
+    date = {|2020年9月12日|};
   |);
 
-  +section{|はじめに|}<
-    +frame{\SLyDIFi;: \SATySFi; のスライド作成用パッケージ}<
+  +section{|Section Name|}<%
+  % 複数行にまたがるセクション名は以下のようにします
+  % +section{|長い名前のセクション名が続く|Section Name|}<%
+
+    +frame{普通のスライド}<%
+      +p{
+        まずはコマンドを使いこなそう．
+      }
       +listing{
-        * \emph{\SATySFi;} (\link(`https://github.com/gfngfn/SATySFi`);)
-          ** 静的型付き関数型言語ベースの新たな組版処理システム
-          ** 普通の文書作成時にはそこまで関数型言語を意識しなくてよい
-          ** パッケージの記述に用いる構文は OCaml 風
-
-        * \emph{\SLyDIFi;} (\link(`https://github.com/monaqa/slydifi`);)
-          ** \SATySFi; でスライドを作成することができる
-          ** 実は既に先駆者がいる（\link?:({Steamer: Slide Presentation in SATySFi})(`https://github.com/konn/satysfi-steamer`);）
-            *** Steamer とは page break 周りの実装を少しばかり変えている
+        * `+p` で段落を作成できる
+        * `+listing` で箇条書きを作成できる
+          ** ネストも可能
       }
 
-    >
-  >
+      +p{
+        続いて，インラインマークアップを使いこなそう．
+      }
 
-  +section{|\SLyDIFi; の機能|}<
-    +frame{フレーム作成}<
       +listing{
-        * フレーム：スライド資料の1ページ1ページに値するもの
-        * \SLyDIFi; では3種類のフレームを区別する
-          ** 見出し：スライド全体の題目，発表者名などを載せるフレーム
-          ** セクション見出し：セクションのタイトルを載せる
-          ** 本文：通常のフレーム
+        * `\emph` で\emph{強調}
+        * `\textbf` で\textbf{太字}（太字のフォント設定が必要）
+        * `\text-color` で\text-color(Color.orange){テキストの色を変更}
+        * `\uline` で \uline{下線}
+        * `\strike` で\strike{打ち消し線}
       }
-    >
+    >%
 
-    +frame{テキストの記述}<
-      +p{以下のようなコマンドを用いてテキストを記述できる．}
-      +listing{
-        * `+p{}`: 段落
-        * `+listing{}`: 番号のない箇条書き
-        * `+enumerate{}`: 番号付きの箇条書き
+    +frame{図の挿入}<%
+      +p{
+        `FigBox` モジュールの関数・コマンドで自由に図を挿入しよう．
       }
-      +p{さらに，インラインテキストの中では以下のマークアップが使える．}
-      +listing{
-        * `\emph{}`: \emph{強調}
-        * `\textbf{}`: \textbf{太字}
-        * `\text-color(){}`: \text-color(SlydifiColor.html-color 0x42883B){文字色変更}
-        * ``\link?:({Hyper Link})(`url`)``: \link?:({ハイパーリンク})(`https://github.com/gfngfn/SATySFi`);
+      +p{
+        その他にも様々な関数・コマンドが用意されている．
+        様々な関数を使いこなせば，
+        次ページのような多少複雑な配置も構造的に配置可能．
       }
-    >
+    >%
 
-    +frame{図表の貼り付け（`FigBox` モジュール）}<
-      +listing{
-        * 例： ``+fig-center(FigBox.include-image 80pt `path/to/image.jpg`);``
-          ** `FigBox.include-image`：画像 (PDF/JPEG) を指定幅で読み込む
-          ** `+fig-center`：読み込んだ図を中央揃えで配置
-      }
-
-      +fig-on-right(dummy-box 100pt 200pt)<
-        +listing{
-          * その他にも様々な読み込み用の関数や配置コマンドが用意されている
-            ** `dummy-box`：指定されたサイズのダミーボックス
-            ** `hmargin`：水平方向に指定された量の余白を付ける
-            ** `vconcat`：鉛直方向に図を結合
-            ** `\fig-inline`：テキスト中\fig-inline?:(0.5)(dummy-box 60pt 30pt |> hmargin 5pt);に画像を出力
-            ** `+fig-on-right`：画像を右に，本文を左に配置
-
-        }
-      >
-
-    >
-  >
-
-  +section{|\SLyDIFi; でオーバーレイ|}<
-
-    +multiframe(4){オーバーレイの例 (\show-layer;/4)}<
-      +p{この段落は常に表示される．}
-      +p?:(till 2){
-        ① オプション引数を指定して，今何枚目かに応じて表示を出し分けられる．
-        この段落は 1, 2 枚目のとき\emph?:(only 2){のみ}表示される段落．
-      }
-      +p?:(during 2 3){② これは 2, 3 枚目のときのみ表示される段落．}
-      +p?:(elsewhen 3){③ これは 3枚目以外のときに表示される段落．}
-      +p?:(in-case [1; 4]){④ これは 1, 4 枚目のときのみ表示される段落．}
-      +p{下の図は 2 枚目以降2枚表示される．}
+    +frame{テーマの選択}<%
       +fig-center(
-        hconcat ?:0.5 [
-          dummy-box 200pt 50pt |> hmargin 10pt;
-          dummy-box 150pt 100pt |> hmargin 10pt |> phantom (after 2)
+        let frame-example it pth =              % 複数のテーマの図で同じ体裁を使い回すための関数
+          vconcat ?:align-center [              % 中央揃えで縦方向に図を結合
+            include-image 250pt pth             % 与えられたファイルパスの図をinclude
+              |> frame 0.5pt Color.black;       % 図に黒色の囲み枠をつける
+            gap 5pt;                            % vconcat の中では鉛直方向の余白となる
+            textbox ?:(set-font-size 14pt) it;  % 任意のインラインテキストをボックス化
+          ] |> hvmargin 5pt                     % vconcat で作ったボックスの上下左右に5ptのマージンを追加
+        in
+
+        % 以下は少し複雑．
+        % 余白など「見えない箱」を見たいときは，satysfi を実行するときに
+        % `--debug-show-bbox --debug-show-space` オプションを付けるのがオススメ．
+        vconcat ?:align-right [  % 右揃えで縦方向に図を結合
+          hconcat ?:align-top [  % 上揃えで横方向に図を結合
+            textblock 390pt '<   % 任意のブロックテキストをボックス化する
+              +p{
+                デフォルトで3種類用意されている．
+                自作も可能．
+              }
+              +p{
+                ただしいきなり自作はちょっと大変なので，
+                まずは既存のヘッダファイルをコピーして
+                フォント設定などを変更することから初めてみよう．
+              }
+            >;
+            gap 10pt;                                              % hconcat の中では水平方向の余白となる
+            frame-example {Plain theme} `../fig/plain-frame.jpg`;  % 25行ぐらい上で定義した関数を使う
+          ];
+          hconcat [
+            frame-example {Hakodate theme} `../fig/hakodate-frame.jpg`;
+            gap 10pt;
+            frame-example {Akasaka theme} `../fig/akasaka-frame.jpg`;
+          ]
         ]
       );
-    >
-
-    +multiframe(4){オーバーレイの例2}<
-      +show-in-order[
-        '<+p{
-          実際には，オーバーレイは上から順に表示させる用途で用いられることが多い．
-          }>;
-        '<+p{
-          そのような需要に簡潔に答えるために `+show-in-order` というコマンドが用意されている．
-          }>;
-        '<+p{
-          `+show-in-order: [block-text list] block-cmd `
-          }>;
-        '<+p{
-          順に表示させたいブロックテキストの列を与えれば，順々に表示してくれる．
-          }>;
-        '<+p{
-          そのような需要に簡潔に答えるために `+show-in-order` というコマンドが用意されている．
-          }>;
-      ];
-    >
-
-  >
+    >%
+  >%
 
 >

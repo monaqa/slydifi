@@ -1,0 +1,143 @@
+% -*- coding: utf-8 -*-
+
+@require: annot
+@require: list
+@require: class-slydifi/theme/hakodate
+
+open FigBox
+open SlydifiOverlay
+
+let-inline ctx \link ?:it url =
+  let ctx2 = ctx |> set-text-color (SlydifiColor.html-color 0x8F3F71) in
+  let ctx-link = match it with
+    | None    -> ctx2 |> set-font Latin (`lmmono`, 1.0, 0.0)
+                      |> set-font-size (get-font-size ctx)
+    | Some(v) -> ctx2
+  in
+  let text = match it with
+    | None    -> (embed-string url)
+    | Some(v) -> v
+  in
+  read-inline ctx-link {\href(url){#text;}}
+
+in
+
+SlydifiHakodate.document(|
+  draft-mode = false;
+|)'<
+
+  +make-title(|
+    title = {|\SLyDIFi; でらくらくスライド作成|};
+    author = {|monaqa|GitHub: \link(`https://github.com/monaqa`);|};
+    date = {|2020年1月12日|};
+  |);
+
+  +section{|はじめに|}<
+    +frame{\SLyDIFi;: \SATySFi; のスライド作成用パッケージ}<
+      +listing{
+        * \emph{\SATySFi;} (\link(`https://github.com/gfngfn/SATySFi`);)
+          ** 静的型付き関数型言語ベースの新たな組版処理システム
+          ** 普通の文書作成時にはそこまで関数型言語を意識しなくてよい
+          ** パッケージの記述に用いる構文は OCaml 風
+
+        * \emph{\SLyDIFi;} (\link(`https://github.com/monaqa/slydifi`);)
+          ** \SATySFi; でスライドを作成することができる
+          ** 実は既に先駆者がいる（\link?:({Steamer: Slide Presentation in SATySFi})(`https://github.com/konn/satysfi-steamer`);）
+            *** Steamer とは page break 周りの実装を少しばかり変えている
+      }
+
+    >
+  >
+
+  +section{|\SLyDIFi; の機能|}<
+    +frame{フレーム作成}<
+      +listing{
+        * フレーム：スライド資料の1ページ1ページに値するもの
+        * \SLyDIFi; では3種類のフレームを区別する
+          ** 見出し：スライド全体の題目，発表者名などを載せるフレーム
+          ** セクション見出し：セクションのタイトルを載せる
+          ** 本文：通常のフレーム
+      }
+    >
+
+    +frame{テキストの記述}<
+      +p{以下のようなコマンドを用いてテキストを記述できる．}
+      +listing{
+        * `+p{}`: 段落
+        * `+listing{}`: 番号のない箇条書き
+        * `+enumerate{}`: 番号付きの箇条書き
+      }
+      +p{さらに，インラインテキストの中では以下のマークアップが使える．}
+      +listing{
+        * `\emph{}`: \emph{強調}
+        * `\textbf{}`: \textbf{太字}
+        * `\text-color(){}`: \text-color(SlydifiColor.html-color 0x42883B){文字色変更}
+        * ``\link?:({Hyper Link})(`url`)``: \link?:({ハイパーリンク})(`https://github.com/gfngfn/SATySFi`);
+      }
+    >
+
+    +frame{図表の貼り付け（`FigBox` モジュール）}<
+      +listing{
+        * 例： ``+fig-center(FigBox.include-image 80pt `path/to/image.jpg`);``
+          ** `FigBox.include-image`：画像 (PDF/JPEG) を指定幅で読み込む
+          ** `+fig-center`：読み込んだ図を中央揃えで配置
+      }
+
+      +fig-on-right(dummy-box 100pt 200pt)<
+        +listing{
+          * その他にも様々な読み込み用の関数や配置コマンドが用意されている
+            ** `dummy-box`：指定されたサイズのダミーボックス
+            ** `hmargin`：水平方向に指定された量の余白を付ける
+            ** `vconcat`：鉛直方向に図を結合
+            ** `\fig-inline`：テキスト中\fig-inline?:(0.5)(dummy-box 60pt 30pt |> hmargin 5pt);に画像を出力
+            ** `+fig-on-right`：画像を右に，本文を左に配置
+
+        }
+      >
+
+    >
+  >
+
+  +section{|\SLyDIFi; でオーバーレイ|}<
+
+    +multiframe(4){オーバーレイの例 (\show-layer;/4)}<
+      +p{この段落は常に表示される．}
+      +p?:(till 2){
+        ① オプション引数を指定して，今何枚目かに応じて表示を出し分けられる．
+        この段落は 1, 2 枚目のとき\emph?:(only 2){のみ}表示される段落．
+      }
+      +p?:(during 2 3){② これは 2, 3 枚目のときのみ表示される段落．}
+      +p?:(elsewhen 3){③ これは 3枚目以外のときに表示される段落．}
+      +p?:(in-case [1; 4]){④ これは 1, 4 枚目のときのみ表示される段落．}
+      +p{下の図は 2 枚目以降2枚表示される．}
+      +fig-center(
+        hconcat ?:0.5 [
+          dummy-box 200pt 50pt |> hmargin 10pt;
+          dummy-box 150pt 100pt |> hmargin 10pt |> phantom (after 2)
+        ]
+      );
+    >
+
+    +multiframe(4){オーバーレイの例2}<
+      +show-in-order[
+        '<+p{
+          実際には，オーバーレイは上から順に表示させる用途で用いられることが多い．
+          }>;
+        '<+p{
+          そのような需要に簡潔に答えるために `+show-in-order` というコマンドが用意されている．
+          }>;
+        '<+p{
+          `+show-in-order: [block-text list] block-cmd `
+          }>;
+        '<+p{
+          順に表示させたいブロックテキストの列を与えれば，順々に表示してくれる．
+          }>;
+        '<+p{
+          そのような需要に簡潔に答えるために `+show-in-order` というコマンドが用意されている．
+          }>;
+      ];
+    >
+
+  >
+
+>
