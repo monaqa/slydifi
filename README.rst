@@ -35,7 +35,7 @@ Installation & Usage
 これで SATySFi を走らせて以下のような PDF が生成されたら，正常に動いています
 （必要なフォントは適宜準備してください）．
 
-.. image:: fig/slydifi-test.png
+.. image:: fig/slydifi-test.jpg
 
 SLyDIFi でできること
 ====================
@@ -84,11 +84,11 @@ Plain
 
 装飾のないシンプルなテーマ．
 
-.. image:: fig/plain-title.png
+.. image:: fig/plain-title.jpg
 
-.. image:: fig/plain-section.png
+.. image:: fig/plain-section.jpg
 
-.. image:: fig/plain-frame.png
+.. image:: fig/plain-frame.jpg
 
 以下のように記述すれば用いることが出来ます::
 
@@ -108,11 +108,11 @@ Hakodate
 `Gruvbox <https://github.com/gruvbox-community/gruvbox>`_
 の色をベースにしたテーマ．
 
-.. image:: fig/hakodate-title.png
+.. image:: fig/hakodate-title.jpg
 
-.. image:: fig/hakodate-section.png
+.. image:: fig/hakodate-section.jpg
 
-.. image:: fig/hakodate-frame.png
+.. image:: fig/hakodate-frame.jpg
 
 以下のように記述すれば用いることが出来ます::
 
@@ -136,11 +136,11 @@ Akasaka
 
 灰色のスタンダードなテーマ．
 
-.. image:: fig/akasaka-title.png
+.. image:: fig/akasaka-title.jpg
 
-.. image:: fig/akasaka-section.png
+.. image:: fig/akasaka-section.jpg
 
-.. image:: fig/akasaka-frame.png
+.. image:: fig/akasaka-frame.jpg
 
 以下のように記述すれば用いることが出来ます::
 
