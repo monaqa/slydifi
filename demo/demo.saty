@@ -99,7 +99,7 @@ SlydifiPlain.document(|
       );
     >%
 
-    +multiframe(4){オーバーレイ}<%
+    +multiframe(4){オーバーレイ (\show-layer;/4)}<%
 
       +p{
         \SLyDIFi; では簡素なオーバーレイ機能を搭載している．
