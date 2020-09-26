@@ -1,24 +1,19 @@
 # SLyDIFi
 
-([English README is here](README-en.md))
+（[日本語版はこちら](README-ja.md)）
 
-SLyDIFi は， [SATySFi](https://github.com/gfngfn/SATySFi) でスライドを作成するためのパッケージ（クラスファイル）です．
-LaTeX でいうところの beamer に相当しています（機能は最低限のもののみ用意しています）．
+SLyDIFi is a package (class file) for creating slides with [SATySFi](https://github.com/gfngfn/SATySFi) . It is equivalent to beamer in LaTeX (only the minimum functions are available).
 
 ## Installation & Usage
 
-[Satyrographos](https://github.com/gfngfn/SATySFi/wiki/Satyrographos)
-を用いてインストールすることが出来ます．
-より具体的には， Satyrographos の入った環境で以下のように打てばインストールできます:
-
+It can be installed using [Satyrographos](https://github.com/gfngfn/SATySFi/wiki/Satyrographos).<br>Concretely, you can install SLyDIFi with the following command:
 
 ```
 opam install satysfi-class-slydifi
 satyrographos install
 ```
 
-正しくインストールされたかどうか動作を確認したければ，
-適当なディレクトリ下で，以下のように記述された `minimum.saty` を用意してください:
+If you want to check the operation to see if it was installed correctly, prepare `minimum.saty` with the following description under an appropriate directory:
 
 ```
 @require: code
@@ -29,70 +24,65 @@ satyrographos install
 SlydifiPlain.document(|
   draft-mode = false;
 |)'<
-  +frame{\SLyDIFi; のテスト}<
+  +frame{Test of \SLyDIFi;}<
     +p{Hello, \SLyDIFi;!}
   >
 >
 ```
 
-これで SATySFi を走らせて以下のような PDF が生成されたら，正常に動いています
-（必要なフォントは適宜準備してください）．
+If you run `satysfi` command and the following PDF is generated, it is working properly (please prepare the necessary fonts as appropriate).
 
-![slydifi-test](fig/slydifi-test.jpg)
+![slydifi-test](https://github.com/monaqa/slydifi/blob/i18n/fig/slydifi-test.jpg?raw=true)
 
-## Gitpodを使ったデモ
+## Demo with Gitpod
 
-[Gitpod](https://gitpod.io) を使って，SLyDIFi の使用感を試すことができます．
+Try it in [Gitpod](https://gitpod.io)!
 
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/monaqa/slydifi)
 
-`demo/demo.saty` を自由に編集し，ターミナル上で `satysfi demo/demo.saty` とすることでPDF (`demo/demo.pdf`) を生成できます．
-[SATySFi の docker image](https://github.com/amutake/satysfi-docker) を使用しているため，
-`opam` / `satyrographos` コマンドで他のパッケージを入れることもできます．
+You can create PDF (`demo/demo.pdf`) by editing `demo/demo.saty` freely and run `satysfi demo/demo.saty` on console.
+You can also install other packages via `opam` / `satyrographos` command, because this demo uses [SATySFi's docker image](https://github.com/amutake/satysfi-docker).
 
 ![gitpod-demo-gif](https://user-images.githubusercontent.com/48883418/93006630-8d70c200-f599-11ea-8777-d3d5afbacf25.gif)
 
-## SLyDIFi でできること
+## What You Can Do with SLyDIFi
 
-SLyDIFi は以下の機能を有しています．
+SLyDIFi has the following functions.
 
-### フレームの作成
+### Creating Frames
 
-標準のスライドテーマでは，以下の3種類のスライドを用意しています，
+In the standard slide theme, the following three types of slides are available.
 
-* 通常のスライド
-* タイトルスライド
-* セクションスライド
+- Normal slide
+- Title slide
+- Section slide
 
-具体的なレイアウトについては，後述の「テーマの選択と変更」を参照してください．
+For the specific layout, refer to "Selecting and Changing Themes" below.
 
-### スライド内でのマークアップ
+### Markup in Frames
 
-スライド内では，以下のマークアップを行うことが出来ます．
+The following markup can be done in the frame.
 
-* 段落
-* 箇条書き
-* 図表の挿入
-* 脚注の挿入
+- Paragraph
+- Itemize (bullets)
+- Insertion of figures
+- Insertion of footnotes
 
-また，インラインテキストマークアップとして以下のコマンドを用意しています．
+In addition, the following commands are available as in-line text markup.
 
-* ``\textbf``
-* ``\emph``
-* ``\link``
+- `\textbf`
+- `\emph`
+- `\link`
 
-### テーマの選択と変更
+### Selecting and Changing Themes
 
-SLyDIFi はテーマの変更に対応しています．
-標準では現時点で3種類のテーマを用意しています．
-テーマは自作することも可能ですし，既存のテーマを自身でカスタマイズすることもできます
-（ただし，そのためのドキュメントはまだ作成されていません）．
+SLyDIFi supports multiple themes. At present, three types of themes are available as standard. You can create your own theme, or you can customize an existing theme yourself (although no documentation has been created for that).
 
-以下は標準で用意されたテーマの外観と導入方法です．
+The following is the appearance and introduction method of the theme prepared as standard.
 
 #### Plain
 
-装飾のないシンプルなテーマ．
+A simple theme without decoration.
 
 ![plain-title](fig/plain-title.jpg)
 
@@ -100,7 +90,7 @@ SLyDIFi はテーマの変更に対応しています．
 
 ![plain-frame](fig/plain-frame.jpg)
 
-以下のように記述すれば用いることが出来ます:
+You can use it by writing:
 
 ```
 @require: class-slydifi/theme/plain
@@ -109,15 +99,14 @@ SlydifiPlain.document(|
   draft-mode = false;
 |)'<
 
-（本文）
+(body)
 
 >
 ```
 
 #### Hakodate
 
-[Gruvbox](https://github.com/gruvbox-community/gruvbox)
-の色をベースにしたテーマ．
+A theme based on the colors of [Gruvbox](https://github.com/gruvbox-community/gruvbox) .
 
 ![hakodate-title](fig/hakodate-title.jpg)
 
@@ -125,7 +114,7 @@ SlydifiPlain.document(|
 
 ![hakodate-frame](fig/hakodate-frame.jpg)
 
-以下のように記述すれば用いることが出来ます:
+You can use it by writing:
 
 ```
 @require: class-slydifi/theme/hakodate
@@ -134,19 +123,16 @@ SlydifiHakodate.document(|
   draft-mode = false;
 |)'<
 
-（本文）
+(body)
 
 >
 ```
 
-使用するには [M+ フォント](https://mplus-fonts.osdn.jp/about.html)
-のインストールと，hash ファイルによる紐付けが必要です．
-このあたりはいずれ別途パッケージ化するかもしれません．
-
+To use it, you need to install [M + font](https://mplus-fonts.osdn.jp/about.html) and link it with a hash file. This installation process may be automated using Satyrographos in the future.
 
 #### Akasaka
 
-灰色のスタンダードなテーマ．
+Gray standard theme.
 
 ![akasaka-title](fig/akasaka-title.jpg)
 
@@ -154,25 +140,22 @@ SlydifiHakodate.document(|
 
 ![akasaka-frame](fig/akasaka-frame.jpg)
 
-以下のように記述すれば用いることが出来ます:
+You can use it by writing:
 
 ```
 @require: class-slydifi/theme/akasaka
 
 SlydifiAkasaka.document(|
   draft-mode = false;
-  header-text = {（ヘッダに付与したいテキスト）};
+  header-text = {(Text you want to add in header)};
 |)'<
 
-（本文）
+(body)
 
 >
 ```
 
-使用するには [Noto Sans](https://www.google.com/get/noto/) 系のフォント
-（Noto Sans 及び Noto Sans CJK JP）
-のインストールと，hash ファイルによる紐付けが必要です．
-これは既に satyrographos に登録されており，以下のコマンドでインストール可能です:
+To use it, you need to install [Noto Sans](https://www.google.com/get/noto/) font family (Noto Sans and Noto Sans CJK JP) and link it with a hash file.<br>Now it is already registered with Satyrographos and can be installed with the following command:
 
 ```
 opam install satysfi-fonts-noto-sans
@@ -180,13 +163,12 @@ opam install satysfi-fonts-noto-sans-cjk-jp
 satyrographos install
 ```
 
-詳細は
+See
 [SATySFi-fonts-noto-sans](https://github.com/zeptometer/SATySFi-fonts-noto-sans)
-及び
+and
 [SATySFi-fonts-noto-sans-cjk-jp](https://github.com/zeptometer/SATySFi-fonts-noto-sans-cjk-jp)
-を参照．
-
+for details.
 
 ## ToDo
 
-* block 環境に相当するコマンド
+- Command equivalent to `block` environment in Beamer
