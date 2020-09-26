@@ -1,5 +1,7 @@
 # SLyDIFi
 
+([English README is here](README-en.md))
+
 SLyDIFi は， [SATySFi](https://github.com/gfngfn/SATySFi) でスライドを作成するためのパッケージ（クラスファイル）です．
 LaTeX でいうところの beamer に相当しています（機能は最低限のもののみ用意しています）．
 

@@ -1,5 +1,7 @@
 # SLyDIFi
 
+（[日本語版はこちら](README.md)）
+
 SLyDIFi is a package (class file) for creating slides with [SATySFi](https://github.com/gfngfn/SATySFi) . It is equivalent to beamer in LaTeX (only the minimum functions are available).
 
 ## Installation & Usage
@@ -36,9 +38,10 @@ If you run `satysfi` command and the following PDF is generated, it is working p
 
 Try it in [Gitpod](https://gitpod.io)!
 
-[](https://gitpod.io/#https://github.com/monaqa/slydifi)![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/monaqa/slydifi)
 
-You can create PDF (`demo/demo.pdf`) by editing <br>`demo/demo.saty` freely and run `satysfi demo/demo.saty` on console.<br>You can also install other packages via `opam` / `satyrographos` command, because this demo uses [SATySFi's docker image](https://github.com/amutake/satysfi-docker).
+You can create PDF (`demo/demo.pdf`) by editing `demo/demo.saty` freely and run `satysfi demo/demo.saty` on console.
+You can also install other packages via `opam` / `satyrographos` command, because this demo uses [SATySFi's docker image](https://github.com/amutake/satysfi-docker).
 
 ![gitpod-demo-gif](https://user-images.githubusercontent.com/48883418/93006630-8d70c200-f599-11ea-8777-d3d5afbacf25.gif)
 
@@ -81,11 +84,11 @@ The following is the appearance and introduction method of the theme prepared as
 
 A simple theme without decoration.
 
-![plain-title](https://github.com/monaqa/slydifi/blob/i18n/fig/plain-title.jpg?raw=true)
+![plain-title](fig/plain-title.jpg)
 
-![plain-section](https://github.com/monaqa/slydifi/blob/i18n/fig/plain-section.jpg?raw=true)
+![plain-section](fig/plain-section.jpg)
 
-![plain-frame](https://github.com/monaqa/slydifi/blob/i18n/fig/plain-frame.jpg?raw=true)
+![plain-frame](fig/plain-frame.jpg)
 
 You can use it by writing:
 
@@ -105,11 +108,11 @@ SlydifiPlain.document(|
 
 A theme based on the colors of [Gruvbox](https://github.com/gruvbox-community/gruvbox) .
 
-[Gruvbox](https://github.com/gruvbox-community/gruvbox) の色をベースにしたテーマ．
+![hakodate-title](fig/hakodate-title.jpg)
 
-![hakodate-title](https://github.com/monaqa/slydifi/blob/i18n/fig/hakodate-title.jpg?raw=true)
+![hakodate-section](fig/hakodate-section.jpg)
 
-![hakodate-section](https://github.com/monaqa/slydifi/blob/i18n/fig/hakodate-section.jpg?raw=true)
+![hakodate-frame](fig/hakodate-frame.jpg)
 
 You can use it by writing:
 
@@ -131,11 +134,11 @@ To use it, you need to install [M + font](https://mplus-fonts.osdn.jp/about.html
 
 Gray standard theme.
 
-![hakodate-section](fig/hakodate-section.jpg)
+![akasaka-title](fig/akasaka-title.jpg)
 
-![akasaka-title](https://github.com/monaqa/slydifi/blob/i18n/fig/akasaka-title.jpg?raw=true)
+![akasaka-section](fig/akasaka-section.jpg)
 
-![akasaka-section](https://github.com/monaqa/slydifi/blob/i18n/fig/akasaka-section.jpg?raw=true)
+![akasaka-frame](fig/akasaka-frame.jpg)
 
 You can use it by writing:
 
@@ -160,7 +163,11 @@ opam install satysfi-fonts-noto-sans-cjk-jp
 satyrographos install
 ```
 
-See [SATySFi-fonts-noto-sans](https://github.com/zeptometer/SATySFi-fonts-noto-sans) and [SATySFi-fonts-noto-sans-cjk-jp](https://github.com/zeptometer/SATySFi-fonts-noto-sans-cjk-jp) for details.
+See
+[SATySFi-fonts-noto-sans](https://github.com/zeptometer/SATySFi-fonts-noto-sans)
+and
+[SATySFi-fonts-noto-sans-cjk-jp](https://github.com/zeptometer/SATySFi-fonts-noto-sans-cjk-jp)
+for details.
 
 ## ToDo
 
