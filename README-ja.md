@@ -24,7 +24,7 @@ satyrographos install
 @require: code
 @require: annot
 @require: list
-@require: slydifi/theme/plain
+@require: class-slydifi/theme/plain
 
 SlydifiPlain.document(|
   draft-mode = false;

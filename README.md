@@ -19,7 +19,7 @@ If you want to check the operation to see if it was installed correctly, prepare
 @require: code
 @require: annot
 @require: list
-@require: slydifi/theme/plain
+@require: class-slydifi/theme/plain
 
 SlydifiPlain.document(|
   draft-mode = false;
