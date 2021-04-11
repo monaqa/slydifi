@@ -1,6 +1,6 @@
 opam-version: "2.0"
 name: "satysfi-class-slydifi"
-version: "0.2.0"
+version: "0.3.0"
 synopsis: "A SATySFi document class for creating presentations slides"
 description: """A SATySFi document class for creating presentations slides."""
 
@@ -15,6 +15,7 @@ depends: [
   "satysfi" {>= "0.0.5" & < "0.0.6"}
   "satyrographos" {>= "0.0.2" & < "0.0.3"}
   "satysfi-enumitem" {>= "2.0.0"}
+  "satysfi-figbox" {>= "0.1.1"}
   "satysfi-base" {>= "1.0.0"}
 ]
 build: [ ]
