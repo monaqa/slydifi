@@ -494,7 +494,7 @@ SlydifiDocument.document(|
 
   >%
 
-  +multiframe(3){図のオーバーレイ表示}<%
+  +multiframe(3){図のオーバーレイ表示 (\show-layer;/3)}<%
     +p{
       図もオーバーレイに対応しており，特定のレイヤーに応じて図を出し分けることが可能．
     }
@@ -511,7 +511,7 @@ SlydifiDocument.document(|
     }
 
     +p{
-      `fig-select` 関数を用いて図の一部分を切り替えることも可能。
+      `fig-select` 関数を用いて図の内容や体裁などを切り替えることも可能。
     }
 
     +fig-center(
@@ -524,7 +524,7 @@ SlydifiDocument.document(|
         textbox-with-width 400pt
           {
             The line color of this box is blue on the first and second frame, and red in the third frame.
-            Therefore, the color of this box is
+            Therefore, the line color of this box is
             \select(till 2){\text-color(Color.blue){blue}}{\text-color(Color.red){red}} now.
           }
           |> glass-box ?:(align-center, align-center) 450pt 80pt
