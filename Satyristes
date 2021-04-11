@@ -9,11 +9,10 @@
      ))
   (opam "satysfi-class-slydifi.opam")
   (dependencies
-    (
-     (enumitem ())
+    ((enumitem ())
      (figbox ())
-     (base ())))
-  (compatibility ((satyrographos "0.0.1"))))
+     (base ())
+     )))
 
 (libraryDoc
   (name "class-slydifi-doc")
@@ -25,6 +24,6 @@
     ((doc "slydifi.pdf" "doc/slydifi.pdf")))
   (opam "satysfi-class-slydifi-doc.opam")
   (dependencies
-    (
-     (class-slydifi ())
-     (easytable ()))))
+    ((class-slydifi ())
+     (easytable ())
+     )))
