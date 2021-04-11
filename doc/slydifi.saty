@@ -273,7 +273,7 @@ SlydifiDocument.document(|
 
   >%
 
-  +multiframe(3){オーバーレイ}<%
+  +multiframe(3){オーバーレイ (\show-layer;/3)}<%
     +fig-on-right(
       textblock ?:(set-font-size 12pt) 300pt '<%
         +code(```
@@ -494,26 +494,43 @@ SlydifiDocument.document(|
 
   >%
 
-  +frame{図のオーバーレイ表示}<%
+  +multiframe(3){図のオーバーレイ表示}<%
     +p{
       図もオーバーレイに対応しており，特定のレイヤーに応じて図を出し分けることが可能．
     }
 
     +p{
       表示条件を満たすときに図を表示し，それ以外のときは大きさを0にしたいときは
-      `ghost` 関数を用いて `figbox |> ghost (cond)` とする．
+      `fig-ghost` 関数を用いて `figbox |> fig-ghost (cond)` とする．
     }
 
     +p{
       表示条件を満たすときに図を表示し，それ以外のときは図を不可視としたい
       （すなわち，元の図と同じ大きさの透明の箱を置きたい）ときは
-      `phantom` 関数を用いて `figbox |> phantom (cond)` とする．
+      `fig-phantom` 関数を用いて `figbox |> fig-phantom (cond)` とする．
     }
 
     +p{
-      表示条件に応じて図を出し分けたいときは，
-      `select` 関数を用いて `select (cond) figbox-true figbox-false` とする．
+      `fig-select` 関数を用いて図の一部分を切り替えることも可能。
     }
+
+    +fig-center(
+      vconcat [
+        textbox {This box appears only on the first frame.}
+          |> glass-box ?:(align-center, align-center) 450pt 30pt
+          |> bgcolor (Color.gray 0.8)
+          |> fig-phantom (only 1);
+        gap 20pt;
+        textbox-with-width 400pt
+          {
+            The line color of this box is blue on the first and second frame, and red in the third frame.
+            Therefore, the color of this box is
+            \select(till 2){\text-color(Color.blue){blue}}{\text-color(Color.red){red}} now.
+          }
+          |> glass-box ?:(align-center, align-center) 450pt 80pt
+          |> frame 3pt (select (till 2) Color.blue Color.red)
+      ]
+    );
   >%
 
 >%

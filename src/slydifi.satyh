@@ -2,8 +2,10 @@
 @require: math
 @require: list
 @require: annot
+
+@require: figbox/figbox
+
 @import: functions/color
-@import: functions/figbox
 @import: functions/param
 @import: functions/footnote
 @import: functions/overlay

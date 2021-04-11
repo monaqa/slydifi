@@ -3,10 +3,11 @@
 @require: math
 @require: list
 @require: annot
-@require: class-slydifi/slydifi
-@require: class-slydifi/functions/color
+% @require: class-slydifi/slydifi
+% @require: class-slydifi/functions/color
+% @require: class-slydifi/functions/footnote
+@import: ../src/slydifi
 @require: enumitem/enumitem
-@require: class-slydifi/functions/footnote
 
 let () = Enumitem.item-indent-ratio |> EnumitemParam.set 1.0
 let () = Enumitem.label-width-ratio |> EnumitemParam.set 1.0
