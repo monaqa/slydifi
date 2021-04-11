@@ -131,7 +131,7 @@ SlydifiPlain.document(|
         textbox {このスライドもオーバーレイを使っています}
           |> hvmargin 3pt
           |> bgcolor (Color.gray 0.9)
-          |> ghost (in-case [2; 4;])
+          |> fig-ghost (in-case [2; 4;])
       );
 
     >%
