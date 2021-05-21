@@ -3,7 +3,7 @@
 
 (library
   (name "class-slydifi")
-  (version "0.3.0")
+  (version "0.3.1")
   (sources
     ((packageDir "src")
      ))
@@ -16,7 +16,7 @@
 
 (libraryDoc
   (name "class-slydifi-doc")
-  (version "0.3.0")
+  (version "0.3.1")
   (workingDirectory "doc")
   (build
     ((satysfi "slydifi.saty" "-o" "slydifi.pdf")))

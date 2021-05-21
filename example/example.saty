@@ -113,7 +113,7 @@ SlydifiHakodate.document(|
       +fig-center(
         hconcat ?:0.5 [
           dummy-box 200pt 50pt |> hmargin 10pt;
-          dummy-box 150pt 100pt |> hmargin 10pt |> phantom (after 2)
+          dummy-box 150pt 100pt |> hmargin 10pt |> fig-phantom (after 2)
         ]
       );
     >
