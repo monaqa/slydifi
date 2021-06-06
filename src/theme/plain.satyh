@@ -1,7 +1,11 @@
 @require: gr
 @require: color
 @import: ../slydifi
+@import: ../footnote
+@require: enumitem/enumitem
 
+let () = Enumitem.item-indent-ratio |> EnumitemParam.set 1.0
+let () = Enumitem.label-width-ratio |> EnumitemParam.set 1.0
 
 module SlydifiThemePlain: sig
 
@@ -34,6 +38,11 @@ module SlydifiThemePlain: sig
 
 % inline commands
   direct \emph : [(int -> bool)?; inline-text] inline-cmd
+
+% 脚注
+  direct \footnote : [inline-text] inline-cmd
+  direct \footnotetext : [string; inline-text] inline-cmd
+  direct \footnotemark : [string] inline-cmd
 
 end = struct
 
@@ -68,7 +77,8 @@ end = struct
         slide-date = [default-font-conf 20pt;];
         section-title = [default-font-conf 28pt;];
         frame-title = [default-font-conf 28pt;];
-        footnote = [default-font-conf 12pt;];
+        pagenum = [default-font-conf 12pt;];
+        footnote = [default-font-conf 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;]
       |);
       color = (|
         bg = Color.gray 0.85;
@@ -101,7 +111,7 @@ end = struct
       let gr-page-number =
         let it-pagenum = SlydifiParam.get page-num |> arabic |> embed-string in
         let it-total = get-cross-reference `pagecount` |> Option.from ` ` |> embed-string in
-        let ctx-pagenum = apply-font-cfg config#font#footnote ctx in
+        let ctx-pagenum = apply-font-cfg config#font#pagenum ctx in
         let ib = read-inline ctx-pagenum {#it-pagenum;/#it-total;} in
         let (wid, _, dp) = get-natural-metrics ib in
         let x = layout#paper-width -' wid -' 10pt in
@@ -210,6 +220,7 @@ end = struct
       % frame-master-with-footer の graphics list を踏襲する
       let (_, gr) = frame-master-with-footer |> Frame.embed ctx () in
 
+      % タイトルのブロックボックス列
       let bb-title =
         let ctx-title = ctx
           |> apply-font-cfg config#font#frame-title
@@ -219,6 +230,7 @@ end = struct
         line-break true true ctx-title (ib-title ++ inline-fil)
       in
 
+      % 中身のブロックボックス列
       let bb-inner = read-block ctx content#inner in
 
       (bb-title +++ bb-inner, gr)
@@ -253,6 +265,50 @@ end = struct
       SlydifiOverlay.select dcf (apply-font-cfg config#font#emph ctx) ctx
     in
     read-inline ctx2 it
+
+% \footnote{} command
+
+  let-inline ctx \footnotetext ref-label it =
+    let bbf num =
+      let it-num = embed-string (arabic num) in
+      let ctx = apply-font-cfg config#font#footnote ctx in
+        line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
+    in
+      FootnoteScheme.main ctx (Some(ref-label)) (fun _ -> inline-nil) bbf
+
+  let-inline ctx \footnotemark ref-label =
+    let size = get-font-size ctx in
+    let ctx =
+      ctx |> set-font-size (size *' 0.75)
+          |> set-manual-rising (size *' 0.25)
+    in
+    let ctx =
+      ctx |> set-font-size (size *' 0.75)
+          |> set-manual-rising (size *' 0.25)
+    in
+    match FootnoteScheme.get-footnote-num ref-label with
+    | Some(n) ->
+      let it-num = embed-string n in
+      read-inline ctx {\*#it-num;}
+    | _ ->
+      read-inline ctx {\*?}
+
+  let-inline ctx \footnote it =
+    let size = get-font-size ctx in
+    let ibf num =
+      let it-num = embed-string (arabic num) in
+      let ctx =
+        ctx |> set-font-size (size *' 0.75)
+            |> set-manual-rising (size *' 0.25)
+      in
+        read-inline ctx {\*#it-num;}
+    in
+    let bbf num =
+      let it-num = embed-string (arabic num) in
+      let ctx = apply-font-cfg config#font#footnote ctx in
+        line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
+    in
+      FootnoteScheme.main ctx None ibf bbf
 
 end
 

@@ -1,6 +1,8 @@
 @require: pervasives
+@require: gr
 @import: frame
 @import: overlay
+@import: footnote
 
 %% フォント設定記述方法。
 %% [set-font-size 12pt; set-text-color Color.blue] みたいな感じで書く。
@@ -18,7 +20,18 @@ module SlydifiScheme: sig
 
   val +genframe: ['content Frame.frame; int; 'content] block-cmd
 
+% common commands
   direct +p: [(int -> bool)?; inline-text] block-cmd
+
+  direct \ctx : [(int -> bool)?; (context -> context); inline-text] inline-cmd
+  direct +ctx : [(int -> bool)?; (context -> context); block-text] block-cmd
+
+  direct \br: [] inline-cmd
+  direct \text-color: [(int -> bool)?; color; inline-text] inline-cmd
+  direct \uline : [(int -> bool)?; inline-text] inline-cmd
+  direct \strike : [(int -> bool)?; inline-text] inline-cmd
+
+  direct +show-in-order: [block-text list] block-cmd
 
 end = struct
 
@@ -34,9 +47,11 @@ end = struct
       |> set-language Latin English
       |> set-hyphen-penalty 100
 
+% document scheme
   let document-scheme layout hookf inner =
     let page = UserDefinedPaper (layout#paper-width, layout#paper-height) in
     let pagecontf _ =
+      let () = FootnoteScheme.start-page () in
       (|
         text-origin = (layout#text-horizontal-margin, layout#bg-gr-start-point);
         text-height = layout#text-height;
@@ -65,9 +80,64 @@ end = struct
   let-block ctx +genframe frame n-layer content =
     frame |> SlydifiOverlay.multiframe n-layer ctx content
 
+% common commands
   let-block ctx +p ?:dcf it =
     let dcf = Option.from (fun _ -> true) dcf in
     SlydifiOverlay.ghost-block dcf (line-break true true ctx (read-inline ctx it ++ inline-fil))
+
+  let-inline ctx \br = discretionary (- 1000) inline-nil inline-fil inline-nil
+
+  let-inline ctx \text-color ?:dcf clr it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    SlydifiOverlay.select dcf
+      (read-inline (ctx |> set-text-color clr) it)
+        (read-inline ctx it)
+
+  let-inline ctx \uline ?:dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ib = read-inline ctx it in
+    let pad (x, y) w h d =
+      SlydifiOverlay.select dcf (
+        [
+          stroke 1pt (get-text-color ctx)
+            (Gr.line (x, y -' d) (x +' w, y  -' d))
+        ]
+      )(
+        []
+      )
+    in
+    inline-frame-breakable (0pt, 0pt, 0pt, 0pt) (pad, pad, pad, pad) ib
+
+  let-inline ctx \strike ?:dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ib = read-inline ctx it in
+    let pad (x, y) w h d =
+      SlydifiOverlay.select dcf (
+        let h-base = get-font-size ctx *' 0.3 in
+        [
+          stroke 1pt (get-text-color ctx)
+            (Gr.line (x, y +' h-base) (x +' w, y +' h-base))
+        ]
+      )(
+        []
+      )
+    in
+    inline-frame-breakable (0pt, 0pt, 0pt, 0pt) (pad, pad, pad, pad) ib
+
+  let-inline ctx \ctx ?:dcf ctxf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    read-inline (SlydifiOverlay.select dcf (ctxf ctx) ctx) it
+
+  let-block  ctx +ctx ?:dcf ctxf bt =
+    let dcf = Option.from (fun _ -> true) dcf in
+    read-block (SlydifiOverlay.select dcf (ctxf ctx) ctx) bt
+
+  let-block ctx +show-in-order btlst =
+    let ghost-btlst = btlst |> List.mapi ( fun idx bt ->(
+      let dcf = SlydifiOverlay.after (idx + 1) in
+      SlydifiOverlay.ghost-block dcf (read-block ctx bt)))
+    in
+    ghost-btlst |> List.fold-left (+++) block-nil
 
 end
 
