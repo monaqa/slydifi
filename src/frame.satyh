@@ -1,0 +1,72 @@
+%% どんなテーマにも必須のレイアウト。
+type basic-layout = (|
+  %% 紙面の横幅。
+  paper-width: length;
+  %% 紙面の縦幅。
+  paper-height: length;
+  %% テキスト描画領域の横幅。
+  text-width: length;
+  %% テキスト描画領域の高さ。
+  text-height: length;
+  %% 紙面の左端から、テキスト描画領域の開始点までのx軸方向の長さ。
+  text-horizontal-margin: length;
+  %% 紙面の上端から、テキスト描画領域の開始点までのy軸方向の長さ。
+  text-vertical-margin: length;
+  %% なんだっけ、これ
+  bg-gr-start-point: length;
+|)
+
+module Frame : sig
+
+  type 'layout 'content frame
+
+  val make : (context -> 'layout -> 'content -> (block-boxes * graphics list)) -> 'layout 'content frame
+    constraint 'layout :: (|
+      base: basic-layout;
+    |)
+
+  val embed : context -> 'layout -> 'content -> 'layout 'content frame -> (block-boxes * graphics list)
+    constraint 'layout :: (|
+      base: basic-layout;
+    |)
+
+  val to-page : context -> 'layout -> 'content -> 'layout 'content frame -> block-boxes
+    constraint 'layout :: (|
+      base: basic-layout;
+    |)
+
+end = struct
+
+  type 'layout 'content frame = context -> 'layout -> 'content -> (block-boxes * graphics list)
+    constraint 'layout :: (|
+      base: basic-layout;
+    |)
+
+  let-mutable is-first-page <- true
+
+  % 2ページ以降のときに改ページを入れる．
+  % is-first-page は，現在 first page かどうかを表す bool ref 型の変数．
+  let clear-page-or-nil is-first-page =
+    match !is-first-page with
+    | true -> let () = is-first-page <- false in block-nil
+    | false -> clear-page
+
+  let make framef = framef
+
+  let embed ctx layout content frame = frame ctx layout content
+
+  let to-page ctx layout content frame =
+
+    let (bb-inner, grlst) = frame ctx layout content in
+    let box-inner =
+      let ib-inner = embed-block-top ctx layout#base#text-width (fun _ -> bb-inner) in
+      line-break false false ctx ib-inner
+    in
+    let bb-gr =
+      let spacing-bg-gr = layout#base#text-vertical-margin -' layout#base#bg-gr-start-point in
+      let ctx-bg-gr = ctx |> set-paragraph-margin 0pt spacing-bg-gr in
+      line-break true false ctx-bg-gr (inline-graphics 0pt 0pt 0pt (fun _ -> grlst))
+    in
+    (clear-page-or-nil is-first-page) +++ bb-gr +++ box-inner
+
+end

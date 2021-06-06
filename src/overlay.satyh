@@ -1,7 +1,6 @@
 @require: list
 @import: param
-
-@require: figbox/figbox
+@import: frame
 
 module SlydifiOverlay : sig
 
@@ -16,6 +15,11 @@ module SlydifiOverlay : sig
   val frame-scheme-overlay :
     context -> int -> (inline-text list -> block-text list -> block-boxes)
     -> inline-text list -> block-text list -> block-boxes
+
+  val multiframe: int -> context -> 'layout -> 'content -> 'layout 'content Frame.frame -> block-boxes
+    constraint 'layout :: (|
+      base: basic-layout;
+    |)
 
   % display-condition: int -> bool
   %   表示条件．
@@ -50,10 +54,6 @@ module SlydifiOverlay : sig
   val during: int -> int -> int -> bool
   val in-case: int list -> int -> bool
 
-  % figbox
-  val fig-ghost: (int -> bool) -> FigBox.figbox -> FigBox.figbox
-  val fig-phantom: (int -> bool) -> FigBox.figbox -> FigBox.figbox
-
 end = struct
 
   % Overlay 付きスライドにおけるレイヤー．
@@ -73,6 +73,14 @@ end = struct
     let func n =
       let () = layer |> SlydifiParam.set n in
       frame-f itlst btlst
+    in
+    range 1 n-layer |> List.map func |> List.fold-left (+++) block-nil
+
+  let multiframe n-layer ctx layout content frame =
+    let () = SlydifiParam.discard layer in
+    let func n =
+      let () = layer |> SlydifiParam.set n in
+      frame |> Frame.to-page ctx layout content
     in
     range 1 n-layer |> List.map func |> List.fold-left (+++) block-nil
 
@@ -121,19 +129,5 @@ end = struct
     nlst |> List.map (fun n -> n-layer == n)
          |> List.fold-left ( || ) false
 
-% figbox
-  let fig-ghost dcf fb =
-    let embedf ctx =
-      let ib = FigBox.embed-figbox ctx fb in
-      ghost-inline dcf ib
-    in
-    FigBox.rawbox embedf
-
-  let fig-phantom dcf fb =
-    let embedf ctx =
-      let ib = FigBox.embed-figbox ctx fb in
-      phantom-inline dcf ib
-    in
-    FigBox.rawbox embedf
 
 end
