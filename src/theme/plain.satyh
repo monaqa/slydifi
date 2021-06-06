@@ -1,5 +1,6 @@
 @require: gr
 @require: color
+@require: code
 @import: ../slydifi
 @import: ../footnote
 @require: enumitem/enumitem
@@ -55,6 +56,7 @@ end = struct
         |> set-font-size fsize
         |> set-paragraph-margin (fsize *' 0.65) (fsize *' 0.65)
         |> set-leading (fsize *' 1.4)
+        |> set-code-text-command (command \code)
 
   let layout = (|
     paper-width = 254mm;

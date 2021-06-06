@@ -1,4 +1,5 @@
 @require: list
+@require: figbox/figbox
 @import: param
 @import: frame
 
@@ -50,6 +51,10 @@ module SlydifiOverlay : sig
   val after: int -> int -> bool
   val during: int -> int -> int -> bool
   val in-case: int list -> int -> bool
+
+  % figbox
+  val fig-ghost: (int -> bool) -> FigBox.figbox -> FigBox.figbox
+  val fig-phantom: (int -> bool) -> FigBox.figbox -> FigBox.figbox
 
 end = struct
 
@@ -126,5 +131,20 @@ end = struct
     nlst |> List.map (fun n -> n-layer == n)
          |> List.fold-left ( || ) false
 
+% figbox
+  let fig-ghost dcf fb =
+    let embedf ctx =
+      let ib = FigBox.embed-figbox ctx fb in
+      ghost-inline dcf ib
+    in
+    FigBox.rawbox embedf
+
+  let fig-phantom dcf fb =
+    let embedf ctx =
+      let ib = FigBox.embed-figbox ctx fb in
+      phantom-inline dcf ib
+    in
+    FigBox.rawbox embedf
 
 end
+
