@@ -8,19 +8,24 @@ type layout-slydifi-theme = (|
   base: basic-layout;
   %% フォント設定。
   font: (|
-    normal: font-config;
     emph: font-config;
     slide-title: font-config;
     slide-author: font-config;
     slide-date: font-config;
+    section-title: font-config;
     frame-title: font-config;
     footnote: font-config;
+  |);
+  %% 色関連の設定。
+  color: (|
+    bg: color;
   |)
 |)
 
 module SlydifiThemePlain: sig
 
   val default-layout: layout-slydifi-theme
+  val default-font-conf: length -> context -> context
 
   val document: block-text -> document
 
@@ -28,9 +33,13 @@ module SlydifiThemePlain: sig
   %% スライドマスター。
   val frame-master: layout-slydifi-theme unit Frame.frame
   %% ページ番号の付いたスライドマスター。
-  val frame-master-with-pagenum: layout-slydifi-theme unit Frame.frame
+  val frame-master-with-footer: layout-slydifi-theme unit Frame.frame
   %% スライド全体のタイトルフレーム。
-  val frame-slide-title: layout-slydifi-theme ((| title: inline-text list; |)) Frame.frame
+  %% title: スライドのタイトル
+  %% title: スライドのタイトル
+  val frame-slide-title: layout-slydifi-theme
+    ((| title: inline-text list; author: inline-text list; date: inline-text list|))
+    Frame.frame
   %% セクションフレーム。
   % val frame-section-title: layout-slydifi-theme ((| title: inline-text list; |)) Frame.frame
   %% タイトルフレーム。
@@ -38,23 +47,27 @@ module SlydifiThemePlain: sig
 
 % frame commands
   %% frame-slide-title に従ってタイトルスライドを生成する。
-  direct +make-title : [(| title: inline-text list;|);] block-cmd
+  direct +make-title : [(| title: inline-text list; author: inline-text list; date: inline-text list|);] block-cmd
   %% frame-normal に従って通常のスライドを生成する。
-  direct +frame : [int?; inline-text; block-text;] block-cmd
+  direct +section : [inline-text list; block-text;] block-cmd
+  direct +frame : [int?; layout-slydifi-theme?; inline-text; block-text;] block-cmd
+
+% inline commands
+  direct \emph : [(int -> bool)?; inline-text] inline-cmd
 
 end = struct
 
   let page-num = SlydifiParam.make 0
 
+  let default-font-conf fsize ctx =
+    ctx |> set-font Latin          (`lmsans`, 1.0, 0.0)
+        |> set-font Kana           (`ipaexg`, 1.0, 0.0)
+        |> set-font HanIdeographic (`ipaexg`, 1.0, 0.0)
+        |> set-font-size fsize
+        |> set-paragraph-margin (fsize *' 0.65) (fsize *' 0.65)
+        |> set-leading (fsize *' 1.4)
+
   let default-layout =
-    let default-font-conf fsize ctx =
-      ctx |> set-font Latin          (`lmsans`, 1.0, 0.0)
-          |> set-font Kana           (`ipaexg`, 1.0, 0.0)
-          |> set-font HanIdeographic (`ipaexg`, 1.0, 0.0)
-          |> set-font-size fsize
-          |> set-paragraph-margin (fsize *' 0.65) (fsize *' 0.65)
-          |> set-leading (fsize *' 1.4)
-    in
     (|
       base = (|
         paper-width = 254mm;
@@ -64,35 +77,41 @@ end = struct
         text-horizontal-margin = 20pt;
         text-vertical-margin = 10pt;
         bg-gr-start-point = 0pt;
+        default-ctx = default-font-conf 20pt;
       |);
-       font = (|
-        normal = [default-font-conf 20pt;];
+      font = (|
         emph = [set-text-color Color.red;];
         slide-title = [default-font-conf 36pt;];
         slide-author = [default-font-conf 24pt;];
         slide-date = [default-font-conf 20pt;];
+        section-title = [default-font-conf 28pt;];
         frame-title = [default-font-conf 28pt;];
         footnote = [default-font-conf 12pt;];
-       |);
+      |);
+      color = (|
+        bg = Color.gray 0.85;
+      |)
     |)
 
   let document bt =
-    let hookf _ _ = 
+    let hookf _ _ =
       let numpages = SlydifiParam.get page-num in
       register-cross-reference `pagecount` (arabic numpages)
     in
     SlydifiScheme.document-scheme default-layout hookf bt
 
+% frames
+
   let frame-master =
     let f ctx layout () =
       (block-nil, [
         Gr.rectangle (0pt, 0pt) (layout#base#paper-width, layout#base#paper-height)
-          |> fill (Color.gray 0.85)
+          |> fill layout#color#bg
       ])
     in
     Frame.make f
 
-  let frame-master-with-pagenum =
+  let frame-master-with-footer =
     let f ctx layout () =
       % frame-master の graphics list を踏襲する
       let (_, gr-frame-master) = frame-master |> Frame.embed ctx layout () in
@@ -117,20 +136,88 @@ end = struct
       % frame-master の graphics list を踏襲する
       let (_, gr-frame-master) = frame-master |> Frame.embed ctx layout () in
 
-      let ctx-title = ctx |> apply-font-cfg layout#font#slide-title in
-      let title = content#title in
+      % 設定
+      let title-width = layout#base#paper-width *' 0.8 in
+      let title-xmin = layout#base#paper-width *' 0.1 in
+      let title-ymin = layout#base#paper-height *' 0.45 in
+      let date-ymax = layout#base#paper-height *' 0.2 in
+      let title-mgn = 24pt in
 
+      % タイトルのグラフィックス
       let gr-title =
-        let bbs-title ctx =
+        let bbs ctx =
           content#title |> List.map (fun it ->
-            line-break true true ctx ((read-inline ctx it) ++ inline-fil))
+            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
         in
-        let ib-title = embed-block-top ctx-title (layout#base#text-width)
-          (fun ctx -> (bbs-title ctx |> List.fold-left (+++) block-nil))
+        let ib =
+          let ctx = ctx |> apply-font-cfg layout#font#slide-title in
+          embed-block-top ctx title-width
+          (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
         in
-        draw-text (100pt +' 20pt, 100pt +' 20pt) ib-title
+        draw-text (title-xmin, title-ymin +' title-mgn) ib
+      in
+
+      % 著者名のグラフィックス
+      let gr-author =
+        let bbs ctx =
+          content#author |> List.map (fun it ->
+            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
+        in
+        let ib =
+          let ctx = ctx |> apply-font-cfg layout#font#slide-author in
+          embed-block-top ctx title-width
+          (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
+        in
+        let (_, ht, dp) = get-natural-metrics ib in
+        draw-text (title-xmin, title-ymin -' title-mgn -' ht) ib
       in
       let (_, gr) = frame-master |> Frame.embed ctx layout () in
+
+      % 日付のグラフィックス
+      let gr-date =
+        let bbs ctx =
+          content#date |> List.map (fun it ->
+            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
+        in
+        let ib =
+          let ctx = ctx |> apply-font-cfg layout#font#slide-date in
+          embed-block-top ctx title-width
+          (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
+        in
+        let (_, ht, dp) = get-natural-metrics ib in
+        draw-text (title-xmin, date-ymax -' title-mgn -' ht) ib
+      in
+      let (_, gr) = frame-master |> Frame.embed ctx layout () in
+
+      (block-nil, [gr-frame-master; [gr-title; gr-author; gr-date]] |> List.concat)
+    in
+    Frame.make f
+
+  let frame-section-title =
+    let f ctx layout content =
+      % frame-master の graphics list を踏襲する
+      let (_, gr-frame-master) = frame-master |> Frame.embed ctx layout () in
+
+      % 設定
+      let title-width = layout#base#paper-width *' 0.8 in
+      let title-xmin = layout#base#paper-width *' 0.1 in
+      let title-ymin = layout#base#paper-height *' 0.45 in
+      let date-ymax = layout#base#paper-height *' 0.2 in
+      let title-mgn = 24pt in
+
+      % タイトルのグラフィックス
+      let gr-title =
+        let bbs ctx =
+          content#title |> List.map (fun it ->
+            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
+        in
+        let ib =
+          let ctx = ctx |> apply-font-cfg layout#font#section-title in
+          embed-block-top ctx title-width
+          (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
+        in
+        draw-text (title-xmin, title-ymin +' title-mgn) ib
+      in
 
       (block-nil, [gr-frame-master; [gr-title]] |> List.concat)
     in
@@ -138,29 +225,53 @@ end = struct
 
   let frame-normal =
     let f ctx layout content =
-      % frame-master-with-pagenum の graphics list を踏襲する
-      let (_, gr) = frame-master-with-pagenum |> Frame.embed ctx layout () in
+      % frame-master-with-footer の graphics list を踏襲する
+      let (_, gr) = frame-master-with-footer |> Frame.embed ctx layout () in
 
-      let title = content#title in
-      let inner = content#inner in
-      let bb = read-block (apply-font-cfg layout#font#normal ctx) inner in
+      let bb-title =
+        let ctx-title = ctx
+          |> apply-font-cfg layout#font#frame-title
+          |> set-paragraph-margin 0pt 20pt
+        in
+        let ib-title = read-inline ctx-title content#title in
+        line-break true true ctx-title (ib-title ++ inline-fil)
+      in
 
-      (bb, gr)
+      let bb-inner = read-block ctx content#inner in
+
+      (bb-title +++ bb-inner, gr)
 
     in
     Frame.make f
+
+% frame commands
 
   let-block ctx +make-title content =
     read-block ctx '<
       +SlydifiScheme.genframe(frame-slide-title)(default-layout)(1)(content);
     >
 
-  let-block ctx +frame ?:n-frame title inner =
+  let-block ctx +section title inner =
+    read-block ctx '<
+      +SlydifiScheme.genframe(frame-section-title)(default-layout)(1)(|title = title;|);
+      #inner;
+    >
+
+  let-block ctx +frame ?:n-frame ?:layout title inner =
     let () = page-num |> SlydifiParam.set (SlydifiParam.get page-num + 1) in
     let n-frame = n-frame |> Option.from 1 in
+    let layout = layout |> Option.from default-layout in
     read-block ctx '<
-      +SlydifiScheme.genframe(frame-normal)(default-layout)(n-frame)(|title = title; inner = inner|);
+      +SlydifiScheme.genframe(frame-normal)(layout)(n-frame)(|title = title; inner = inner|);
     >
+
+% inline commands
+  let-inline ctx \emph ?:dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ctx2 =
+      SlydifiOverlay.select dcf (apply-font-cfg default-layout#font#emph ctx) ctx
+    in
+    read-inline ctx2 it
 
 end
 

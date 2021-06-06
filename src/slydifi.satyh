@@ -58,7 +58,7 @@ end = struct
     in
 
     let bb-main =
-      let ctx-doc = (get-standard-context layout#base#text-width) in
+      let ctx-doc = (get-standard-context layout#base#text-width) |> layout#base#default-ctx in
       read-block ctx-doc inner
     in
 

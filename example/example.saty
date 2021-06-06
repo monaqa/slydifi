@@ -7,16 +7,39 @@
 open FigBox
 open SlydifiOverlay
 
+let white-layout =
+  (|
+  SlydifiThemePlain.default-layout
+    with
+      base = SlydifiThemePlain.default-layout#base;
+      font = (|
+        SlydifiThemePlain.default-layout#font
+          with
+            footnote = [SlydifiThemePlain.default-font-conf 20pt;];
+      |);
+      color = (|
+        bg = Color.white;
+      |)
+  |)
+
 in
 
 document '<
 
   +make-title(|
     title = {|\SLyDIFi; でらくらくスライド作成|};
-    % author = {|monaqa|GitHub: `https://github.com/monaqa`|};
+    author = {|monaqa|GitHub: `https://github.com/monaqa`|};
+    date = {| 2021年6月6日 |};
   |);
 
-  +frame{フレーム作成}<
+  +frame?:(1)?:(white-layout){フレーム作成}<
+    +p{
+      フレーム：スライド資料の1ページ1ページに値するもの
+      フレーム：スライド資料の1ページ1ページに値するもの
+      フレーム：スライド資料の1ページ1ページに値するもの
+      フレーム：スライド資料の1ページ1ページに値するもの
+      フレーム：スライド資料の1ページ1ページに値するもの
+    }
     +listing{
       * フレーム：スライド資料の1ページ1ページに値するもの
       * \SLyDIFi; では3種類のフレームを区別する
@@ -26,28 +49,20 @@ document '<
     }
   >
 
-  +frame{フレーム作成2}<
-    +p{
-      fooo!
-    }
-  >
+  +section{|はじめに|}<
+    +frame{\SLyDIFi;: \SATySFi; のスライド作成用パッケージ}<
+      +listing{
+        * \emph{\SATySFi;}
+          ** 静的型付き関数型言語ベースの新たな組版処理システム
+          ** 普通の文書作成時にはそこまで関数型言語を意識しなくてよい
+          ** パッケージの記述に用いる構文は OCaml 風
 
-  % +section{|はじめに|}<
-  %   +frame{\SLyDIFi;: \SATySFi; のスライド作成用パッケージ}<
-  %     +listing{
-  %       * \emph{\SATySFi;} (\link(`https://github.com/gfngfn/SATySFi`);)
-  %         ** 静的型付き関数型言語ベースの新たな組版処理システム
-  %         ** 普通の文書作成時にはそこまで関数型言語を意識しなくてよい
-  %         ** パッケージの記述に用いる構文は OCaml 風
-  % 
-  %       * \emph{\SLyDIFi;} (\link(`https://github.com/monaqa/slydifi`);)
-  %         ** \SATySFi; でスライドを作成することができる
-  %         ** 実は既に先駆者がいる（\link?:({Steamer: Slide Presentation in SATySFi})(`https://github.com/konn/satysfi-steamer`);）
-  %           *** Steamer とは page break 周りの実装を少しばかり変えている
-  %     }
-  % 
-  %   >
-  % >
+        * \emph{\SLyDIFi;}
+          ** \SATySFi; でスライドを作成することができる
+      }
+
+    >
+  >
   % 
   % +section{|\SLyDIFi; の機能|}<
   %   +frame{フレーム作成}<

@@ -10,10 +10,12 @@ type basic-layout = (|
   text-height: length;
   %% 紙面の左端から、テキスト描画領域の開始点までのx軸方向の長さ。
   text-horizontal-margin: length;
-  %% 紙面の上端から、テキスト描画領域の開始点までのy軸方向の長さ。
+  %% 紙面の上端から、テキスト描画領域の開始点までのy軸方向の長さに関するパラメータ。
   text-vertical-margin: length;
-  %% なんだっけ、これ
   bg-gr-start-point: length;
+
+  %% デフォルトのテキスト処理文脈
+  default-ctx: context -> context
 |)
 
 module Frame : sig
