@@ -16,10 +16,7 @@ module SlydifiOverlay : sig
     context -> int -> (inline-text list -> block-text list -> block-boxes)
     -> inline-text list -> block-text list -> block-boxes
 
-  val multiframe: int -> context -> 'layout -> 'content -> 'layout 'content Frame.frame -> block-boxes
-    constraint 'layout :: (|
-      base: basic-layout;
-    |)
+  val multiframe: int -> context -> 'content -> 'content Frame.frame -> block-boxes
 
   % display-condition: int -> bool
   %   表示条件．
@@ -76,11 +73,11 @@ end = struct
     in
     range 1 n-layer |> List.map func |> List.fold-left (+++) block-nil
 
-  let multiframe n-layer ctx layout content frame =
+  let multiframe n-layer ctx content frame =
     let () = SlydifiParam.discard layer in
     let func n =
       let () = layer |> SlydifiParam.set n in
-      frame |> Frame.to-page ctx layout content
+      frame |> Frame.to-page ctx content
     in
     range 1 n-layer |> List.map func |> List.fold-left (+++) block-nil
 

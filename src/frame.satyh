@@ -1,5 +1,5 @@
 %% どんなテーマにも必須のレイアウト。
-type basic-layout = (|
+type frame-layout = (|
   %% 紙面の横幅。
   paper-width: length;
   %% 紙面の縦幅。
@@ -20,29 +20,20 @@ type basic-layout = (|
 
 module Frame : sig
 
-  type 'layout 'content frame
+  type 'content frame
 
-  val make : (context -> 'layout -> 'content -> (block-boxes * graphics list)) -> 'layout 'content frame
-    constraint 'layout :: (|
-      base: basic-layout;
-    |)
+  val make : frame-layout -> (context -> 'content -> (block-boxes * graphics list)) -> 'content frame
 
-  val embed : context -> 'layout -> 'content -> 'layout 'content frame -> (block-boxes * graphics list)
-    constraint 'layout :: (|
-      base: basic-layout;
-    |)
+  val embed : context -> 'content -> 'content frame -> (block-boxes * graphics list)
 
-  val to-page : context -> 'layout -> 'content -> 'layout 'content frame -> block-boxes
-    constraint 'layout :: (|
-      base: basic-layout;
-    |)
+  val to-page : context -> 'content -> 'content frame -> block-boxes
 
 end = struct
 
-  type 'layout 'content frame = context -> 'layout -> 'content -> (block-boxes * graphics list)
-    constraint 'layout :: (|
-      base: basic-layout;
-    |)
+  type 'content frame = (|
+    layout: frame-layout;
+    contentf: context -> 'content -> (block-boxes * graphics list);
+  |)
 
   let-mutable is-first-page <- true
 
@@ -53,19 +44,19 @@ end = struct
     | true -> let () = is-first-page <- false in block-nil
     | false -> clear-page
 
-  let make framef = framef
+  let make layout contentf = (| layout = layout; contentf = contentf|)
 
-  let embed ctx layout content frame = frame ctx layout content
+  let embed ctx content frame = frame#contentf ctx content
 
-  let to-page ctx layout content frame =
+  let to-page ctx content frame =
 
-    let (bb-inner, grlst) = frame ctx layout content in
+    let (bb-inner, grlst) = frame#contentf ctx content in
     let box-inner =
-      let ib-inner = embed-block-top ctx layout#base#text-width (fun _ -> bb-inner) in
+      let ib-inner = embed-block-top ctx frame#layout#text-width (fun _ -> bb-inner) in
       line-break false false ctx ib-inner
     in
     let bb-gr =
-      let spacing-bg-gr = layout#base#text-vertical-margin -' layout#base#bg-gr-start-point in
+      let spacing-bg-gr = frame#layout#text-vertical-margin -' frame#layout#bg-gr-start-point in
       let ctx-bg-gr = ctx |> set-paragraph-margin 0pt spacing-bg-gr in
       line-break true false ctx-bg-gr (inline-graphics 0pt 0pt 0pt (fun _ -> grlst))
     in

@@ -14,17 +14,11 @@ let apply-font-cfg : font-config -> context -> context
 %% SLyDIFi のすべてのテーマの元となる scheme。
 module SlydifiScheme: sig
 
-  val document-scheme:  'layout -> ((|page-number : int|) -> (length * length) -> unit) -> block-text -> document
-    constraint 'layout :: (|
-      base: basic-layout;
-    |)
+  val document-scheme:  frame-layout -> ((|page-number : int|) -> (length * length) -> unit) -> block-text -> document
 
-  val +genframe: ['layout 'content Frame.frame; 'layout; int; 'content] block-cmd
-    constraint 'layout :: (|
-      base: basic-layout;
-    |)
+  val +genframe: ['content Frame.frame; int; 'content] block-cmd
 
-  direct +p : [(int -> bool)?; inline-text] block-cmd
+  direct +p: [(int -> bool)?; inline-text] block-cmd
 
 end = struct
 
@@ -41,11 +35,11 @@ end = struct
       |> set-hyphen-penalty 100
 
   let document-scheme layout hookf inner =
-    let page = UserDefinedPaper (layout#base#paper-width, layout#base#paper-height) in
+    let page = UserDefinedPaper (layout#paper-width, layout#paper-height) in
     let pagecontf _ =
       (|
-        text-origin = (layout#base#text-horizontal-margin, layout#base#bg-gr-start-point);
-        text-height = layout#base#text-height;
+        text-origin = (layout#text-horizontal-margin, layout#bg-gr-start-point);
+        text-height = layout#text-height;
       |)
     in
     let pagepartsf pbinfo =
@@ -58,7 +52,7 @@ end = struct
     in
 
     let bb-main =
-      let ctx-doc = (get-standard-context layout#base#text-width) |> layout#base#default-ctx in
+      let ctx-doc = (get-standard-context layout#text-width) |> layout#default-ctx in
       read-block ctx-doc inner
     in
 
@@ -68,8 +62,8 @@ end = struct
 
     page-break page pagecontf pagepartsf (bb-main +++ hook)
 
-  let-block ctx +genframe frame layout n-layer content =
-    frame |> SlydifiOverlay.multiframe n-layer ctx layout content
+  let-block ctx +genframe frame n-layer content =
+    frame |> SlydifiOverlay.multiframe n-layer ctx content
 
   let-block ctx +p ?:dcf it =
     let dcf = Option.from (fun _ -> true) dcf in

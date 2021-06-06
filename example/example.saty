@@ -7,21 +7,6 @@
 open FigBox
 open SlydifiOverlay
 
-let white-layout =
-  (|
-  SlydifiThemePlain.default-layout
-    with
-      base = SlydifiThemePlain.default-layout#base;
-      font = (|
-        SlydifiThemePlain.default-layout#font
-          with
-            footnote = [SlydifiThemePlain.default-font-conf 20pt;];
-      |);
-      color = (|
-        bg = Color.white;
-      |)
-  |)
-
 in
 
 document '<
@@ -32,7 +17,7 @@ document '<
     date = {| 2021年6月6日 |};
   |);
 
-  +frame?:(1)?:(white-layout){フレーム作成}<
+  +frame?:(1){フレーム作成}<
     +p{
       フレーム：スライド資料の1ページ1ページに値するもの
       フレーム：スライド資料の1ページ1ページに値するもの
