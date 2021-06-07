@@ -56,7 +56,7 @@ end = struct
     let bb-gr =
       let spacing-bg-gr = frame#layout#text-vertical-margin -' frame#layout#bg-gr-start-point in
       let ctx-bg-gr = ctx |> set-paragraph-margin 0pt spacing-bg-gr in
-      line-break true false ctx-bg-gr (inline-graphics 0pt 0pt 0pt (fun _ -> grlst))
+      line-break true false ctx-bg-gr (inline-graphics 0pt 0pt 0pt (fun _ -> grlst) ++ inline-fil)
     in
     (clear-page-or-nil is-first-page) +++ bb-gr +++ box-inner
 
