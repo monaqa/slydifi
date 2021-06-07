@@ -14,13 +14,13 @@ document '<
 
   +make-title(|
     title = {|\SLyDIFi; で|らくらくスライド作成|};
-    author = {|monaqa|GitHub: `https://github.com/monaqa`|};
+    author = {|monaqa|GitHub: \link(`https://github.com/monaqa`);|};
     date = {| 2021年6月6日 |};
   |);
 
 
   +section{|セクションスライドの|具体例|}<
-    +frame{フレーム作成}<
+    +frame{フレーム作成 in \SLyDIFi;}<
       +listing{
         * フレーム：スライド資料の1ページ1ページに値するもの
         * \SLyDIFi; では3種類のフレームを区別する

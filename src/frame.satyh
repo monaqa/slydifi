@@ -13,9 +13,6 @@ type frame-layout = (|
   %% 紙面の上端から、テキスト描画領域の開始点までのy軸方向の長さに関するパラメータ。
   text-vertical-margin: length;
   bg-gr-start-point: length;
-
-  %% デフォルトのテキスト処理文脈
-  default-ctx: context -> context
 |)
 
 module Frame : sig

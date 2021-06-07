@@ -66,13 +66,13 @@ end = struct
     text-horizontal-margin = 20pt;
     text-vertical-margin = 10pt;
     bg-gr-start-point = 0pt;
-    default-ctx = default-font-conf 20pt;
   |)
 
 % configuration
   let config =
     (|
       font = (|
+        normal = [default-font-conf 20pt;];
         emph = [set-text-color Color.red;];
         slide-title = [default-font-conf 36pt;];
         slide-author = [default-font-conf 24pt;];
@@ -92,7 +92,7 @@ end = struct
       let numpages = SlydifiParam.get page-num in
       register-cross-reference `pagecount` (arabic numpages)
     in
-    SlydifiScheme.document-scheme layout hookf bt
+    SlydifiScheme.document-scheme layout (SlydifiScheme.apply-font-cfg config#font#normal) hookf bt
 
 % frames
 
@@ -113,7 +113,7 @@ end = struct
       let gr-page-number =
         let it-pagenum = SlydifiParam.get page-num |> arabic |> embed-string in
         let it-total = get-cross-reference `pagecount` |> Option.from ` ` |> embed-string in
-        let ctx-pagenum = apply-font-cfg config#font#pagenum ctx in
+        let ctx-pagenum = SlydifiScheme.apply-font-cfg config#font#pagenum ctx in
         let ib = read-inline ctx-pagenum {#it-pagenum;/#it-total;} in
         let (wid, _, dp) = get-natural-metrics ib in
         let x = layout#paper-width -' wid -' 10pt in
@@ -144,7 +144,7 @@ end = struct
             line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
         in
         let ib =
-          let ctx = ctx |> apply-font-cfg config#font#slide-title in
+          let ctx = ctx |> SlydifiScheme.apply-font-cfg config#font#slide-title in
           embed-block-top ctx title-width
           (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
         in
@@ -158,7 +158,7 @@ end = struct
             line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
         in
         let ib =
-          let ctx = ctx |> apply-font-cfg config#font#slide-author in
+          let ctx = ctx |> SlydifiScheme.apply-font-cfg config#font#slide-author in
           embed-block-top ctx title-width
           (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
         in
@@ -174,7 +174,7 @@ end = struct
             line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
         in
         let ib =
-          let ctx = ctx |> apply-font-cfg config#font#slide-date in
+          let ctx = ctx |> SlydifiScheme.apply-font-cfg config#font#slide-date in
           embed-block-top ctx title-width
           (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
         in
@@ -206,7 +206,7 @@ end = struct
             line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
         in
         let ib =
-          let ctx = ctx |> apply-font-cfg config#font#section-title in
+          let ctx = ctx |> SlydifiScheme.apply-font-cfg config#font#section-title in
           embed-block-top ctx title-width
           (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
         in
@@ -225,7 +225,7 @@ end = struct
       % タイトルのブロックボックス列
       let bb-title =
         let ctx-title = ctx
-          |> apply-font-cfg config#font#frame-title
+          |> SlydifiScheme.apply-font-cfg config#font#frame-title
           |> set-paragraph-margin 0pt 20pt
         in
         let ib-title = read-inline ctx-title content#title in
@@ -264,7 +264,7 @@ end = struct
   let-inline ctx \emph ?:dcf it =
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
-      SlydifiOverlay.select dcf (apply-font-cfg config#font#emph ctx) ctx
+      SlydifiOverlay.select dcf (SlydifiScheme.apply-font-cfg config#font#emph ctx) ctx
     in
     read-inline ctx2 it
 
@@ -273,7 +273,7 @@ end = struct
   let-inline ctx \footnotetext ref-label it =
     let bbf num =
       let it-num = embed-string (arabic num) in
-      let ctx = apply-font-cfg config#font#footnote ctx in
+      let ctx = SlydifiScheme.apply-font-cfg config#font#footnote ctx in
         line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
     in
       FootnoteScheme.main ctx (Some(ref-label)) (fun _ -> inline-nil) bbf
@@ -307,7 +307,7 @@ end = struct
     in
     let bbf num =
       let it-num = embed-string (arabic num) in
-      let ctx = apply-font-cfg config#font#footnote ctx in
+      let ctx = SlydifiScheme.apply-font-cfg config#font#footnote ctx in
         line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
     in
       FootnoteScheme.main ctx None ibf bbf

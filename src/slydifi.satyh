@@ -8,15 +8,20 @@
 %% [set-font-size 12pt; set-text-color Color.blue] みたいな感じで書く。
 type font-config = (context -> context) list
 
-%% font-config を受け取り、特定の context を context に変換する。
-let apply-font-cfg : font-config -> context -> context
-  | cfgs ctx =
-  cfgs |> List.fold-left (fun ctx ctxf -> ctxf ctx) ctx
-
 %% SLyDIFi のすべてのテーマの元となる scheme。
 module SlydifiScheme: sig
 
-  val document-scheme:  frame-layout -> ((|page-number : int|) -> (length * length) -> unit) -> block-text -> document
+  %% スライド作成用の document 関数を生成する。
+  %% Parameters:
+  %%   layout (frame-layout): フレーム全体に関係するレイアウト。
+  %%   init-ctx (context -> context): 文書全体にかけるテキスト処理文脈の変換関数。
+  %%   hookf ((|page-number : int|) -> (length * length) -> unit):
+  %%     フック関数。スライドの最後に起動する。ページの総数を受け取りたい場合などに便利。
+  %%   inner (block-text): スライド本体のブロックテキスト。
+  val document-scheme: frame-layout -> (context -> context) -> ((|page-number : int|) -> (length * length) -> unit) -> block-text -> document
+
+  %% font-config を受け取り、特定の context を context に変換する。
+  val apply-font-cfg : font-config -> context -> context
 
   val +genframe: ['content Frame.frame; int; 'content] block-cmd
 
@@ -47,8 +52,11 @@ end = struct
       |> set-language Latin English
       |> set-hyphen-penalty 100
 
+  let apply-font-cfg cfgs ctx =
+    cfgs |> List.fold-left (fun ctx ctxf -> ctxf ctx) ctx
+
 % document scheme
-  let document-scheme layout hookf inner =
+  let document-scheme layout init-ctx hookf inner =
     let page = UserDefinedPaper (layout#paper-width, layout#paper-height) in
     let pagecontf _ =
       let () = FootnoteScheme.start-page () in
@@ -67,7 +75,7 @@ end = struct
     in
 
     let bb-main =
-      let ctx-doc = (get-standard-context layout#text-width) |> layout#default-ctx in
+      let ctx-doc = get-standard-context layout#text-width |> init-ctx in
       read-block ctx-doc inner
     in
 

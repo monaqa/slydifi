@@ -1,10 +1,12 @@
 %% This slide theme is heavily inspired by the iceberg.vim colorscheme.
 %% [iceberg.vim](https://github.com/cocopon/iceberg.vim): Copyright (c) 2014 cocopon <cocopon@me.com>
+%% https://github.com/cocopon/iceberg.vim/blob/master/colors/iceberg.vim
 
 @require: gr
-@require: color
-@require: code
+@require: annot
 @require: railway/railway
+@require: base/color-ext
+@require: base/int
 @import: ../slydifi
 @import: ../footnote
 @require: enumitem/enumitem
@@ -25,7 +27,7 @@ module SlydifiThemeArctic: sig
   %% title: スライドのタイトル
   val frame-slide-title:
     ((| title: inline-text list; author: inline-text list; date: inline-text list|))
-    Frame.frame
+      Frame.frame
   %% セクションフレーム。
   % val frame-section-title: layout-slydifi-theme ((| title: inline-text list; |)) Frame.frame
   %% タイトルフレーム。
@@ -40,6 +42,9 @@ module SlydifiThemeArctic: sig
 
 % inline commands
   direct \emph : [(int -> bool)?; inline-text] inline-cmd
+  direct \textbf : [(int -> bool)?; inline-text] inline-cmd
+  direct \link : [inline-text?; string] inline-cmd
+  direct \code : [string] inline-cmd
 
 % 脚注
   direct \footnote : [inline-text] inline-cmd
@@ -50,21 +55,6 @@ end = struct
 
   let page-num = SlydifiParam.make 0
 
-  let default-font-conf fsize ctx =
-    ctx |> set-font Latin          (`fonts-noto-sans:NotoSans-Regular`, 1.0, 0.0)
-        |> set-font Kana           (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0)
-        |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0)
-        |> set-text-color (Color.of-css `#161821`)
-        |> set-font-size fsize
-        |> set-paragraph-margin (fsize *' 0.65) (fsize *' 0.65)
-        |> set-leading (fsize *' 1.4)
-        |> set-code-text-command (command \code)
-
-  let emph-font ctx =
-    ctx |> set-font Latin          (`fonts-noto-sans:NotoSans-Bold`, 1.0, 0.0)
-        |> set-font Kana           (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Bold`, 1.0, 0.0)
-        |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Bold`, 1.0, 0.0)
-
   let layout = (|
     paper-width = 254mm;
     paper-height = 142.9mm;
@@ -73,45 +63,106 @@ end = struct
     text-horizontal-margin = 20pt;
     text-vertical-margin = 10pt;
     bg-gr-start-point = -20pt;
-    default-ctx = default-font-conf 20pt;
   |)
 
 % configuration
   let config =
-    let bg = Color.of-css `#c6c8d1` in
-    let fg = Color.of-css `#161821` in
-    % let emph = Color.of-css `#e27878` in
-    let emph = Color.of-css `#cc4343` in
+    let set-font-metrics fsize ctx =
+      ctx |> set-font-size fsize
+          |> set-paragraph-margin (fsize *' 0.65) (fsize *' 0.65)
+          |> set-leading (fsize *' 1.4)
+    in
+    let default-font ctx =
+      ctx |> set-font Latin          (`fonts-noto-sans:NotoSans-Regular`, 1.0, 0.0)
+          |> set-font Kana           (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0)
+          |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0)
+    in
+    let code-font ctx =
+      ctx |> set-font Latin          (`system:mplus-1m-regular`, 1.0, 0.0)
+          |> set-font Kana           (`system:mplus-1m-regular`, 1.0, 0.0)
+          |> set-font HanIdeographic (`system:mplus-1m-regular`, 1.0, 0.0)
+    in
+    let bold-font ctx =
+      ctx |> set-font Latin          (`fonts-noto-sans:NotoSans-Bold`, 1.0, 0.0)
+          |> set-font Kana           (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Bold`, 1.0, 0.0)
+          |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Bold`, 1.0, 0.0)
+    in
 
     (|
       font = (|
-        emph = [set-text-color emph; emph-font];
-        slide-title = [default-font-conf 32pt; emph-font];
-        slide-author = [default-font-conf 24pt;];
-        slide-date = [default-font-conf 20pt;];
-        section-title = [default-font-conf 32pt; emph-font];
-        frame-title = [default-font-conf 28pt; emph-font];
-        pagenum = [default-font-conf 12pt;];
-        footnote = [default-font-conf 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;]
+        normal = [default-font; set-font-metrics 20pt];
+        bold = [bold-font];
+        code = [code-font];
+        slide-title = [bold-font; set-font-metrics 32pt];
+        slide-author = [default-font; set-font-metrics 24pt;];
+        slide-date = [default-font; set-font-metrics 20pt;];
+        section-title = [bold-font; set-font-metrics 32pt];
+        frame-title = [bold-font; set-font-metrics 28pt];
+        pagenum = [default-font; set-font-metrics 14pt;];
+        footnote = [default-font; set-font-metrics 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;];
       |);
       color = (|
-        bg = bg;
-        fg = fg;
+        bg = Color.of-css `#e8e9ec`;
+        fg = Color.of-css `#33374c`;
+        emph = Color.of-css `#7759b4`;
+        red = Color.of-css `#cc517a`;
+        green = Color.of-css `#668e3d`;
+        link = Color.of-css `#2d539e`;
+
+        bg-code = Color.of-css `#dcdfe7`;
         bg-slide-author = Color.of-css `#1e2132`;
         title-inv-iceberg = Color.of-css `#6b7089`;
+        separator = Color.of-css `#6b7089`;
+        mini-iceberg = Color.of-css `#c6c8d1`;
       |);
       length = (|
         frame-title-height = 36pt;
         frame-title-left-margin = 10pt;
+        frame-title-bot-margin = 10pt;
+        frame-body-top-margin = 14pt;
       |)
     |)
+
+  let-inline ctx \code code =
+    let ctx =
+      ctx |> SlydifiScheme.apply-font-cfg config#font#code
+          |> set-text-color config#color#fg
+    in
+    let fsize = get-font-size ctx in
+    let dpt = fsize *' 0.3 in
+    let hgt = fsize *' 1.0 in
+    let pads = (fsize *' 0.15, fsize *' 0.15, fsize *' 0.1, fsize *' 0.1) in
+
+    let rectangle-round-fill r extra color =
+      let decoS (x, y) wid _ _ =
+        [ fill color (Gr.rectangle-round r (x, y -' dpt) (x +' wid, y +' hgt)) ]
+      in
+      let decoH (x, y) wid _ _ =
+        [ fill color (Gr.rectangle-round-left r (x, y -' dpt) (x +' wid +' extra, y +' hgt)) ]
+      in
+      let decoM (x, y) wid _ _ =
+        [ fill color (Gr.rectangle (x, y -' dpt) (x +' wid +' extra, y +' hgt)) ]
+      in
+      let decoT (x, y) wid _ _ =
+        [ fill color (Gr.rectangle-round-right r (x -' extra, y -' dpt) (x +' wid, y +' hgt)) ]
+      in
+      (decoS, decoH, decoM, decoT)
+    in
+
+    let ib = script-guard Latin (read-inline ctx (embed-string code)) in
+    inline-frame-breakable pads (rectangle-round-fill 2pt 1pt config#color#bg-code) ib
 
   let document bt =
     let hookf _ _ =
       let numpages = SlydifiParam.get page-num in
       register-cross-reference `pagecount` (arabic numpages)
     in
-    SlydifiScheme.document-scheme layout hookf bt
+    let init-ctx ctx =
+      ctx |> SlydifiScheme.apply-font-cfg config#font#normal
+          |> set-text-color config#color#fg
+          |> set-code-text-command (command \code)
+    in
+    SlydifiScheme.document-scheme layout init-ctx hookf bt
 
 % frames
 
@@ -129,18 +180,46 @@ end = struct
       % frame-master の graphics list を踏襲する
       let (_, gr-frame-master) = frame-master |> Frame.embed ctx () in
 
+      let pagenum = SlydifiParam.get page-num in
+      let total = get-cross-reference `pagecount` |> Option.from `1` in
+
       let gr-page-number =
-        let it-pagenum = SlydifiParam.get page-num |> arabic |> embed-string in
-        let it-total = get-cross-reference `pagecount` |> Option.from ` ` |> embed-string in
-        let ctx-pagenum = apply-font-cfg config#font#pagenum ctx in
+        let it-pagenum = pagenum |> arabic |> embed-string in
+        let it-total = embed-string total in
+        let ctx-pagenum = SlydifiScheme.apply-font-cfg config#font#pagenum ctx in
         let ib = read-inline ctx-pagenum {#it-pagenum;/#it-total;} in
         let (wid, _, dp) = get-natural-metrics ib in
         let x = layout#paper-width -' wid -' 10pt in
-        let y = dp +' 10pt in
+        let y = dp +' 12pt in
         [ draw-text (x, y) ib ]
       in
 
-      (block-nil, [gr-frame-master; gr-page-number] |> List.concat)
+      let gr-mini-iceberg =
+        let progress =
+          let float-pagenum = float pagenum in
+          let float-total =
+            let int-total = Int.of-string total in
+            float (if int-total <= 1 then 2 else int-total)  % ゼロ割などの回避
+          in
+          (float-pagenum -. 1.) /. (float-total -. 1.)
+        in
+        let iceberg =
+          let scale-ratio = 0.3 in
+          Rail.(
+            init
+          |> push-line (20pt, 20pt)
+          |> push-line (10pt, -10pt)
+          |> push-line (20pt, 20pt)
+          |> push-line (30pt, -30pt)
+          |> scale scale-ratio scale-ratio
+          |> to-loop (-50pt *' scale-ratio, 0pt)
+        ) |> fill config#color#mini-iceberg
+          |> shift-graphics (layout#paper-width *' progress, 0pt)
+        in
+        [iceberg]
+      in
+
+      (block-nil, [gr-frame-master; gr-mini-iceberg; gr-page-number; ] |> List.concat)
     in
     Frame.make layout f
 
@@ -183,7 +262,7 @@ end = struct
         in
         let ib =
           let ctx = ctx
-            |> apply-font-cfg config#font#slide-title
+            |> SlydifiScheme.apply-font-cfg config#font#slide-title
             |> set-text-color config#color#bg
           in
           embed-block-bottom ctx title-width
@@ -201,7 +280,7 @@ end = struct
         in
         let ib =
           let ctx = ctx
-            |> apply-font-cfg config#font#slide-author
+            |> SlydifiScheme.apply-font-cfg config#font#slide-author
             |> set-text-color config#color#bg
           in
           embed-block-top ctx title-width
@@ -220,7 +299,7 @@ end = struct
         in
         let ib =
           let ctx = ctx
-            |> apply-font-cfg config#font#slide-date
+            |> SlydifiScheme.apply-font-cfg config#font#slide-date
             |> set-text-color config#color#bg
           in
           embed-block-top ctx title-width
@@ -248,7 +327,7 @@ end = struct
       let title-ymin = layout#paper-height *' 0.45 in
       let date-ymax = layout#paper-height *' 0.2 in
       let title-mgn = 24pt in
-      let color-mirror = Color.of-css `#636881` in
+      let color-mirror = Color.of-css `#636983` in
 
       % タイトルのグラフィックス
       let gr-bgs =
@@ -273,7 +352,7 @@ end = struct
         in
         let ibf clr =
           let ctx = ctx
-            |> apply-font-cfg config#font#section-title
+            |> SlydifiScheme.apply-font-cfg config#font#section-title
             |> set-text-color clr
           in
           embed-block-bottom ctx title-width
@@ -303,14 +382,16 @@ end = struct
       let title-ymin = layout#paper-height -' config#length#frame-title-height in
 
       let gr-separator =
-        []
+        let xleft = config#length#frame-title-left-margin in
+        let xright = layout#paper-width -' config#length#frame-title-left-margin in
+        let y = title-ymin -' config#length#frame-title-bot-margin in
+        [Gr.line (xleft, y) (xright, y) |> stroke 1pt config#color#separator]
       in
 
       % タイトルのブロックボックス列
       let gr-title =
         let ctx-title = ctx
-          |> apply-font-cfg config#font#frame-title
-          |> set-paragraph-margin 0pt 20pt
+          |> SlydifiScheme.apply-font-cfg config#font#frame-title
         in
         let ib-title = read-inline ctx-title content#title in
         [draw-text (config#length#frame-title-left-margin, title-ymin) ib-title]
@@ -320,7 +401,10 @@ end = struct
       let bb-blank skip =
         line-break false false (ctx |> set-paragraph-margin 0pt skip) inline-nil
       in
-      let bb-inner = bb-blank 48pt +++ (read-block ctx content#inner) in
+      let bb-inner =
+        bb-blank (config#length#frame-title-height +' config#length#frame-body-top-margin)
+          +++ (read-block ctx content#inner)
+      in
 
 
       (bb-inner, [gr; gr-separator; gr-title] |> List.concat)
@@ -352,16 +436,42 @@ end = struct
   let-inline ctx \emph ?:dcf it =
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
-      SlydifiOverlay.select dcf (apply-font-cfg config#font#emph ctx) ctx
+      SlydifiOverlay.select dcf (
+        ctx |> SlydifiScheme.apply-font-cfg config#font#bold
+            |> set-text-color config#color#emph
+      ) ctx
     in
     read-inline ctx2 it
+
+  let-inline ctx \textbf ?:dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ctx2 =
+      SlydifiOverlay.select dcf (SlydifiScheme.apply-font-cfg config#font#bold ctx) ctx
+    in
+    read-inline ctx2 it
+
+  let-inline ctx \link ?:text url =
+    match text with
+    | Some(text) ->
+        let ctx =
+          ctx |> set-text-color config#color#link
+        in
+        read-inline ctx {\href(url)(text);}
+    | None ->
+        let text = embed-string url in
+        let ctx =
+          ctx
+            |> SlydifiScheme.apply-font-cfg config#font#code
+            |> set-text-color config#color#link
+        in
+        read-inline ctx {\href(url)(text);}
 
 % \footnote{} command
 
   let-inline ctx \footnotetext ref-label it =
     let bbf num =
       let it-num = embed-string (arabic num) in
-      let ctx = apply-font-cfg config#font#footnote ctx in
+      let ctx = SlydifiScheme.apply-font-cfg config#font#footnote ctx in
         line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
     in
       FootnoteScheme.main ctx (Some(ref-label)) (fun _ -> inline-nil) bbf
@@ -395,7 +505,7 @@ end = struct
     in
     let bbf num =
       let it-num = embed-string (arabic num) in
-      let ctx = apply-font-cfg config#font#footnote ctx in
+      let ctx = SlydifiScheme.apply-font-cfg config#font#footnote ctx in
         line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
     in
       FootnoteScheme.main ctx None ibf bbf
