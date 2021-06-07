@@ -12,6 +12,7 @@
     ((enumitem ())
      (figbox ())
      (base ())
+     (railway ())
      )))
 
 (libraryDoc
