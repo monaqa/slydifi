@@ -1,7 +1,3 @@
-%% This slide theme is heavily inspired by the iceberg.vim colorscheme.
-%% [iceberg.vim](https://github.com/cocopon/iceberg.vim): Copyright (c) 2014 cocopon <cocopon@me.com>
-%% https://github.com/cocopon/iceberg.vim/blob/master/colors/iceberg.vim
-
 @require: gr
 @require: annot
 @require: railway/railway
@@ -11,7 +7,7 @@
 @import: ../footnote
 @require: enumitem/enumitem
 
-module SlydifiThemeArctic: sig
+module SlydifiThemeAkasaka: sig
 
   val layout: frame-layout
 
@@ -58,9 +54,9 @@ end = struct
   let layout = (|
     paper-width = 254mm;
     paper-height = 142.9mm;
-    text-width = 254mm -' 40pt;
+    text-width = 254mm -' 60pt;
     text-height = 142.9mm -' 30pt;
-    text-horizontal-margin = 20pt;
+    text-horizontal-margin = 30pt;
     text-vertical-margin = 10pt;
     bg-gr-start-point = -20pt;
   |)
@@ -69,7 +65,7 @@ end = struct
   let config =
     let set-font-metrics fsize ctx =
       ctx |> set-font-size fsize
-          |> set-paragraph-margin (fsize *' 0.65) (fsize *' 0.65)
+          |> set-paragraph-margin (fsize *' 0.6) (fsize *' 0.6)
           |> set-leading (fsize *' 1.4)
     in
     let default-font ctx =
@@ -78,9 +74,9 @@ end = struct
           |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0)
     in
     let code-font ctx =
-      ctx |> set-font Latin          (`system:mplus-1m-regular`, 1.0, 0.0)
-          |> set-font Kana           (`system:mplus-1m-regular`, 1.0, 0.0)
-          |> set-font HanIdeographic (`system:mplus-1m-regular`, 1.0, 0.0)
+      ctx |> set-font Latin          (`lmmono`, 1.0, 0.0)
+          |> set-font Kana           (`lmmono`, 1.0, 0.0)
+          |> set-font HanIdeographic (`lmmono`, 1.0, 0.0)
     in
     let bold-font ctx =
       ctx |> set-font Latin          (`fonts-noto-sans:NotoSans-Bold`, 1.0, 0.0)
@@ -90,36 +86,40 @@ end = struct
 
     (|
       font = (|
-        normal = [default-font; set-font-metrics 20pt];
+        normal = [default-font; set-font-metrics 18pt];
         bold = [bold-font];
         code = [code-font];
-        slide-title = [bold-font; set-font-metrics 32pt];
+        slide-title = [bold-font; set-font-metrics 36pt];
         slide-author = [default-font; set-font-metrics 24pt;];
         slide-date = [default-font; set-font-metrics 20pt;];
-        section-title = [bold-font; set-font-metrics 32pt];
+        section-title = [bold-font; set-font-metrics 28pt];
         frame-title = [bold-font; set-font-metrics 28pt];
-        pagenum = [default-font; set-font-metrics 14pt;];
+        pagenum = [default-font; set-font-metrics 12pt;];
         footnote = [default-font; set-font-metrics 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;];
       |);
       color = (|
-        bg = Color.of-css `#e8e9ec`;
-        fg = Color.of-css `#33374c`;
-        emph = Color.of-css `#7759b4`;
-        red = Color.of-css `#cc517a`;
-        green = Color.of-css `#668e3d`;
+        bg = Color.of-css `#EEEEEE`;
+        fg = Color.of-css `#000000`;
+        emph = Color.of-css `#ff0027`;
+        % red = Color.of-css `#cc517a`;
+        % green = Color.of-css `#668e3d`;
         link = Color.of-css `#2d539e`;
 
-        bg-code = Color.of-css `#dcdfe7`;
-        bg-slide-author = Color.of-css `#1e2132`;
-        title-inv-iceberg = Color.of-css `#6b7089`;
-        separator = Color.of-css `#6b7089`;
-        mini-iceberg = Color.of-css `#c6c8d1`;
+        title = Color.of-css `#555555`;
+        separator = Color.of-css `#555555`;
+        section-ribbon = Color.of-css `#aaaaaa`;
+        section-ribbon-intersect = Color.of-css `#777777`;
       |);
       length = (|
         frame-title-height = 36pt;
         frame-title-left-margin = 10pt;
         frame-title-bot-margin = 10pt;
         frame-body-top-margin = 14pt;
+
+        title-padding-lr = 12pt;  % タイトルの左右のパディング（紙面基準）
+        title-padding-upper-line = 5pt;  % タイトルの下線とタイトル文字の間隔
+        title-padding-lower-line = 0pt;  % タイトルの下線と本文の間隔
+        title-line-width = 3pt;  % タイトルの下線とタイトル文字の間隔
       |)
     |)
 
@@ -129,28 +129,8 @@ end = struct
           |> set-text-color config#color#fg
     in
     let fsize = get-font-size ctx in
-    let dpt = fsize *' 0.3 in
-    let hgt = fsize *' 1.0 in
-    let pads = (fsize *' 0.15, fsize *' 0.15, fsize *' 0.1, fsize *' 0.1) in
 
-    let rectangle-round-fill r extra color =
-      let decoS (x, y) wid _ _ =
-        [ fill color (Gr.rectangle-round r (x, y -' dpt) (x +' wid, y +' hgt)) ]
-      in
-      let decoH (x, y) wid _ _ =
-        [ fill color (Gr.rectangle-round-left r (x, y -' dpt) (x +' wid +' extra, y +' hgt)) ]
-      in
-      let decoM (x, y) wid _ _ =
-        [ fill color (Gr.rectangle (x, y -' dpt) (x +' wid +' extra, y +' hgt)) ]
-      in
-      let decoT (x, y) wid _ _ =
-        [ fill color (Gr.rectangle-round-right r (x -' extra, y -' dpt) (x +' wid, y +' hgt)) ]
-      in
-      (decoS, decoH, decoM, decoT)
-    in
-
-    let ib = script-guard Latin (read-inline ctx (embed-string code)) in
-    inline-frame-breakable pads (rectangle-round-fill 2pt 1pt config#color#bg-code) ib
+    script-guard Latin (read-inline ctx (embed-string code))
 
   let document bt =
     let hookf _ _ =
@@ -194,32 +174,7 @@ end = struct
         [ draw-text (x, y) ib ]
       in
 
-      let gr-mini-iceberg =
-        let progress =
-          let float-pagenum = float pagenum in
-          let float-total =
-            let int-total = Int.of-string total in
-            float (if int-total <= 1 then 2 else int-total)  % ゼロ割などの回避
-          in
-          (float-pagenum -. 1.) /. (float-total -. 1.)
-        in
-        let iceberg =
-          let scale-ratio = 0.3 in
-          Rail.(
-            init
-          |> push-line (20pt, 20pt)
-          |> push-line (10pt, -10pt)
-          |> push-line (20pt, 20pt)
-          |> push-line (30pt, -30pt)
-          |> scale scale-ratio scale-ratio
-          |> to-loop (-50pt *' scale-ratio, 0pt)
-        ) |> fill config#color#mini-iceberg
-          |> shift-graphics (layout#paper-width *' progress, 0pt)
-        in
-        [iceberg]
-      in
-
-      (block-nil, [gr-frame-master; gr-mini-iceberg; gr-page-number; ] |> List.concat)
+      (block-nil, [gr-frame-master; gr-page-number; ] |> List.concat)
     in
     Frame.make layout f
 
@@ -231,26 +186,16 @@ end = struct
       % 設定
       let relwid r = layout#paper-width *' r in
       let relht r = layout#paper-height *' r in
-      let title-width = relwid 0.75 in
-      let title-xmin = relwid 0.08 in
-      let title-ymin = relht 0.5 in
-      let date-ymax = relht 0.2 in
+      let title-width = relwid 0.8 in
+      let title-xmin = relwid 0.1 in
+      let title-ymin = relht 0.45 in
       let title-mgn = 24pt in
+      let date-ymax = relht 0.2 in
 
-      let gr-background =
-        let iceberg = Rail.(init
-          |> push-line (20pt, 20pt)
-          |> push-line (10pt, -10pt)
-          |> push-line (40pt, 40pt)
-          |> push-line (50pt, -50pt)
-        )
-        in
-        let inv-iceberg = Rail.(iceberg |> reflect-x |> reflect-y |> reverse) in
+      let gr-bgs =
         [
-          Gr.rectangle (0pt, 0pt) (relwid 1.0, relht 0.6) |> fill config#color#bg-slide-author;
-          Gr.rectangle (0pt, relht 0.5) (relwid 1.0, relht 1.0) |> fill config#color#fg;
-          iceberg |> Rail.to-loop (630pt, relht 0.5) |> fill config#color#bg;
-          inv-iceberg |> Rail.to-loop (630pt, relht 0.5) |> fill config#color#title-inv-iceberg;
+          Gr.rectangle (0pt, title-ymin) (relwid 1.0, relht 1.0)
+            |> fill config#color#title;
         ]
       in
 
@@ -262,7 +207,7 @@ end = struct
           in
           let bbf ctx =
             content#title |> List.map (fun it ->
-              line-break true true ctx ((read-inline ctx it) ++ inline-fil))
+              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
                 |> List.fold-left (+++) block-nil
           in
           embed-block-bottom ctx title-width bbf
@@ -275,11 +220,11 @@ end = struct
         let ib =
           let ctx = ctx
             |> SlydifiScheme.apply-font-cfg config#font#slide-author
-            |> set-text-color config#color#bg
+            |> set-text-color config#color#fg
           in
           let bbf ctx =
             content#author |> List.map (fun it ->
-              line-break true true ctx ((read-inline ctx it) ++ inline-fil))
+              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
                 |> List.fold-left (+++) block-nil
           in
           embed-block-top ctx title-width bbf
@@ -292,11 +237,11 @@ end = struct
         let ib =
           let ctx = ctx
             |> SlydifiScheme.apply-font-cfg config#font#slide-date
-            |> set-text-color config#color#bg
+            |> set-text-color config#color#fg
           in
           let bbf ctx =
             content#date |> List.map (fun it ->
-              line-break true true ctx ((read-inline ctx it) ++ inline-fil))
+              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
                 |> List.fold-left (+++) block-nil
           in
           embed-block-top ctx title-width bbf
@@ -305,7 +250,7 @@ end = struct
         draw-text (title-xmin, date-ymax -' title-mgn -' ht) ib
       in
 
-      (block-nil, [gr-frame-master; gr-background; [gr-title; gr-author; gr-date]] |> List.concat)
+      (block-nil, [gr-frame-master; gr-bgs; [gr-title; gr-author; gr-date]] |> List.concat)
 
     in
     Frame.make layout f
@@ -320,56 +265,49 @@ end = struct
       let relht r = layout#paper-height *' r in
       let title-width = layout#paper-width *' 0.8 in
       let title-xmin = layout#paper-width *' 0.1 in
+      let title-xmax = layout#paper-width *' 0.1 +' 5pt in
       let title-ymin = layout#paper-height *' 0.45 in
-      let date-ymax = layout#paper-height *' 0.2 in
+      let title-ymax = layout#paper-height *' 0.45 +' 5pt in
       let title-mgn = 24pt in
       let color-mirror = Color.of-css `#636983` in
 
-      let mirror-transform = linear-transform-graphics 1. 0.0 0. (0. -. 0.8) in
-
       % タイトルのグラフィックス
-      let gr-background =
-        let iceberg = Rail.(init
-          |> push-line (20pt, 20pt)
-          |> push-line (10pt, -10pt)
-          |> push-line (40pt, 40pt)
-          |> push-line (50pt, -50pt)
-        )
-        in
+      let gr-bgs =
+        let north-rect = Gr.rectangle (title-xmin, title-ymax) (title-xmax, relht 1.00) in
+        let south-rect = Gr.rectangle (title-xmin, title-ymin) (title-xmax, relht 0.00) in
+        let east-rect  = Gr.rectangle (title-xmax, title-ymin) (relwid 1.00, title-ymax) in
+        let west-rect  = Gr.rectangle (title-xmin, title-ymin) (relwid 0.00, title-ymax) in
+        let cent-rect  = Gr.rectangle (title-xmin, title-ymin) (title-xmax, title-ymax) in
+
         [
-          Gr.rectangle (0pt, 0pt) (relwid 1.0, title-ymin) |> fill config#color#title-inv-iceberg;
-          iceberg |> Rail.to-loop (630pt, title-ymin) |> fill config#color#fg;
-          iceberg |> Rail.to-loop (0pt, 0pt)
-                  |> fill color-mirror
-                  |> mirror-transform
-                  |> shift-graphics (630pt, title-ymin);
+          fill config#color#section-ribbon north-rect;
+          fill config#color#section-ribbon south-rect;
+          fill config#color#section-ribbon east-rect;
+          fill config#color#section-ribbon west-rect;
+          fill config#color#section-ribbon-intersect cent-rect;
         ]
       in
 
-      let gr-title =
+      let gr-titles =
+        let bbs ctx =
+          content#title |> List.map (fun it ->
+            line-break true true ctx ((read-inline ctx it) ++ inline-fil))
+        in
         let ibf clr =
           let ctx = ctx
             |> SlydifiScheme.apply-font-cfg config#font#section-title
             |> set-text-color clr
           in
-          let bbf ctx =
-            content#title |> List.map (fun it ->
-              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-                |> List.fold-left (+++) block-nil
-          in
-          embed-block-bottom ctx title-width bbf
+          embed-block-bottom ctx title-width
+          (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
         in
-        let gr-title = draw-text (title-xmin, title-ymin +' title-mgn) (ibf config#color#fg) in
-        let gr-title-inv =
-          draw-text (0pt, title-mgn) (ibf color-mirror)
-            |> mirror-transform
-            |> shift-graphics (title-xmin, title-ymin)
-        in
-        [ gr-title; gr-title-inv; ]
+        let gr-title = draw-text (title-xmin +' title-mgn, title-ymin +' title-mgn) (ibf config#color#fg) in
+        [
+          gr-title;
+        ]
       in
 
-      (block-nil, [gr-frame-master; gr-background; gr-title] |> List.concat)
-
+      (block-nil, [gr-frame-master; gr-bgs; gr-titles] |> List.concat)
     in
     Frame.make layout f
 
@@ -384,7 +322,7 @@ end = struct
         let xleft = config#length#frame-title-left-margin in
         let xright = layout#paper-width -' config#length#frame-title-left-margin in
         let y = title-ymin -' config#length#frame-title-bot-margin in
-        [Gr.line (xleft, y) (xright, y) |> stroke 1pt config#color#separator]
+        [Gr.line (xleft, y) (xright, y) |> stroke 3pt config#color#separator]
       in
 
       % タイトルのブロックボックス列
@@ -511,4 +449,5 @@ end = struct
 
 end
 
-let document = SlydifiThemeArctic.document
+let document = SlydifiThemeAkasaka.document
+

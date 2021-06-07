@@ -12,6 +12,7 @@ type frame-layout = (|
   text-horizontal-margin: length;
   %% 紙面の上端から、テキスト描画領域の開始点までのy軸方向の長さに関するパラメータ。
   text-vertical-margin: length;
+  %% background graphics の phantom inline-boxes をどこに置くか（適当な負の値を指定）
   bg-gr-start-point: length;
 |)
 
