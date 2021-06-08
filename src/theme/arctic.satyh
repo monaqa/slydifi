@@ -31,14 +31,15 @@ module SlydifiThemeArctic: sig
   %% セクションフレーム。
   % val frame-section-title: layout-slydifi-theme ((| title: inline-text list; |)) Frame.frame
   %% タイトルフレーム。
-  val frame-normal: ((| title: inline-text; inner: block-text |)) Frame.frame
+  val frame-normal: ((| title: inline-text; inner: block-text; footer: bool |)) Frame.frame
 
 % frame commands
   %% frame-slide-title に従ってタイトルスライドを生成する。
   direct +make-title : [(| title: inline-text list; author: inline-text list; date: inline-text list|);] block-cmd
   %% frame-normal に従って通常のスライドを生成する。
-  direct +section : [inline-text list; block-text;] block-cmd
+  direct +section : [inline-text?; inline-text list; block-text;] block-cmd
   direct +frame : [int?; inline-text; block-text;] block-cmd
+  direct +frame-nofooter : [int?; inline-text; block-text;] block-cmd
 
 % inline commands
   direct \emph : [(int -> bool)?; inline-text] inline-cmd
@@ -46,12 +47,28 @@ module SlydifiThemeArctic: sig
   direct \link : [inline-text?; string] inline-cmd
   direct \code : [string] inline-cmd
 
+% listing
+
+  direct +listing : [int?; itemize] block-cmd
+  direct \listing : [int?; itemize] inline-cmd
+  direct +listing-overlay : [int?; itemize] block-cmd
+  direct +enumerate-overlay : [int?; itemize] block-cmd
+  direct \cond-item : [(int -> bool)] inline-cmd
+  val label-dia  : int list -> context -> inline-boxes
+  val label-tria : int list -> context -> inline-boxes
+  val label-circ : int list -> context -> inline-boxes
+  val label-rule : int list -> context -> inline-boxes
+
+% itemize
+
 % 脚注
   direct \footnote : [inline-text] inline-cmd
   direct \footnotetext : [string; inline-text] inline-cmd
   direct \footnotemark : [string] inline-cmd
 
 end = struct
+
+  let section-name = SlydifiParam.make {}
 
   let page-num = SlydifiParam.make 0
 
@@ -66,6 +83,7 @@ end = struct
   |)
 
 % configuration
+
   let config =
     let set-font-metrics fsize ctx =
       ctx |> set-font-size fsize
@@ -98,22 +116,30 @@ end = struct
         slide-date = [default-font; set-font-metrics 20pt;];
         section-title = [bold-font; set-font-metrics 32pt];
         frame-title = [bold-font; set-font-metrics 28pt];
-        pagenum = [default-font; set-font-metrics 14pt;];
+        pagenum = [default-font; set-font-metrics 12pt;];
         footnote = [default-font; set-font-metrics 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;];
       |);
       color = (|
+        % basic
         bg = Color.of-css `#e8e9ec`;
         fg = Color.of-css `#33374c`;
         emph = Color.of-css `#7759b4`;
         red = Color.of-css `#cc517a`;
         green = Color.of-css `#668e3d`;
         link = Color.of-css `#2d539e`;
-
         bg-code = Color.of-css `#dcdfe7`;
+
+        % frame template
         bg-slide-author = Color.of-css `#1e2132`;
         title-inv-iceberg = Color.of-css `#6b7089`;
         separator = Color.of-css `#6b7089`;
         mini-iceberg = Color.of-css `#c6c8d1`;
+        pagenum = Color.of-css `#6b7089`;
+
+        % listing
+        bullet-dia = Color.of-css `#3f83a6`;
+        bullet-tria = Color.of-css `#3f83a6`;
+        bullet-circ = Color.of-css `#3f83a6`;
       |);
       length = (|
         frame-title-height = 36pt;
@@ -186,7 +212,10 @@ end = struct
       let gr-page-number =
         let it-pagenum = pagenum |> arabic |> embed-string in
         let it-total = embed-string total in
-        let ctx-pagenum = SlydifiScheme.apply-font-cfg config#font#pagenum ctx in
+        let ctx-pagenum =
+          ctx |> SlydifiScheme.apply-font-cfg config#font#pagenum
+              |> set-text-color config#color#pagenum
+        in
         let ib = read-inline ctx-pagenum {#it-pagenum;/#it-total;} in
         let (wid, _, dp) = get-natural-metrics ib in
         let x = layout#paper-width -' wid -' 10pt in
@@ -194,6 +223,22 @@ end = struct
         [ draw-text (x, y) ib ]
       in
 
+      let gr-section-title =
+        if (section-name |> SlydifiParam.has-changed) then
+          let it = section-name |> SlydifiParam.get in
+          let ctx-pagenum =
+            ctx |> SlydifiScheme.apply-font-cfg config#font#pagenum
+                |> set-text-color config#color#pagenum
+          in
+          let ib = read-inline ctx-pagenum it in
+          let (wid, _, dp) = get-natural-metrics ib in
+          let x = (layout#paper-width -' wid) *' 0.5 in
+          [ draw-text (x, dp +' 12pt) ib ]
+        else
+          []
+      in
+
+      % ページが進むにつれ氷山が少しずつ右に動く
       let gr-mini-iceberg =
         let progress =
           let float-pagenum = float pagenum in
@@ -219,7 +264,7 @@ end = struct
         [iceberg]
       in
 
-      (block-nil, [gr-frame-master; gr-mini-iceberg; gr-page-number; ] |> List.concat)
+      (block-nil, [gr-frame-master; gr-mini-iceberg; gr-section-title; gr-page-number; ] |> List.concat)
     in
     Frame.make layout f
 
@@ -375,8 +420,13 @@ end = struct
 
   let frame-normal =
     let f ctx content =
-      % frame-master-with-footer の graphics list を踏襲する
-      let (_, gr) = frame-master-with-footer |> Frame.embed ctx () in
+      % content#footer の値に応じてフッターをつけるかどうか変える
+      let (_, gr) =
+        if content#footer then
+          frame-master-with-footer |> Frame.embed ctx ()
+        else
+          frame-master |> Frame.embed ctx ()
+      in
 
       let title-ymin = layout#paper-height -' config#length#frame-title-height in
 
@@ -398,7 +448,7 @@ end = struct
 
       % 中身のブロックボックス列
       let bb-blank skip =
-        line-break false false (ctx |> set-paragraph-margin 0pt skip) inline-nil
+        line-break false false (ctx |> set-paragraph-margin 0pt skip) inline-fil
       in
       let bb-inner =
         bb-blank (config#length#frame-title-height +' config#length#frame-body-top-margin)
@@ -418,20 +468,38 @@ end = struct
       +SlydifiScheme.genframe(frame-slide-title)(1)(content);
     >
 
-  let-block ctx +section title inner =
-    read-block ctx '<
+  let-block ctx +section ?:short-name title inner =
+    let bb-section = read-block ctx '<
       +SlydifiScheme.genframe(frame-section-title)(1)(|title = title;|);
-      #inner;
     >
+    in
+    let it-title =
+      let default = title |> List.fold-left (fun it1 it2 -> {#it1;#it2;}) {} in
+      short-name |> Option.from default
+    in
+    let () = section-name |> SlydifiParam.set it-title in
+    let bb-inner = read-block ctx inner in
+    let () = section-name |> SlydifiParam.discard in
+
+    bb-section +++ bb-inner
+
 
   let-block ctx +frame ?:n-frame title inner =
     let () = page-num |> SlydifiParam.set (SlydifiParam.get page-num + 1) in
     let n-frame = n-frame |> Option.from 1 in
     read-block ctx '<
-      +SlydifiScheme.genframe(frame-normal)(n-frame)(|title = title; inner = inner|);
+      +SlydifiScheme.genframe(frame-normal)(n-frame)(|title = title; inner = inner; footer = true|);
+    >
+
+  let-block ctx +frame-nofooter ?:n-frame title inner =
+    let () = page-num |> SlydifiParam.set (SlydifiParam.get page-num + 1) in
+    let n-frame = n-frame |> Option.from 1 in
+    read-block ctx '<
+      +SlydifiScheme.genframe(frame-normal)(n-frame)(|title = title; inner = inner; footer = false|);
     >
 
 % inline commands
+
   let-inline ctx \emph ?:dcf it =
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
@@ -464,6 +532,138 @@ end = struct
             |> set-text-color config#color#link
         in
         read-inline ctx {\href(url)(text);}
+
+% listing
+
+  let label-dia (idx :: _) ctx =
+    let fsize = get-font-size ctx in
+    let grf (x, y) =
+      let edge = Rail.( init |> push-line (fsize *' 0.25, fsize *' 0.25) ) in
+      let gr =
+        Rail.(map-repeat (fun i -> edge ^ (90. *. (float i))) 4)
+          |> Rail.to-loop (x +' fsize *' 0.25, y +' fsize *' 0.1)
+          |> fill config#color#bullet-dia
+      in
+      [gr]
+    in
+    inline-graphics 16pt 8pt 0pt grf
+
+  let label-tria (idx :: _) ctx =
+    let fsize = get-font-size ctx in
+    let grf (x, y) =
+      let gr =
+        Rail.(
+          init |> push-line (fsize *' 0.4, fsize *' 0.2)
+               |> push-line (0pt -' fsize *' 0.4, fsize *' 0.2)
+               |> push-line (0pt, 0pt -' fsize *' 0.4)
+               |> to-loop (x, y +' fsize *' 0.1)
+        ) |> fill config#color#bullet-tria
+      in
+      [gr]
+    in
+    let path (x, y) =
+      let yc = y +' fsize *' 0.3 in
+      let xl = x in
+      let xr = x +' fsize *' 0.4 in
+      let yu = yc +' fsize *' 0.2 in
+      let yd = yc -' fsize *' 0.2 in
+      start-path (xl, yu)
+        |> line-to (xr, yc)
+        |> line-to (xl, yd)
+        |> close-with-line
+    in
+    let gr (x, y) = [fill config#color#bullet-tria (path (x, y))] in
+    inline-graphics 16pt 8pt 0pt grf
+
+  let label-circ (idx :: _) ctx =
+    let fsize = get-font-size ctx in
+    let path (x, y) =
+      let cx = x +' fsize *' 0.3 in
+      let cy = y +' fsize *' 0.3 in
+      let r = fsize *' 0.15 in
+      Gr.circle (cx, cy) r
+    in
+    let gr (x, y) = [fill config#color#bullet-circ (path (x, y))] in
+    inline-graphics 16pt 8pt 0pt (gr)
+
+  let label-rule idxlst =
+    match (List.length idxlst) with
+    | 1 -> label-dia idxlst
+    | 2 -> label-tria idxlst
+    | _ -> label-circ idxlst
+
+  let gen-label-rule d idxlst =
+    match (List.length idxlst + d - 1) with
+    | 1 -> label-dia idxlst
+    | 2 -> label-tria idxlst
+    | _ -> label-circ idxlst
+
+  let-rec power-float-int r m =
+    match m with
+    | 0 -> 1.
+    | _ -> (power-float-int r (m - 1)) *. r
+
+  let max-float f1 f2 = if (1pt *' f1) >' (1pt *' f2) then f1 else f2
+
+  let gen-arctic-item d ctx depth ib-label text =
+    let shrink-ratio =
+      max-float (power-float-int 0.95 (depth + d - 1)) 0.85
+    in
+    let ctx-item =
+      let fsize = (get-font-size ctx) *' shrink-ratio in
+      ctx |> set-font-size fsize
+          % |> set-paragraph-margin (fsize *' 0.75) (fsize *' 0.75)
+    in
+    let text-indent =
+      let fsize = get-font-size ctx-item in
+      fsize *' (1.2 *. (float depth))
+    in
+    let ib-text =
+      let index-width = get-natural-width ib-label in
+      let item-text-width = (get-text-width ctx) -' text-indent -' index-width in
+      embed-block-top ctx-item item-text-width (fun ctx ->
+        line-break true true ctx (read-inline ctx text ++ inline-fil)
+      )
+    in
+    line-break true true ctx-item
+      ((inline-skip text-indent) ++ ib-label ++ ib-text)
+
+  let arctic-item = gen-arctic-item 1
+
+  let-block ctx +listing ?:depth item =
+    let depth = depth |> Option.from 1 in
+    read-block ctx '< +genlisting(gen-label-rule depth)(gen-arctic-item depth)(item); >
+
+  let-inline ctx \listing ?:depth item =
+    let depth = depth |> Option.from 1 in
+    read-inline ctx {\listing-from-block<+listing?:(depth)(item);>}
+
+  let param-item-overlay = EnumitemBase.make-param (fun x -> false)
+  let-inline \cond-item dcf = {\set-item(param-item-overlay)(dcf);}
+
+  let-block ctx +listing-overlay ?:depth item =
+    let depth = depth |> Option.from 1 in
+    let itemf = SlydifiOverlay.select (EnumitemParam.get param-item-overlay)
+      (gen-arctic-item depth)
+        (fun _ _ _ _ -> block-nil)
+    in
+    read-block ctx '< +xgenlisting(gen-label-rule depth)(itemf)(item); >
+
+  let-block ctx +enumerate-overlay ?:depth item =
+    let depth = depth |> Option.from 1 in
+    read-block ctx '< +xgenlisting(Enumitem.dot-arabic)(
+      fun ctx dp label inner -> (
+        let () = display-message (
+          `param-item-overlay: ` ^
+            (if (EnumitemParam.get param-item-overlay 1) then `1` else ` `) ^
+            (if (EnumitemParam.get param-item-overlay 2) then `2` else ` `) ^
+            (if (EnumitemParam.get param-item-overlay 3) then `3` else ` `)
+        )
+        in
+        SlydifiOverlay.select (EnumitemParam.get param-item-overlay)
+          (gen-arctic-item depth ctx dp label inner) block-nil
+      )
+    )(item); >
 
 % \footnote{} command
 
