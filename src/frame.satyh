@@ -12,8 +12,6 @@ type frame-layout = (|
   text-horizontal-margin: length;
   %% 紙面の上端から、テキスト描画領域の開始点までのy軸方向の長さに関するパラメータ。
   text-vertical-margin: length;
-  %% background graphics の phantom inline-boxes をどこに置くか（適当な負の値を指定）
-  bg-gr-start-point: length;
 |)
 
 module Frame : sig
@@ -26,7 +24,13 @@ module Frame : sig
 
   val to-page : context -> 'content -> 'content frame -> block-boxes
 
+  %% background image を配置するための空のインラインボックス列
+  %% を配置する場所の y 座標。定数で固定する。
+  val bg-graphic-box-offset: length
+
 end = struct
+
+  let bg-graphic-box-offset = 100pt
 
   type 'content frame = (|
     layout: frame-layout;
@@ -54,7 +58,7 @@ end = struct
       line-break false false ctx ib-inner
     in
     let bb-gr =
-      let spacing-bg-gr = frame#layout#text-vertical-margin -' frame#layout#bg-gr-start-point in
+      let spacing-bg-gr = frame#layout#text-vertical-margin +' bg-graphic-box-offset in
       let ctx-bg-gr = ctx |> set-paragraph-margin 0pt spacing-bg-gr in
       line-break true false ctx-bg-gr (inline-graphics 0pt 0pt 0pt (fun _ -> grlst) ++ inline-fil)
     in

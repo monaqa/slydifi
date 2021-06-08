@@ -61,8 +61,8 @@ end = struct
     let pagecontf _ =
       let () = FootnoteScheme.start-page () in
       (|
-        text-origin = (layout#text-horizontal-margin, layout#bg-gr-start-point);
-        text-height = layout#text-height;
+        text-origin = (layout#text-horizontal-margin, 0pt -' Frame.bg-graphic-box-offset);
+        text-height = layout#text-height +' layout#text-vertical-margin +' Frame.bg-graphic-box-offset;
       |)
     in
     let pagepartsf pbinfo =

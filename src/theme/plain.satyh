@@ -65,7 +65,6 @@ end = struct
     text-height = 142.9mm -' 30pt;
     text-horizontal-margin = 20pt;
     text-vertical-margin = 10pt;
-    bg-gr-start-point = 0pt;
   |)
 
 % configuration
