@@ -13,6 +13,57 @@
 
 module SlydifiThemeArctic: sig
 
+  val config: (|
+    font : (|
+      normal : font-config;
+      bold : font-config;
+      code : font-config;
+      slide-title : font-config;
+      slide-author : font-config;
+      slide-date : font-config;
+      section-title : font-config;
+      frame-title : font-config;
+      pagenum : font-config;
+      footnote : font-config;
+      quote : font-config;
+    |);
+     color : (|
+       % basic
+       bg : color;
+       fg : color;
+       emph : color;
+       red : color;
+       green : color;
+       link : color;
+       bg-code : color;
+
+       % frame template
+       bg-slide-section : color;
+       bg-slide-author : color;
+       separator : color;
+       pagenum : color;
+       indicator-total : color;
+       indicator-done : color;
+
+       % decoration
+       quote : color;
+       quote-line : color;
+
+       % listing
+       bullet-dia : color;
+       bullet-tria : color;
+       bullet-circ : color;
+     |);
+      length : (|
+        frame-title-height : length;
+        frame-title-left-margin : length;
+        frame-title-bot-margin : length;
+        frame-body-top-margin : length;
+        indicator-line-thickness: length;
+        indicator-bar-width: length;
+      |)
+  |)
+
   val layout: frame-layout
 
   val document: block-text -> document
@@ -41,11 +92,12 @@ module SlydifiThemeArctic: sig
   direct +frame : [int?; inline-text; block-text;] block-cmd
   direct +frame-nofooter : [int?; inline-text; block-text;] block-cmd
 
-% inline commands
+% decoration commands
   direct \emph : [(int -> bool)?; inline-text] inline-cmd
   direct \textbf : [(int -> bool)?; inline-text] inline-cmd
   direct \link : [inline-text?; string] inline-cmd
   direct \code : [string] inline-cmd
+  direct +quote : [block-text] block-cmd
 
 % listing
 
@@ -117,6 +169,7 @@ end = struct
         frame-title = [bold-font; set-font-metrics 28pt];
         pagenum = [default-font; set-font-metrics 12pt;];
         footnote = [default-font; set-font-metrics 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;];
+        quote = [default-font; set-font-metrics 18pt;];
       |);
       color = (|
         % basic
@@ -130,21 +183,27 @@ end = struct
 
         % frame template
         bg-slide-author = Color.of-css `#1e2132`;
-        title-inv-iceberg = Color.of-css `#6b7089`;
+        bg-slide-section = Color.of-css `#6b7089`;
         separator = Color.of-css `#6b7089`;
-        mini-iceberg = Color.of-css `#c6c8d1`;
         pagenum = Color.of-css `#6b7089`;
+        indicator-total = Color.of-css `#cad0de`;
+        indicator-done = Color.of-css `#3f83a6`;
 
         % listing
         bullet-dia = Color.of-css `#3f83a6`;
         bullet-tria = Color.of-css `#3f83a6`;
         bullet-circ = Color.of-css `#3f83a6`;
+
+        quote = Color.of-css `#33374c`;
+        quote-line = Color.of-css `#33374c`;
       |);
       length = (|
         frame-title-height = 36pt;
         frame-title-left-margin = 10pt;
         frame-title-bot-margin = 10pt;
         frame-body-top-margin = 14pt;
+        indicator-line-thickness = 5pt;
+        indicator-bar-width = 30pt;
       |)
     |)
 
@@ -174,8 +233,9 @@ end = struct
       (decoS, decoH, decoM, decoT)
     in
 
-    let ib = script-guard Latin (read-inline ctx (embed-string code)) in
+    let ib = read-inline ctx (embed-string code) in
     inline-frame-breakable pads (rectangle-round-fill 2pt 1pt config#color#bg-code) ib
+      |> script-guard Latin
 
   let document bt =
     let hookf _ _ =
@@ -237,8 +297,7 @@ end = struct
           []
       in
 
-      % ページが進むにつれ氷山が少しずつ右に動く
-      let gr-mini-iceberg =
+      let gr-progress-bar =
         let progress =
           let float-pagenum = float pagenum in
           let float-total =
@@ -247,23 +306,38 @@ end = struct
           in
           (float-pagenum -. 1.) /. (float-total -. 1.)
         in
-        let iceberg =
-          let scale-ratio = 0.3 in
-          Rail.(
-            init
-          |> push-line (20pt, 20pt)
-          |> push-line (10pt, -10pt)
-          |> push-line (20pt, 20pt)
-          |> push-line (30pt, -30pt)
-          |> scale scale-ratio scale-ratio
-          |> to-loop (-50pt *' scale-ratio, 0pt)
-        ) |> fill config#color#mini-iceberg
-          |> shift-graphics (layout#paper-width *' progress, 0pt)
+        let y = (layout#paper-height *' (1.0 -. progress)) in
+        % let bar-done =
+        %   Gr.rectangle (0pt, 0pt) (x, config#length#indicator-line-thickness)
+        %     |> fill config#color#indicator-done
+        % in
+        let bar-done =
+          let vert-line = Rail.init |> Rail.push-line (0pt, config#length#indicator-bar-width) in
+          let side = Rail.(
+            circular-sector ?:(180.) (config#length#indicator-line-thickness *' 0.5)
+          )
+          in
+          Rail.(concat [
+            vert-line;
+            side;
+            vert-line |> reverse;
+            side ^ 180.
+          ] |> to-loop (layout#paper-width, y -' (config#length#indicator-bar-width *' 0.5))
+          )
+            |> fill config#color#indicator-done
         in
-        [iceberg]
+
+        let bar-total =
+          Gr.rectangle (layout#paper-width -' config#length#indicator-line-thickness, 0pt) (layout#paper-width, layout#paper-height)
+            |> fill config#color#indicator-total
+        in
+        [
+          bar-total;
+          bar-done;
+        ]
       in
 
-      (block-nil, [gr-frame-master; gr-mini-iceberg; gr-section-title; gr-page-number; ] |> List.concat)
+      (block-nil, [gr-frame-master; gr-section-title; gr-progress-bar; gr-page-number; ] |> List.concat)
     in
     Frame.make layout f
 
@@ -282,19 +356,9 @@ end = struct
       let title-mgn = 24pt in
 
       let gr-background =
-        let iceberg = Rail.(init
-          |> push-line (20pt, 20pt)
-          |> push-line (10pt, -10pt)
-          |> push-line (40pt, 40pt)
-          |> push-line (50pt, -50pt)
-        )
-        in
-        let inv-iceberg = Rail.(iceberg |> reflect-x |> reflect-y |> reverse) in
         [
           Gr.rectangle (0pt, 0pt) (relwid 1.0, relht 0.6) |> fill config#color#bg-slide-author;
           Gr.rectangle (0pt, relht 0.5) (relwid 1.0, relht 1.0) |> fill config#color#fg;
-          iceberg |> Rail.to-loop (630pt, relht 0.5) |> fill config#color#bg;
-          inv-iceberg |> Rail.to-loop (630pt, relht 0.5) |> fill config#color#title-inv-iceberg;
         ]
       in
 
@@ -373,20 +437,8 @@ end = struct
 
       % タイトルのグラフィックス
       let gr-background =
-        let iceberg = Rail.(init
-          |> push-line (20pt, 20pt)
-          |> push-line (10pt, -10pt)
-          |> push-line (40pt, 40pt)
-          |> push-line (50pt, -50pt)
-        )
-        in
         [
-          Gr.rectangle (0pt, 0pt) (relwid 1.0, title-ymin) |> fill config#color#title-inv-iceberg;
-          iceberg |> Rail.to-loop (630pt, title-ymin) |> fill config#color#fg;
-          iceberg |> Rail.to-loop (0pt, 0pt)
-                  |> fill color-mirror
-                  |> mirror-transform
-                  |> shift-graphics (630pt, title-ymin);
+          Gr.rectangle (0pt, 0pt) (relwid 1.0, title-ymin) |> fill config#color#bg-slide-section;
         ]
       in
 
@@ -531,6 +583,22 @@ end = struct
             |> set-text-color config#color#link
         in
         read-inline ctx {\href(url)(text);}
+
+  let-block ctx +quote bt =
+    let deco (x, y) w h d =
+      [
+        fill config#color#quote-line (Gr.rectangle (x, y) (x +' 6pt, y +' h))
+      ]
+    in
+    block-frame-breakable ctx (20pt, 0pt, 10pt, 10pt)
+      (deco, deco, deco, deco)
+        (fun ctx -> (
+          let ctx2 = ctx
+            |> set-text-color config#color#quote
+            |> SlydifiScheme.apply-font-cfg config#font#quote
+          in
+          (read-block ctx2 bt)
+        ))
 
 % listing
 
