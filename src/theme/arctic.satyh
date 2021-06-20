@@ -91,6 +91,8 @@ module SlydifiThemeArctic: sig
   direct +section : [inline-text?; inline-text list; block-text;] block-cmd
   direct +frame : [int?; inline-text; block-text;] block-cmd
   direct +frame-nofooter : [int?; inline-text; block-text;] block-cmd
+  direct +namedframe : [string; inline-text; block-text;] block-cmd
+  direct +againframe : [int?; string] block-cmd
 
 % decoration commands
   direct \emph : [(int -> bool)?; inline-text] inline-cmd
@@ -139,6 +141,7 @@ end = struct
     let set-font-metrics fsize ctx =
       ctx |> set-font-size fsize
           |> set-paragraph-margin (fsize *' 0.65) (fsize *' 0.65)
+          |> set-min-gap-of-lines 0pt
           |> set-leading (fsize *' 1.4)
     in
     let default-font ctx =
@@ -150,6 +153,11 @@ end = struct
       ctx |> set-font Latin          (`system:mplus-1m-regular`, 1.0, 0.0)
           |> set-font Kana           (`system:mplus-1m-regular`, 1.0, 0.0)
           |> set-font HanIdeographic (`system:mplus-1m-regular`, 1.0, 0.0)
+          |> set-hyphen-min 1000 1000  % ハイフンを無効化
+          |> set-space-ratio-between-scripts 0. 0. 0. Latin Kana
+          |> set-space-ratio-between-scripts 0. 0. 0. Kana Latin
+          |> set-space-ratio-between-scripts 0. 0. 0. Latin HanIdeographic
+          |> set-space-ratio-between-scripts 0. 0. 0. HanIdeographic Latin
     in
     let bold-font ctx =
       ctx |> set-font Latin          (`fonts-noto-sans:NotoSans-Bold`, 1.0, 0.0)
@@ -349,8 +357,8 @@ end = struct
       % 設定
       let relwid r = layout#paper-width *' r in
       let relht r = layout#paper-height *' r in
-      let title-width = relwid 0.75 in
-      let title-xmin = relwid 0.08 in
+      let title-width = relwid 0.8 in
+      let title-xmin = relwid 0.1 in
       let title-ymin = relht 0.5 in
       let date-ymax = relht 0.2 in
       let title-mgn = 24pt in
@@ -370,7 +378,7 @@ end = struct
           in
           let bbf ctx =
             content#title |> List.map (fun it ->
-              line-break true true ctx ((read-inline ctx it) ++ inline-fil))
+              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
                 |> List.fold-left (+++) block-nil
           in
           embed-block-bottom ctx title-width bbf
@@ -387,7 +395,7 @@ end = struct
           in
           let bbf ctx =
             content#author |> List.map (fun it ->
-              line-break true true ctx ((read-inline ctx it) ++ inline-fil))
+              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
                 |> List.fold-left (+++) block-nil
           in
           embed-block-top ctx title-width bbf
@@ -404,7 +412,7 @@ end = struct
           in
           let bbf ctx =
             content#date |> List.map (fun it ->
-              line-break true true ctx ((read-inline ctx it) ++ inline-fil))
+              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
                 |> List.fold-left (+++) block-nil
           in
           embed-block-top ctx title-width bbf
@@ -549,12 +557,28 @@ end = struct
       +SlydifiScheme.genframe(frame-normal)(n-frame)(|title = title; inner = inner; footer = false|);
     >
 
+  let-block ctx +namedframe name title inner =
+    let () = page-num |> SlydifiParam.set (SlydifiParam.get page-num + 1) in
+    read-block ctx '<
+      +SlydifiScheme.namedframe(frame-normal)(name)(|title = title; inner = inner; footer = true|);
+    >
+
+  let-block ctx +againframe ?:lyr name =
+    let () = page-num |> SlydifiParam.set (SlydifiParam.get page-num + 1) in
+    match lyr with
+    | Some(lyr) -> read-block ctx '<
+      +SlydifiScheme.againframe?:(lyr)(name);
+    >
+    | None -> read-block ctx '<
+      +SlydifiScheme.againframe(name);
+    >
+
 % inline commands
 
   let-inline ctx \emph ?:dcf it =
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
-      SlydifiOverlay.select dcf (
+      SlydifiOverlay.select-from-two dcf (
         ctx |> SlydifiScheme.apply-font-cfg config#font#bold
             |> set-text-color config#color#emph
       ) ctx
@@ -564,7 +588,7 @@ end = struct
   let-inline ctx \textbf ?:dcf it =
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
-      SlydifiOverlay.select dcf (SlydifiScheme.apply-font-cfg config#font#bold ctx) ctx
+      SlydifiOverlay.select-from-two dcf (SlydifiScheme.apply-font-cfg config#font#bold ctx) ctx
     in
     read-inline ctx2 it
 
@@ -710,7 +734,7 @@ end = struct
 
   let-block ctx +listing-overlay ?:depth item =
     let depth = depth |> Option.from 1 in
-    let itemf = SlydifiOverlay.select (EnumitemParam.get param-item-overlay)
+    let itemf = SlydifiOverlay.select-from-two (EnumitemParam.get param-item-overlay)
       (gen-arctic-item depth)
         (fun _ _ _ _ -> block-nil)
     in
@@ -727,7 +751,7 @@ end = struct
             (if (EnumitemParam.get param-item-overlay 3) then `3` else ` `)
         )
         in
-        SlydifiOverlay.select (EnumitemParam.get param-item-overlay)
+        SlydifiOverlay.select-from-two (EnumitemParam.get param-item-overlay)
           (gen-arctic-item depth ctx dp label inner) block-nil
       )
     )(item); >

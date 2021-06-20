@@ -1,5 +1,8 @@
 @require: pervasives
 @require: gr
+@require: base/float
+@require: base/eq
+@require: base/map
 @import: frame
 @import: overlay
 @import: footnote
@@ -7,6 +10,26 @@
 %% フォント設定記述方法。
 %% [set-font-size 12pt; set-text-color Color.blue] みたいな感じで書く。
 type font-config = (context -> context) list
+
+%% 色の内分。 RGB で計算するだけ。
+let color-inner ?:ratio clr1 clr2 =
+  let ratio = ratio |> Option.from 0.5 in
+  let (r1, g1, b1) = match clr1 with
+    | Gray(x) -> ( x, x, x )
+    | RGB(r, g, b) -> (r, g, b)
+  in
+  let (r2, g2, b2) = match clr2 with
+    | Gray(x) -> ( x, x, x )
+    | RGB(r, g, b) -> (r, g, b)
+  in
+  let (r, g, b) =
+    (
+      r1 *. ratio +. r2 *. (1. -. ratio) |> Float.max 0. |> Float.min 1.,
+      g1 *. ratio +. g2 *. (1. -. ratio) |> Float.max 0. |> Float.min 1.,
+      b1 *. ratio +. b2 *. (1. -. ratio) |> Float.max 0. |> Float.min 1.
+    )
+  in
+  RGB(r, g, b)
 
 %% SLyDIFi のすべてのテーマの元となる scheme。
 module SlydifiScheme: sig
@@ -24,6 +47,8 @@ module SlydifiScheme: sig
   val apply-font-cfg : font-config -> context -> context
 
   val +genframe: ['content Frame.frame; int; 'content] block-cmd
+  val +namedframe: ['content Frame.frame; string; 'content] block-cmd
+  val +againframe: [int?; string] block-cmd
 
 % common commands
   direct +p: [(int -> bool)?; inline-text] block-cmd
@@ -39,6 +64,10 @@ module SlydifiScheme: sig
   direct +show-in-order: [block-text list] block-cmd
 
 end = struct
+
+% parameter
+  let namedframe = SlydifiParam.make Map.empty
+  let eq-string = Eq.make string-same
 
   let-inline ctx \math fml = script-guard Latin (embed-math ctx fml)
 
@@ -88,6 +117,41 @@ end = struct
   let-block ctx +genframe frame n-layer content =
     frame |> SlydifiOverlay.multiframe n-layer ctx content
 
+  let-block ctx +specific-frame frame content =
+    frame |> Frame.to-page ctx content
+
+  let-block ctx +namedframe frame name content =
+    let new-map =
+      namedframe |> SlydifiParam.get
+                 |> Map.bind name (1, '<+specific-frame(frame)(content);>)
+    in
+    let () = namedframe |> SlydifiParam.set new-map in
+    read-block ctx '<
+      +SlydifiOverlay.with-layer(1)<
+        +specific-frame(frame)(content);
+      >
+    >
+
+  let-block ctx +againframe ?:lyr name =
+    let map = namedframe |> SlydifiParam.get in
+    let value = map |> Map.of- eq-string name in
+    match value with
+    | None ->
+        let () = display-message (
+          ``[Warning] Frame with name ` `` ^ name
+            ^ `` ` was not found. No page was inserted here. ``)
+        in
+        block-nil
+    | Some((lyr-prev, it)) ->
+        let lyr = lyr |> Option.from (lyr-prev + 1) in
+        let map = map |> Map.bind name (lyr, it) in
+        let () = namedframe |> SlydifiParam.set map in
+        read-block ctx '<
+          +SlydifiOverlay.with-layer(lyr)<
+            #it;
+          >
+        >
+
 % common commands
   let-block ctx +p ?:dcf it =
     let dcf = Option.from (fun _ -> true) dcf in
@@ -97,7 +161,7 @@ end = struct
 
   let-inline ctx \text-color ?:dcf clr it =
     let dcf = Option.from (fun _ -> true) dcf in
-    SlydifiOverlay.select dcf
+    SlydifiOverlay.select-from-two dcf
       (read-inline (ctx |> set-text-color clr) it)
         (read-inline ctx it)
 
@@ -105,7 +169,7 @@ end = struct
     let dcf = Option.from (fun _ -> true) dcf in
     let ib = read-inline ctx it in
     let pad (x, y) w h d =
-      SlydifiOverlay.select dcf (
+      SlydifiOverlay.select-from-two dcf (
         [
           stroke 1pt (get-text-color ctx)
             (Gr.line (x, y -' d) (x +' w, y  -' d))
@@ -120,7 +184,7 @@ end = struct
     let dcf = Option.from (fun _ -> true) dcf in
     let ib = read-inline ctx it in
     let pad (x, y) w h d =
-      SlydifiOverlay.select dcf (
+      SlydifiOverlay.select-from-two dcf (
         let h-base = get-font-size ctx *' 0.3 in
         [
           stroke 1pt (get-text-color ctx)
@@ -134,11 +198,11 @@ end = struct
 
   let-inline ctx \ctx ?:dcf ctxf it =
     let dcf = Option.from (fun _ -> true) dcf in
-    read-inline (SlydifiOverlay.select dcf (ctxf ctx) ctx) it
+    read-inline (SlydifiOverlay.select-from-two dcf (ctxf ctx) ctx) it
 
   let-block  ctx +ctx ?:dcf ctxf bt =
     let dcf = Option.from (fun _ -> true) dcf in
-    read-block (SlydifiOverlay.select dcf (ctxf ctx) ctx) bt
+    read-block (SlydifiOverlay.select-from-two dcf (ctxf ctx) ctx) bt
 
   let-block ctx +show-in-order btlst =
     let ghost-btlst = btlst |> List.mapi ( fun idx bt ->(

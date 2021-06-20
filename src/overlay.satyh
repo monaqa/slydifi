@@ -7,17 +7,24 @@ module SlydifiOverlay : sig
 
   val layer : int SlydifiParam.t
 
-  % let frames = frame-scheme-overlay ctx n-layer frame-f itlst btlst
-  % の形で用いる．
+  % let bb = multiframe n-layer ctx content frame
+  % の形で用いる．layer の数を 1 から n-frame だけ変え、n-frame の数だけのフレームを出力する。
   % n-layer: オーバーレイを行いたいレイヤーの数．
-  % itlst: layer の値に応じて異なる「発火」を行いたいような inline-text のリスト．
-  % btlst: layer の値に応じて異なる「発火」を行いたいような block-text のリスト．
-  % frame-f: itlst と btlst さえ与えられたらフレームが出来上がるような関数．
-  val frame-scheme-overlay :
-    context -> int -> (inline-text list -> block-text list -> block-boxes)
-    -> inline-text list -> block-text list -> block-boxes
-
+  % ctx: 処理用のテキスト処理文脈。
+  % content: frame のコンテンツ。
+  % frame: frame。
   val multiframe: int -> context -> 'content -> 'content Frame.frame -> block-boxes
+
+  % let bb = specific-frame layer ctx content frame
+  % の形で用いる．SlydifiOverlay.layer の数を引数 layer の値に固定し、フレームを出力する。
+  % layer: 何枚目のスライドを出力してほしいか。
+  % ctx: 処理用のテキスト処理文脈。
+  % content: frame のコンテンツ。
+  % frame: frame。
+  val specific-frame: int -> context -> 'content -> 'content Frame.frame -> block-boxes
+
+  % layer の値を一時的に特定の値に固定して block-text を評価する。
+  val +with-layer : [int; block-text] block-cmd
 
   % display-condition: int -> bool
   %   表示条件．
@@ -35,9 +42,10 @@ module SlydifiOverlay : sig
   direct \phantom : [(int -> bool); inline-text] inline-cmd
   direct +phantom : [(int -> bool); block-text] block-cmd
 
-  % 第一引数 (display condition) に現在のレイヤー番号を渡して得られる bool が true なら第2引数を描画．
-  % そうでなければ inline-nil/block-nil を返す．
-  val select : (int -> bool) -> 'a -> 'a -> 'a
+  % 第一引数 (display condition) に現在のレイヤー番号を渡して得られる bool が true なら第2引数を返す。
+  val select-from-two : (int -> bool) -> 'a -> 'a -> 'a
+  % 第一引数 (display condition) に現在のレイヤー番号を渡して得られるものを返す。
+  val select : (int -> 'a) -> 'a
   direct \select : [(int -> bool); inline-text; inline-text] inline-cmd
   direct +select : [(int -> bool); block-text; block-text] block-cmd
 
@@ -67,17 +75,6 @@ end = struct
     in
     if n1 < n2 then (aux n1 n2) else (aux n2 n1)
 
-  % itlst: layer の値に応じて異なる「発火」を行いたいような inline-text のリスト．
-  % btlst: layer の値に応じて異なる「発火」を行いたいような block-text のリスト．
-  % frame-f: itlst と btlst さえ与えられたらフレームが出来上がるような関数．
-  let frame-scheme-overlay ctx n-layer frame-f itlst btlst =
-    let () = SlydifiParam.discard layer in
-    let func n =
-      let () = layer |> SlydifiParam.set n in
-      frame-f itlst btlst
-    in
-    range 1 n-layer |> List.map func |> List.fold-left (+++) block-nil
-
   let multiframe n-layer ctx content frame =
     let () = SlydifiParam.discard layer in
     let func n =
@@ -86,6 +83,19 @@ end = struct
     in
     range 1 n-layer |> List.map func |> List.fold-left (+++) block-nil
 
+  let specific-frame lyr ctx content frame =
+    let original-layer = SlydifiParam.get layer in
+    let () = layer |> SlydifiParam.set lyr in
+    let bb = frame |> Frame.to-page ctx content in
+    let () = layer |> SlydifiParam.set original-layer in
+    bb
+
+  let-block ctx +with-layer lyr it =
+    let original-layer = SlydifiParam.get layer in
+    let () = layer |> SlydifiParam.set lyr in
+    let bb = read-block ctx it in
+    let () = layer |> SlydifiParam.set original-layer in
+    bb
 
   let ghost-inline dcf ib =
     if (dcf (SlydifiParam.get layer)) then ib else inline-nil
@@ -107,8 +117,10 @@ end = struct
       let ht = get-natural-length bb in
       block-skip ht
 
-  let select dcf val-true val-false =
+  let select-from-two dcf val-true val-false =
     if (dcf (SlydifiParam.get layer)) then val-true else val-false
+
+  let select valf = valf (SlydifiParam.get layer)
 
   let-inline \show-layer = embed-string (arabic (SlydifiParam.get layer))
 
@@ -118,8 +130,8 @@ end = struct
   let-inline ctx \phantom dcf it = phantom-inline dcf (read-inline ctx it)
   let-block ctx +phantom dcf bt = phantom-block dcf (read-block ctx bt)
 
-  let-inline \select dcf it-true it-false = (select dcf it-true it-false)
-  let-block +select dcf bt-true bt-false = (select dcf bt-true bt-false)
+  let-inline \select dcf it-true it-false = select-from-two dcf it-true it-false
+  let-block +select dcf bt-true bt-false = select-from-two dcf bt-true bt-false
 
   let only n n-layer = (n-layer == n)
   let elsewhen n n-layer = not (n-layer == n)
