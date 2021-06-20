@@ -404,10 +404,10 @@ SlydifiDocument.document(|
         | コマンド | 役割
         | `+fig-center(figbox);` | 中央揃えで配置
         | `+fig-block?:(align)(figbox);` | align で指定した揃え方で表示（左右揃え）
-        | `+fig-on-right(figbox)< block >;`
+        | `+fig-on-right(figbox)< block >`
         | 本文(`block`)の横幅を `figbox` の横幅の分だけ短くし，
           本文の右側に図を表示．
-        | `+fig-on-left(figbox)< block >;`
+        | `+fig-on-left(figbox)< block >`
         | 本文(`block`)の横幅を `figbox` の横幅の分だけ短くし，
           本文の左側に図を表示．
         | `+fig-abs-pos((x, y))(figbox);` | 絶対座標で配置
