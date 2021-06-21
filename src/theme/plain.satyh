@@ -263,7 +263,7 @@ end = struct
   let-inline ctx \emph ?:dcf it =
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
-      SlydifiOverlay.select dcf (SlydifiScheme.apply-font-cfg config#font#emph ctx) ctx
+      SlydifiOverlay.select-from-two dcf (SlydifiScheme.apply-font-cfg config#font#emph ctx) ctx
     in
     read-inline ctx2 it
 

@@ -32,6 +32,7 @@ module SlydifiThemeArctic: sig
        bg : color;
        fg : color;
        emph : color;
+       weak : color;
        red : color;
        green : color;
        link : color;
@@ -61,6 +62,8 @@ module SlydifiThemeArctic: sig
         frame-body-top-margin : length;
         indicator-line-thickness: length;
         indicator-bar-width: length;
+        frame-footer-xmargin: length;
+        frame-footer-ymargin: length;
       |)
   |)
 
@@ -80,15 +83,18 @@ module SlydifiThemeArctic: sig
     ((| title: inline-text list; author: inline-text list; date: inline-text list|))
       Frame.frame
   %% セクションフレーム。
-  % val frame-section-title: layout-slydifi-theme ((| title: inline-text list; |)) Frame.frame
+  val frame-section-title: ((| title: inline-text list; |)) Frame.frame
   %% タイトルフレーム。
   val frame-normal: ((| title: inline-text; inner: block-text; footer: bool |)) Frame.frame
 
 % frame commands
   %% frame-slide-title に従ってタイトルスライドを生成する。
   direct +make-title : [(| title: inline-text list; author: inline-text list; date: inline-text list|);] block-cmd
-  %% frame-normal に従って通常のスライドを生成する。
+  %% frame-section-title に従って通常のスライドを生成する。
   direct +section : [inline-text?; inline-text list; block-text;] block-cmd
+
+  direct +section-noframe : [inline-text?; block-text;] block-cmd
+  %% frame-normal に従って通常のスライドを生成する。
   direct +frame : [int?; inline-text; block-text;] block-cmd
   direct +frame-nofooter : [int?; inline-text; block-text;] block-cmd
   direct +namedframe : [string; inline-text; block-text;] block-cmd
@@ -96,6 +102,7 @@ module SlydifiThemeArctic: sig
 
 % decoration commands
   direct \emph : [(int -> bool)?; inline-text] inline-cmd
+  direct \weak : [(int -> bool)?; inline-text] inline-cmd
   direct \textbf : [(int -> bool)?; inline-text] inline-cmd
   direct \link : [inline-text?; string] inline-cmd
   direct \code : [string] inline-cmd
@@ -184,6 +191,7 @@ end = struct
         bg = Color.of-css `#e8e9ec`;
         fg = Color.of-css `#33374c`;
         emph = Color.of-css `#7759b4`;
+        weak = Color.of-css `#8389a3`;
         red = Color.of-css `#cc517a`;
         green = Color.of-css `#668e3d`;
         link = Color.of-css `#2d539e`;
@@ -212,6 +220,8 @@ end = struct
         frame-body-top-margin = 14pt;
         indicator-line-thickness = 5pt;
         indicator-bar-width = 30pt;
+        frame-footer-xmargin = 10pt;
+        frame-footer-ymargin = 8pt;
       |)
     |)
 
@@ -285,8 +295,8 @@ end = struct
         in
         let ib = read-inline ctx-pagenum {#it-pagenum;/#it-total;} in
         let (wid, _, dp) = get-natural-metrics ib in
-        let x = layout#paper-width -' wid -' 10pt in
-        let y = dp +' 12pt in
+        let x = layout#paper-width -' wid -' config#length#frame-footer-xmargin in
+        let y = dp +' config#length#frame-footer-ymargin in
         [ draw-text (x, y) ib ]
       in
 
@@ -300,7 +310,7 @@ end = struct
           let ib = read-inline ctx-pagenum it in
           let (wid, _, dp) = get-natural-metrics ib in
           let x = (layout#paper-width -' wid) *' 0.5 in
-          [ draw-text (x, dp +' 12pt) ib ]
+          [ draw-text (x, dp +' config#length#frame-footer-ymargin) ib ]
         else
           []
       in
@@ -542,6 +552,16 @@ end = struct
 
     bb-section +++ bb-inner
 
+  let-block ctx +section-noframe ?:short-name inner =
+    let it-title =
+      short-name |> Option.from {}
+    in
+    let () = section-name |> SlydifiParam.set it-title in
+    let bb-inner = read-block ctx inner in
+    let () = section-name |> SlydifiParam.discard in
+    bb-inner
+
+
 
   let-block ctx +frame ?:n-frame title inner =
     let () = page-num |> SlydifiParam.set (SlydifiParam.get page-num + 1) in
@@ -581,6 +601,15 @@ end = struct
       SlydifiOverlay.select-from-two dcf (
         ctx |> SlydifiScheme.apply-font-cfg config#font#bold
             |> set-text-color config#color#emph
+      ) ctx
+    in
+    read-inline ctx2 it
+
+  let-inline ctx \weak ?:dcf it =
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ctx2 =
+      SlydifiOverlay.select-from-two dcf (
+        ctx |> set-text-color config#color#weak
       ) ctx
     in
     read-inline ctx2 it
