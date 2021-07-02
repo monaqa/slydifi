@@ -4,6 +4,7 @@
 @require: base/eq
 @require: base/map
 @import: frame
+@import: param
 @import: graphics
 @import: overlay
 @import: footnote

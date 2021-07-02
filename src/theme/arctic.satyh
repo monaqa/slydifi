@@ -1,3 +1,7 @@
+%% arctic.satyh
+%%
+%% SLyDIFi theme file.
+%%
 %% This slide theme is heavily inspired by the iceberg.vim colorscheme.
 %% [iceberg.vim](https://github.com/cocopon/iceberg.vim): Copyright (c) 2014 cocopon <cocopon@me.com>
 %% https://github.com/cocopon/iceberg.vim/blob/master/colors/iceberg.vim
@@ -7,25 +11,24 @@
 @require: railway/railway
 @require: base/color-ext
 @require: base/int
+@require: base/typeset/base
 @import: ../slydifi
 @import: ../footnote
 @require: enumitem/enumitem
 
-module SlydifiThemeArctic: sig
-
-  val config: (|
+type arctic-config = (|
     font : (|
-      normal : font-config;
-      bold : font-config;
-      code : font-config;
-      slide-title : font-config;
-      slide-author : font-config;
-      slide-date : font-config;
-      section-title : font-config;
-      frame-title : font-config;
-      pagenum : font-config;
-      footnote : font-config;
-      quote : font-config;
+      normal : context -> context;
+      bold : context -> context;
+      code : context -> context;
+      slide-title : context -> context;
+      slide-author : context -> context;
+      slide-date : context -> context;
+      section-title : context -> context;
+      frame-title : context -> context;
+      pagenum : context -> context;
+      footnote : context -> context;
+      quote : context -> context;
     |);
      color : (|
        % basic
@@ -67,25 +70,35 @@ module SlydifiThemeArctic: sig
       |)
   |)
 
-  val layout: frame-layout
+module SlydifiThemeArctic: sig
 
+  val layout: frame-layout
   val document: block-text -> document
+
+% config
+
+  val default-config: arctic-config
+  val config: arctic-config SlydifiParam.t
+  direct +set-config : [arctic-config] block-cmd
+  direct \set-config : [arctic-config] inline-cmd
+  direct +with-config : [arctic-config; block-text] block-cmd
+  direct \with-config : [arctic-config; inline-text] inline-cmd
 
 % frames
   %% スライドマスター。
-  val frame-master: unit Frame.frame
+  val frame-master: arctic-config -> unit Frame.frame
   %% ページ番号の付いたスライドマスター。
-  val frame-master-with-footer: unit Frame.frame
+  val frame-master-with-footer: arctic-config -> unit Frame.frame
   %% スライド全体のタイトルフレーム。
   %% title: スライドのタイトル
   %% title: スライドのタイトル
-  val frame-slide-title:
+  val frame-slide-title: arctic-config ->
     ((| title: inline-text list; author: inline-text list; date: inline-text list|))
       Frame.frame
   %% セクションフレーム。
-  val frame-section-title: ((| title: inline-text list; |)) Frame.frame
+  val frame-section-title: arctic-config -> ((| title: inline-text list; |)) Frame.frame
   %% タイトルフレーム。
-  val frame-normal: ((| title: inline-text; inner: block-text; footer: bool |)) Frame.frame
+  val frame-normal: arctic-config -> ((| title: inline-text; inner: block-text; footer: bool |)) Frame.frame
 
 % frame commands
   %% frame-slide-title に従ってタイトルスライドを生成する。
@@ -144,7 +157,7 @@ end = struct
 
 % configuration
 
-  let config =
+  let default-config =
     let set-font-metrics fsize ctx =
       ctx |> set-font-size fsize
           |> set-paragraph-margin (fsize *' 0.65) (fsize *' 0.65)
@@ -174,17 +187,17 @@ end = struct
 
     (|
       font = (|
-        normal = [default-font; set-font-metrics 20pt];
-        bold = [bold-font];
-        code = [code-font];
-        slide-title = [bold-font; set-font-metrics 32pt];
-        slide-author = [default-font; set-font-metrics 24pt;];
-        slide-date = [default-font; set-font-metrics 20pt;];
-        section-title = [bold-font; set-font-metrics 32pt];
-        frame-title = [bold-font; set-font-metrics 28pt];
-        pagenum = [default-font; set-font-metrics 12pt;];
-        footnote = [default-font; set-font-metrics 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;];
-        quote = [default-font; set-font-metrics 18pt;];
+        normal = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 20pt];
+        bold = SlydifiScheme.apply-font-cfg [bold-font];
+        code = SlydifiScheme.apply-font-cfg [code-font];
+        slide-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 32pt];
+        slide-author = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 24pt;];
+        slide-date = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 20pt;];
+        section-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 32pt];
+        frame-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 28pt];
+        pagenum = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
+        footnote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;];
+        quote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 18pt;];
       |);
       color = (|
         % basic
@@ -225,9 +238,19 @@ end = struct
       |)
     |)
 
+  let config = SlydifiParam.make default-config
+
+  let-block +set-config cfg = '< +set-param(config)(cfg); >
+  let-inline \set-config cfg = { \set-param(config)(cfg); }
+  let-block +with-config cfg bt = '< +with-param(config)(cfg)(bt); >
+  let-inline \with-config cfg it = { \with-param(config)(cfg)(it); }
+
+% document
+
   let-inline ctx \code code =
+    let config = SlydifiParam.get config in
     let ctx =
-      ctx |> SlydifiScheme.apply-font-cfg config#font#code
+      ctx |> config#font#code
           |> set-text-color config#color#fg
     in
     let fsize = get-font-size ctx in
@@ -256,12 +279,13 @@ end = struct
       |> script-guard Latin
 
   let document bt =
+    let config = SlydifiParam.get config in
     let hookf _ _ =
       let numpages = SlydifiParam.get page-num in
       register-cross-reference `pagecount` (arabic numpages)
     in
     let init-ctx ctx =
-      ctx |> SlydifiScheme.apply-font-cfg config#font#normal
+      ctx |> config#font#normal
           |> set-text-color config#color#fg
           |> set-code-text-command (command \code)
     in
@@ -269,7 +293,7 @@ end = struct
 
 % frames
 
-  let frame-master =
+  let frame-master config =
     let f ctx () =
       (block-nil, [
         Gr.rectangle (0pt, 0pt) (layout#paper-width, layout#paper-height)
@@ -278,10 +302,10 @@ end = struct
     in
     Frame.make layout f
 
-  let frame-master-with-footer =
+  let frame-master-with-footer config =
     let f ctx () =
       % frame-master の graphics list を踏襲する
-      let (_, gr-frame-master) = frame-master |> Frame.embed ctx () in
+      let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
 
       let pagenum = SlydifiParam.get page-num in
       let total = get-cross-reference `pagecount` |> Option.from `1` in
@@ -290,7 +314,7 @@ end = struct
         let it-pagenum = pagenum |> arabic |> embed-string in
         let it-total = embed-string total in
         let ctx-pagenum =
-          ctx |> SlydifiScheme.apply-font-cfg config#font#pagenum
+          ctx |> config#font#pagenum
               |> set-text-color config#color#pagenum
         in
         let ib = read-inline ctx-pagenum {#it-pagenum;/#it-total;} in
@@ -304,7 +328,7 @@ end = struct
         if (section-name |> SlydifiParam.has-changed) then
           let it = section-name |> SlydifiParam.get in
           let ctx-pagenum =
-            ctx |> SlydifiScheme.apply-font-cfg config#font#pagenum
+            ctx |> config#font#pagenum
                 |> set-text-color config#color#pagenum
           in
           let ib = read-inline ctx-pagenum it in
@@ -359,10 +383,10 @@ end = struct
     in
     Frame.make layout f
 
-  let frame-slide-title =
+  let frame-slide-title config =
     let f ctx content =
       % frame-master の graphics list を踏襲する
-      let (_, gr-frame-master) = frame-master |> Frame.embed ctx () in
+      let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
 
       % 設定
       let relwid r = layout#paper-width *' r in
@@ -383,7 +407,7 @@ end = struct
       let gr-title =
         let ib =
           let ctx = ctx
-            |> SlydifiScheme.apply-font-cfg config#font#slide-title
+            |> config#font#slide-title
             |> set-text-color config#color#bg
           in
           let bbf ctx =
@@ -400,7 +424,7 @@ end = struct
       let gr-author =
         let ib =
           let ctx = ctx
-            |> SlydifiScheme.apply-font-cfg config#font#slide-author
+            |> config#font#slide-author
             |> set-text-color config#color#bg
           in
           let bbf ctx =
@@ -417,7 +441,7 @@ end = struct
       let gr-date =
         let ib =
           let ctx = ctx
-            |> SlydifiScheme.apply-font-cfg config#font#slide-date
+            |> config#font#slide-date
             |> set-text-color config#color#bg
           in
           let bbf ctx =
@@ -436,10 +460,10 @@ end = struct
     in
     Frame.make layout f
 
-  let frame-section-title =
+  let frame-section-title config =
     let f ctx content =
       % frame-master の graphics list を踏襲する
-      let (_, gr-frame-master) = frame-master |> Frame.embed ctx () in
+      let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
 
       % 設定
       let relwid r = layout#paper-width *' r in
@@ -463,7 +487,7 @@ end = struct
       let gr-title =
         let ibf clr =
           let ctx = ctx
-            |> SlydifiScheme.apply-font-cfg config#font#section-title
+            |> config#font#section-title
             |> set-text-color clr
           in
           let bbf ctx =
@@ -487,14 +511,14 @@ end = struct
     in
     Frame.make layout f
 
-  let frame-normal =
+  let frame-normal config =
     let f ctx content =
       % content#footer の値に応じてフッターをつけるかどうか変える
       let (_, gr) =
         if content#footer then
-          frame-master-with-footer |> Frame.embed ctx ()
+          frame-master-with-footer config |> Frame.embed ctx ()
         else
-          frame-master |> Frame.embed ctx ()
+          frame-master config |> Frame.embed ctx ()
       in
 
       let title-ymin = layout#paper-height -' config#length#frame-title-height in
@@ -509,7 +533,7 @@ end = struct
       % タイトルのブロックボックス列
       let gr-title =
         let ctx-title = ctx
-          |> SlydifiScheme.apply-font-cfg config#font#frame-title
+          |> config#font#frame-title
         in
         let ib-title = read-inline ctx-title content#title in
         [draw-text (config#length#frame-title-left-margin, title-ymin) ib-title]
@@ -520,6 +544,10 @@ end = struct
         line-break false false (ctx |> set-paragraph-margin 0pt skip) inline-fil
       in
       let bb-inner =
+        let ctx =
+          ctx |> config#font#normal
+              |> set-text-color config#color#fg
+        in
         bb-blank (config#length#frame-title-height +' config#length#frame-body-top-margin)
           +++ (read-block ctx content#inner)
       in
@@ -534,12 +562,12 @@ end = struct
 
   let-block ctx +make-title content =
     read-block ctx '<
-      +SlydifiScheme.genframe(frame-slide-title)(1)(content);
+      +SlydifiScheme.genframe(frame-slide-title (SlydifiParam.get config))(1)(content);
     >
 
   let-block ctx +section ?:short-name title inner =
     let bb-section = read-block ctx '<
-      +SlydifiScheme.genframe(frame-section-title)(1)(|title = title;|);
+      +SlydifiScheme.genframe(frame-section-title (SlydifiParam.get config))(1)(|title = title;|);
     >
     in
     let it-title =
@@ -567,20 +595,20 @@ end = struct
     let () = page-num |> SlydifiParam.set (SlydifiParam.get page-num + 1) in
     let n-frame = n-frame |> Option.from 1 in
     read-block ctx '<
-      +SlydifiScheme.genframe(frame-normal)(n-frame)(|title = title; inner = inner; footer = true|);
+      +SlydifiScheme.genframe(frame-normal (SlydifiParam.get config))(n-frame)(|title = title; inner = inner; footer = true|);
     >
 
   let-block ctx +frame-nofooter ?:n-frame title inner =
     let () = page-num |> SlydifiParam.set (SlydifiParam.get page-num + 1) in
     let n-frame = n-frame |> Option.from 1 in
     read-block ctx '<
-      +SlydifiScheme.genframe(frame-normal)(n-frame)(|title = title; inner = inner; footer = false|);
+      +SlydifiScheme.genframe(frame-normal (SlydifiParam.get config))(n-frame)(|title = title; inner = inner; footer = false|);
     >
 
   let-block ctx +namedframe name title inner =
     let () = page-num |> SlydifiParam.set (SlydifiParam.get page-num + 1) in
     read-block ctx '<
-      +SlydifiScheme.namedframe(frame-normal)(name)(|title = title; inner = inner; footer = true|);
+      +SlydifiScheme.namedframe(frame-normal (SlydifiParam.get config))(name)(|title = title; inner = inner; footer = true|);
     >
 
   let-block ctx +againframe ?:lyr name =
@@ -596,16 +624,18 @@ end = struct
 % inline commands
 
   let-inline ctx \emph ?:dcf it =
+    let config = SlydifiParam.get config in
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
       SlydifiOverlay.select-from-two dcf (
-        ctx |> SlydifiScheme.apply-font-cfg config#font#bold
+        ctx |> config#font#bold
             |> set-text-color config#color#emph
       ) ctx
     in
     read-inline ctx2 it
 
   let-inline ctx \weak ?:dcf it =
+    let config = SlydifiParam.get config in
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
       SlydifiOverlay.select-from-two dcf (
@@ -615,13 +645,15 @@ end = struct
     read-inline ctx2 it
 
   let-inline ctx \textbf ?:dcf it =
+    let config = SlydifiParam.get config in
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
-      SlydifiOverlay.select-from-two dcf (SlydifiScheme.apply-font-cfg config#font#bold ctx) ctx
+      SlydifiOverlay.select-from-two dcf (config#font#bold ctx) ctx
     in
     read-inline ctx2 it
 
   let-inline ctx \link ?:text url =
+    let config = SlydifiParam.get config in
     match text with
     | Some(text) ->
         let ctx =
@@ -632,12 +664,13 @@ end = struct
         let text = embed-string url in
         let ctx =
           ctx
-            |> SlydifiScheme.apply-font-cfg config#font#code
+            |> config#font#code
             |> set-text-color config#color#link
         in
         read-inline ctx {\href(url)(text);}
 
   let-block ctx +quote bt =
+    let config = SlydifiParam.get config in
     let deco (x, y) w h d =
       [
         fill config#color#quote-line (Gr.rectangle (x, y) (x +' 6pt, y +' h))
@@ -648,7 +681,7 @@ end = struct
         (fun ctx -> (
           let ctx2 = ctx
             |> set-text-color config#color#quote
-            |> SlydifiScheme.apply-font-cfg config#font#quote
+            |> config#font#quote
           in
           (read-block ctx2 bt)
         ))
@@ -656,6 +689,7 @@ end = struct
 % listing
 
   let label-dia (idx :: _) ctx =
+    let config = SlydifiParam.get config in
     let fsize = get-font-size ctx in
     let grf (x, y) =
       let edge = Rail.( init |> push-line (fsize *' 0.25, fsize *' 0.25) ) in
@@ -669,6 +703,7 @@ end = struct
     inline-graphics 16pt 8pt 0pt grf
 
   let label-tria (idx :: _) ctx =
+    let config = SlydifiParam.get config in
     let fsize = get-font-size ctx in
     let grf (x, y) =
       let gr =
@@ -696,6 +731,7 @@ end = struct
     inline-graphics 16pt 8pt 0pt grf
 
   let label-circ (idx :: _) ctx =
+    let config = SlydifiParam.get config in
     let fsize = get-font-size ctx in
     let path (x, y) =
       let cx = x +' fsize *' 0.3 in
@@ -788,9 +824,10 @@ end = struct
 % \footnote{} command
 
   let-inline ctx \footnotetext ref-label it =
+    let config = SlydifiParam.get config in
     let bbf num =
       let it-num = embed-string (arabic num) in
-      let ctx = SlydifiScheme.apply-font-cfg config#font#footnote ctx in
+      let ctx = config#font#footnote ctx in
         line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
     in
       FootnoteScheme.main ctx (Some(ref-label)) (fun _ -> inline-nil) bbf
@@ -813,6 +850,7 @@ end = struct
       read-inline ctx {\*?}
 
   let-inline ctx \footnote it =
+    let config = SlydifiParam.get config in
     let size = get-font-size ctx in
     let ibf num =
       let it-num = embed-string (arabic num) in
@@ -824,7 +862,7 @@ end = struct
     in
     let bbf num =
       let it-num = embed-string (arabic num) in
-      let ctx = SlydifiScheme.apply-font-cfg config#font#footnote ctx in
+      let ctx = config#font#footnote ctx in
         line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
     in
       FootnoteScheme.main ctx None ibf bbf

@@ -1,3 +1,7 @@
+%% plain.satyh
+%%
+%% SLyDIFi theme file.
+
 @require: gr
 @require: color
 @require: code

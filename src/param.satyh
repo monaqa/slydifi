@@ -26,6 +26,9 @@ module SlydifiParam : sig
   direct +set-param : ['a t; 'a] block-cmd
   direct \set-param : ['a t; 'a] inline-cmd
 
+  direct +with-param : ['a t; 'a; block-text] block-cmd
+  direct \with-param : ['a t; 'a; inline-text] inline-cmd
+
 end = struct
 
   type 'a t = 'a * (('a option) ref) * (bool ref)
@@ -85,5 +88,19 @@ end = struct
   let-inline ctx \set-param param value =
     let () = set value param in
     inline-nil
+
+  let-block ctx +with-param param value bt =
+    let old-value = get param in
+    let () = set value param in
+    let bb = read-block ctx bt in
+    let () = set old-value param in
+    bb
+
+  let-inline ctx \with-param param value it =
+    let old-value = get param in
+    let () = set value param in
+    let ib = read-inline ctx it in
+    let () = set old-value param in
+    ib
 end
 

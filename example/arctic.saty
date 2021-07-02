@@ -12,6 +12,21 @@ let-inline ctx \cjk it =
   let ctx = ctx |> set-dominant-narrow-script Kana in
   read-inline ctx it
 
+let fancy-conf = (|
+      font = (|
+        SlydifiThemeArctic.default-config#font with
+          frame-title = (fun ctx -> ctx |> SlydifiThemeArctic.default-config#font#frame-title |> set-font-size 20pt);
+      |);
+      color = (|
+        SlydifiThemeArctic.default-config#color with
+          bg = Color.of-css `#bbbbbb`;
+      |);
+     length = (|
+       SlydifiThemeArctic.default-config#length with
+         frame-title-height = 28pt;
+     |)
+    |)
+
 in
 
 document '<
@@ -24,6 +39,9 @@ document '<
 
 
   +section{|セクションスライドの|具体例|}<
+
+    +with-config(fancy-conf)<
+
     +frame{フレーム作成 in \SLyDIFi;}<
       +listing{
         * フレーム：スライド資料の1ページ1ページに値するもの
@@ -32,6 +50,7 @@ document '<
           ** セクション見出し：セクションのタイトルを載せる
           ** 本文：通常のフレーム
       }
+    >
     >
 
     +frame{テキストの記述}<
