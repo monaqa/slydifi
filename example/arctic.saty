@@ -29,7 +29,7 @@ let fancy-conf = (|
 
 in
 
-document '<
+document ?:(fancy-conf) '<
 
   +make-title(|
     title = {|\SLyDIFi; で|らくらくスライド作成|};
@@ -40,7 +40,7 @@ document '<
 
   +section{|セクションスライドの|具体例|}<
 
-    +with-config(fancy-conf)<
+    +with-config(SlydifiThemeArctic.default-config)<
 
     +frame{フレーム作成 in \SLyDIFi;}<
       +listing{
