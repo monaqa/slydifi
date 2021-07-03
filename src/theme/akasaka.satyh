@@ -1,33 +1,75 @@
+%% akasaka.satyh
+%%
+%% SLyDIFi theme file.
+
 @require: gr
 @require: annot
-@require: railway/railway
 @require: base/color-ext
 @require: base/int
-@import: ../slydifi
-@import: ../footnote
+@require: class-slydifi/slydifi
+@require: class-slydifi/footnote
 @require: enumitem/enumitem
+
+type akasaka-config = (|
+  font-normal : context -> context;
+  font-bold : context -> context;
+  font-code : context -> context;
+  font-slide-title : context -> context;
+  font-slide-author : context -> context;
+  font-slide-date : context -> context;
+  font-section-title : context -> context;
+  font-frame-title : context -> context;
+  font-pagenum : context -> context;
+  font-footnote : context -> context;
+
+  color-bg : color;
+  color-fg : color;
+  color-emph : color;
+  color-link : color;
+  color-title : color;
+  color-separator : color;
+  color-section-ribbon : color;
+  color-section-ribbon-intersect : color;
+
+  length-frame-title-height : length;
+  length-frame-title-left-margin : length;
+  length-frame-title-bot-margin : length;
+  length-frame-body-top-margin : length;
+  length-title-padding-lr : length;
+  length-title-padding-upper-line : length;
+  length-title-padding-lower-line : length;
+  length-title-line-width : length;
+|)
+
 
 module SlydifiThemeAkasaka: sig
 
   val layout: frame-layout
-
   val document: block-text -> document
+
+% config
+  val config: akasaka-config SlydifiParam.t
+  val default-config: akasaka-config
+  direct +set-config : [akasaka-config] block-cmd
+  direct \set-config : [akasaka-config] inline-cmd
+  direct +with-config : [akasaka-config; block-text] block-cmd
+  direct \with-config : [akasaka-config; inline-text] inline-cmd
 
 % frames
   %% スライドマスター。
-  val frame-master: unit Frame.frame
+  val frame-master: akasaka-config -> unit Frame.frame
   %% ページ番号の付いたスライドマスター。
-  val frame-master-with-footer: unit Frame.frame
+  val frame-master-with-footer: akasaka-config -> unit Frame.frame
   %% スライド全体のタイトルフレーム。
   %% title: スライドのタイトル
   %% title: スライドのタイトル
-  val frame-slide-title:
+  val frame-slide-title: akasaka-config ->
     ((| title: inline-text list; author: inline-text list; date: inline-text list|))
       Frame.frame
   %% セクションフレーム。
   % val frame-section-title: layout-slydifi-theme ((| title: inline-text list; |)) Frame.frame
   %% タイトルフレーム。
-  val frame-normal: ((| title: inline-text; inner: block-text |)) Frame.frame
+  val frame-normal: akasaka-config -> ((| title: inline-text; inner: block-text |)) Frame.frame
 
 % frame commands
   %% frame-slide-title に従ってタイトルスライドを生成する。
@@ -61,7 +103,7 @@ end = struct
   |)
 
 % configuration
-  let config =
+  let default-config =
     let set-font-metrics fsize ctx =
       ctx |> set-font-size fsize
           |> set-paragraph-margin (fsize *' 0.6) (fsize *' 0.6)
@@ -84,80 +126,81 @@ end = struct
     in
 
     (|
-      font = (|
-        normal = [default-font; set-font-metrics 18pt];
-        bold = [bold-font];
-        code = [code-font];
-        slide-title = [bold-font; set-font-metrics 36pt];
-        slide-author = [default-font; set-font-metrics 24pt;];
-        slide-date = [default-font; set-font-metrics 20pt;];
-        section-title = [bold-font; set-font-metrics 28pt];
-        frame-title = [bold-font; set-font-metrics 28pt];
-        pagenum = [default-font; set-font-metrics 12pt;];
-        footnote = [default-font; set-font-metrics 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;];
-      |);
-      color = (|
-        bg = Color.of-css `#EEEEEE`;
-        fg = Color.of-css `#000000`;
-        emph = Color.of-css `#ff0027`;
-        % red = Color.of-css `#cc517a`;
-        % green = Color.of-css `#668e3d`;
-        link = Color.of-css `#2d539e`;
+      font-normal = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 18pt];
+      font-bold = SlydifiScheme.apply-font-cfg [bold-font];
+      font-code = SlydifiScheme.apply-font-cfg [code-font];
+      font-slide-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 36pt];
+      font-slide-author = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 24pt;];
+      font-slide-date = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 20pt;];
+      font-section-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 28pt];
+      font-frame-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 28pt];
+      font-pagenum = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
+      font-footnote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;];
 
-        title = Color.of-css `#555555`;
-        separator = Color.of-css `#555555`;
-        section-ribbon = Color.of-css `#aaaaaa`;
-        section-ribbon-intersect = Color.of-css `#777777`;
-      |);
-      length = (|
-        frame-title-height = 36pt;
-        frame-title-left-margin = 10pt;
-        frame-title-bot-margin = 10pt;
-        frame-body-top-margin = 14pt;
+      color-bg = Color.of-css `#EEEEEE`;
+      color-fg = Color.of-css `#222222`;
+      color-emph = Color.of-css `#ff0027`;
+      color-link = Color.of-css `#2d539e`;
+      color-title = Color.of-css `#555555`;
+      color-separator = Color.of-css `#555555`;
+      color-section-ribbon = Color.of-css `#aaaaaa`;
+      color-section-ribbon-intersect = Color.of-css `#666666`;
 
-        title-padding-lr = 12pt;  % タイトルの左右のパディング（紙面基準）
-        title-padding-upper-line = 5pt;  % タイトルの下線とタイトル文字の間隔
-        title-padding-lower-line = 0pt;  % タイトルの下線と本文の間隔
-        title-line-width = 3pt;  % タイトルの下線とタイトル文字の間隔
-      |)
+      length-frame-title-height = 36pt;
+      length-frame-title-left-margin = 10pt;
+      length-frame-title-bot-margin = 10pt;
+      length-frame-body-top-margin = 14pt;
+      length-title-padding-lr = 12pt;  % タイトルの左右のパディング（紙面基準）
+      length-title-padding-upper-line = 5pt;  % タイトルの下線とタイトル文字の間隔
+      length-title-padding-lower-line = 0pt;  % タイトルの下線と本文の間隔
+      length-title-line-width = 3pt;  % タイトルの下線とタイトル文字の間隔
     |)
 
+  let config = SlydifiParam.make default-config
+
+  let-block +set-config cfg = '< +set-param(config)(cfg); >
+  let-inline \set-config cfg = { \set-param(config)(cfg); }
+  let-block +with-config cfg bt = '< +with-param(config)(cfg)(bt); >
+  let-inline \with-config cfg it = { \with-param(config)(cfg)(it); }
+
   let-inline ctx \code code =
+    let config = SlydifiParam.get config in
     let ctx =
-      ctx |> SlydifiScheme.apply-font-cfg config#font#code
-          |> set-text-color config#color#fg
+      ctx |> config#font-code
+          |> set-text-color config#color-fg
     in
     let fsize = get-font-size ctx in
 
     script-guard Latin (read-inline ctx (embed-string code))
 
   let document bt =
+    let config = SlydifiParam.get config in
     let hookf _ _ =
       let numpages = SlydifiParam.get page-num in
       register-cross-reference `pagecount` (arabic numpages)
     in
     let init-ctx ctx =
-      ctx |> SlydifiScheme.apply-font-cfg config#font#normal
-          |> set-text-color config#color#fg
+      ctx |> config#font-normal
+          |> set-text-color config#color-fg
           |> set-code-text-command (command \code)
     in
     SlydifiScheme.document-scheme layout init-ctx hookf bt
 
 % frames
 
-  let frame-master =
+  let frame-master config =
     let f ctx () =
       (block-nil, [
         Gr.rectangle (0pt, 0pt) (layout#paper-width, layout#paper-height)
-          |> fill config#color#bg
+          |> fill config#color-bg
       ])
     in
     Frame.make layout f
 
-  let frame-master-with-footer =
+  let frame-master-with-footer config =
     let f ctx () =
       % frame-master の graphics list を踏襲する
-      let (_, gr-frame-master) = frame-master |> Frame.embed ctx () in
+      let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
 
       let pagenum = SlydifiParam.get page-num in
       let total = get-cross-reference `pagecount` |> Option.from `1` in
@@ -165,7 +208,7 @@ end = struct
       let gr-page-number =
         let it-pagenum = pagenum |> arabic |> embed-string in
         let it-total = embed-string total in
-        let ctx-pagenum = SlydifiScheme.apply-font-cfg config#font#pagenum ctx in
+        let ctx-pagenum = config#font-pagenum ctx in
         let ib = read-inline ctx-pagenum {#it-pagenum;/#it-total;} in
         let (wid, _, dp) = get-natural-metrics ib in
         let x = layout#paper-width -' wid -' 10pt in
@@ -177,10 +220,10 @@ end = struct
     in
     Frame.make layout f
 
-  let frame-slide-title =
+  let frame-slide-title config =
     let f ctx content =
       % frame-master の graphics list を踏襲する
-      let (_, gr-frame-master) = frame-master |> Frame.embed ctx () in
+      let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
 
       % 設定
       let relwid r = layout#paper-width *' r in
@@ -194,15 +237,15 @@ end = struct
       let gr-bgs =
         [
           Gr.rectangle (0pt, title-ymin) (relwid 1.0, relht 1.0)
-            |> fill config#color#title;
+            |> fill config#color-title;
         ]
       in
 
       let gr-title =
         let ib =
           let ctx = ctx
-            |> SlydifiScheme.apply-font-cfg config#font#slide-title
-            |> set-text-color config#color#bg
+            |> config#font-slide-title
+            |> set-text-color config#color-bg
           in
           let bbf ctx =
             content#title |> List.map (fun it ->
@@ -218,8 +261,8 @@ end = struct
       let gr-author =
         let ib =
           let ctx = ctx
-            |> SlydifiScheme.apply-font-cfg config#font#slide-author
-            |> set-text-color config#color#fg
+            |> config#font-slide-author
+            |> set-text-color config#color-fg
           in
           let bbf ctx =
             content#author |> List.map (fun it ->
@@ -235,8 +278,8 @@ end = struct
       let gr-date =
         let ib =
           let ctx = ctx
-            |> SlydifiScheme.apply-font-cfg config#font#slide-date
-            |> set-text-color config#color#fg
+            |> config#font-slide-date
+            |> set-text-color config#color-fg
           in
           let bbf ctx =
             content#date |> List.map (fun it ->
@@ -254,10 +297,10 @@ end = struct
     in
     Frame.make layout f
 
-  let frame-section-title =
+  let frame-section-title config =
     let f ctx content =
       % frame-master の graphics list を踏襲する
-      let (_, gr-frame-master) = frame-master |> Frame.embed ctx () in
+      let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
 
       % 設定
       let relwid r = layout#paper-width *' r in
@@ -279,11 +322,11 @@ end = struct
         let cent-rect  = Gr.rectangle (title-xmin, title-ymin) (title-xmax, title-ymax) in
 
         [
-          fill config#color#section-ribbon north-rect;
-          fill config#color#section-ribbon south-rect;
-          fill config#color#section-ribbon east-rect;
-          fill config#color#section-ribbon west-rect;
-          fill config#color#section-ribbon-intersect cent-rect;
+          fill config#color-section-ribbon north-rect;
+          fill config#color-section-ribbon south-rect;
+          fill config#color-section-ribbon east-rect;
+          fill config#color-section-ribbon west-rect;
+          fill config#color-section-ribbon-intersect cent-rect;
         ]
       in
 
@@ -294,13 +337,13 @@ end = struct
         in
         let ibf clr =
           let ctx = ctx
-            |> SlydifiScheme.apply-font-cfg config#font#section-title
+            |> config#font-section-title
             |> set-text-color clr
           in
           embed-block-bottom ctx title-width
           (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
         in
-        let gr-title = draw-text (title-xmin +' title-mgn, title-ymin +' title-mgn) (ibf config#color#fg) in
+        let gr-title = draw-text (title-xmin +' title-mgn, title-ymin +' title-mgn) (ibf config#color-fg) in
         [
           gr-title;
         ]
@@ -310,27 +353,27 @@ end = struct
     in
     Frame.make layout f
 
-  let frame-normal =
+  let frame-normal config =
     let f ctx content =
       % frame-master-with-footer の graphics list を踏襲する
-      let (_, gr) = frame-master-with-footer |> Frame.embed ctx () in
+      let (_, gr) = frame-master-with-footer config |> Frame.embed ctx () in
 
-      let title-ymin = layout#paper-height -' config#length#frame-title-height in
+      let title-ymin = layout#paper-height -' config#length-frame-title-height in
 
       let gr-separator =
-        let xleft = config#length#frame-title-left-margin in
-        let xright = layout#paper-width -' config#length#frame-title-left-margin in
-        let y = title-ymin -' config#length#frame-title-bot-margin in
-        [Gr.line (xleft, y) (xright, y) |> stroke 3pt config#color#separator]
+        let xleft = config#length-frame-title-left-margin in
+        let xright = layout#paper-width -' config#length-frame-title-left-margin in
+        let y = title-ymin -' config#length-frame-title-bot-margin in
+        [Gr.line (xleft, y) (xright, y) |> stroke 3pt config#color-separator]
       in
 
       % タイトルのブロックボックス列
       let gr-title =
         let ctx-title = ctx
-          |> SlydifiScheme.apply-font-cfg config#font#frame-title
+          |> config#font-frame-title
         in
         let ib-title = read-inline ctx-title content#title in
-        [draw-text (config#length#frame-title-left-margin, title-ymin) ib-title]
+        [draw-text (config#length-frame-title-left-margin, title-ymin) ib-title]
       in
 
       % 中身のブロックボックス列
@@ -338,7 +381,7 @@ end = struct
         line-break false false (ctx |> set-paragraph-margin 0pt skip) inline-nil
       in
       let bb-inner =
-        bb-blank (config#length#frame-title-height +' config#length#frame-body-top-margin)
+        bb-blank (config#length-frame-title-height +' config#length-frame-body-top-margin)
           +++ (read-block ctx content#inner)
       in
 
@@ -352,12 +395,12 @@ end = struct
 
   let-block ctx +make-title content =
     read-block ctx '<
-      +SlydifiScheme.genframe(frame-slide-title)(1)(content);
+      +SlydifiScheme.genframe(frame-slide-title (SlydifiParam.get config))(1)(content);
     >
 
   let-block ctx +section title inner =
     read-block ctx '<
-      +SlydifiScheme.genframe(frame-section-title)(1)(|title = title;|);
+      +SlydifiScheme.genframe(frame-section-title (SlydifiParam.get config))(1)(|title = title;|);
       #inner;
     >
 
@@ -365,49 +408,53 @@ end = struct
     let () = page-num |> SlydifiParam.set (SlydifiParam.get page-num + 1) in
     let n-frame = n-frame |> Option.from 1 in
     read-block ctx '<
-      +SlydifiScheme.genframe(frame-normal)(n-frame)(|title = title; inner = inner|);
+      +SlydifiScheme.genframe(frame-normal (SlydifiParam.get config))(n-frame)(|title = title; inner = inner|);
     >
 
 % inline commands
   let-inline ctx \emph ?:dcf it =
+    let config = SlydifiParam.get config in
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
       SlydifiOverlay.select-from-two dcf (
-        ctx |> SlydifiScheme.apply-font-cfg config#font#bold
-            |> set-text-color config#color#emph
+        ctx |> config#font-bold
+            |> set-text-color config#color-emph
       ) ctx
     in
     read-inline ctx2 it
 
   let-inline ctx \textbf ?:dcf it =
+    let config = SlydifiParam.get config in
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
-      SlydifiOverlay.select-from-two dcf (SlydifiScheme.apply-font-cfg config#font#bold ctx) ctx
+      SlydifiOverlay.select-from-two dcf (config#font-bold ctx) ctx
     in
     read-inline ctx2 it
 
   let-inline ctx \link ?:text url =
+    let config = SlydifiParam.get config in
     match text with
     | Some(text) ->
         let ctx =
-          ctx |> set-text-color config#color#link
+          ctx |> set-text-color config#color-link
         in
         read-inline ctx {\href(url)(text);}
     | None ->
         let text = embed-string url in
         let ctx =
           ctx
-            |> SlydifiScheme.apply-font-cfg config#font#code
-            |> set-text-color config#color#link
+            |> config#font-code
+            |> set-text-color config#color-link
         in
         read-inline ctx {\href(url)(text);}
 
 % \footnote{} command
 
   let-inline ctx \footnotetext ref-label it =
+    let config = SlydifiParam.get config in
     let bbf num =
       let it-num = embed-string (arabic num) in
-      let ctx = SlydifiScheme.apply-font-cfg config#font#footnote ctx in
+      let ctx = config#font-footnote ctx in
         line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
     in
       FootnoteScheme.main ctx (Some(ref-label)) (fun _ -> inline-nil) bbf
@@ -430,6 +477,7 @@ end = struct
       read-inline ctx {\*?}
 
   let-inline ctx \footnote it =
+    let config = SlydifiParam.get config in
     let size = get-font-size ctx in
     let ibf num =
       let it-num = embed-string (arabic num) in
@@ -441,7 +489,7 @@ end = struct
     in
     let bbf num =
       let it-num = embed-string (arabic num) in
-      let ctx = SlydifiScheme.apply-font-cfg config#font#footnote ctx in
+      let ctx = config#font-footnote ctx in
         line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
     in
       FootnoteScheme.main ctx None ibf bbf

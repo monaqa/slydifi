@@ -12,8 +12,8 @@
 @require: base/color-ext
 @require: base/int
 @require: base/typeset/base
-@import: ../slydifi
-@import: ../footnote
+@require: class-slydifi/slydifi
+@require: class-slydifi/footnote
 @require: enumitem/enumitem
 
 type arctic-config = (|
