@@ -16,6 +16,12 @@ let fancy-conf = (|
       font = (|
         SlydifiThemeArctic.default-config#font with
           frame-title = (fun ctx -> ctx |> SlydifiThemeArctic.default-config#font#frame-title |> set-font-size 20pt);
+          code = (fun ctx -> ctx
+            |> SlydifiThemeArctic.default-config#font#code
+            |> set-font Latin          (`lmmono`, 1.0, 0.0)
+            |> set-font Kana           (`lmmono`, 1.0, 0.0)
+            |> set-font HanIdeographic (`lmmono`, 1.0, 0.0)
+          );
       |);
       color = (|
         SlydifiThemeArctic.default-config#color with
@@ -29,7 +35,9 @@ let fancy-conf = (|
 
 in
 
-document ?:(fancy-conf) '<
+document '<
+
+  +set-config(fancy-conf);
 
   +make-title(|
     title = {|\SLyDIFi; で|らくらくスライド作成|};

@@ -73,7 +73,7 @@ type arctic-config = (|
 module SlydifiThemeArctic: sig
 
   val layout: frame-layout
-  val document: arctic-config?-> block-text -> document
+  val document: block-text -> document
 
 % config
 
@@ -278,14 +278,8 @@ end = struct
     inline-frame-breakable pads (rectangle-round-fill 2pt 1pt config#color#bg-code) ib
       |> script-guard Latin
 
-  let document ?:user-config bt =
-    let config = match user-config with
-      | Some(user-config) -> (
-          let () = config |> SlydifiParam.set user-config in
-          user-config
-      )
-      | None -> SlydifiParam.get config
-    in
+  let document bt =
+    let config = SlydifiParam.get config in
     let hookf _ _ =
       let numpages = SlydifiParam.get page-num in
       register-cross-reference `pagecount` (arabic numpages)

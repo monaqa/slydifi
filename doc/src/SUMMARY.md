@@ -16,3 +16,4 @@
   - [インラインコマンド](./making_theme/5_inline_commands.md)
   - [オーバーレイへの対応](./making_theme/6_overlay.md)
   - [ヘッダ、フッタ](./making_theme/7_header_footer.md)
+  - [テーマファイルを作るときに推奨すること](./making_theme/8_best_practice.md)

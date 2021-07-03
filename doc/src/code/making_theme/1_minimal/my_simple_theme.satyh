@@ -3,15 +3,19 @@
 
 module SlydifiThemeMySimple: sig
 
-  % ANCHOR: signiture
+  % ANCHOR: signature
+  %% スライド全体のレイアウト。
   val layout: frame-layout
 
+  %% document 関数。引数のブロックテキストを組んでスライドにする。
   val document: block-text -> document
 
+  %% 通常のフレーム。
   val frame-normal: ((| title: inline-text; inner: block-text |)) Frame.frame
 
+  %% frame-normal に従って1枚のフレームを作成するコマンド。
   direct +frame : [inline-text; block-text;] block-cmd
-  % ANCHOR_END: signiture
+  % ANCHOR_END: signature
 
 end = struct
 
@@ -41,34 +45,36 @@ end = struct
   % ANCHOR_END: document
 
   % ANCHOR: frame-normal
-  let font-slide ctx =
-    ctx |> set-font Latin          (`ipaexg`, 1.0, 0.0)
-        |> set-font Kana           (`ipaexg`, 1.0, 0.0)
-        |> set-font HanIdeographic (`ipaexg`, 1.0, 0.0)
-        |> set-font-size 18pt
-        |> set-leading 24pt
-
   let frame-normal =
+
+    let font-slide fsize ctx =
+      ctx |> set-font Latin          (`ipaexg`, 1.0, 0.0)
+          |> set-font Kana           (`ipaexg`, 1.0, 0.0)
+          |> set-font HanIdeographic (`ipaexg`, 1.0, 0.0)
+          |> set-font-size fsize
+          |> set-leading (fsize *' 1.4)
+          |> set-paragraph-margin (fsize *' 0.6) (fsize *' 0.6)
+    in
+
+    % frame を作成するための関数
     let f ctx content =
-      let ib-title =
-        let ctx = ctx
-          |> font-slide
-          |> set-font-size 28pt
-        in
-        read-inline ctx content#title
-      in
+      % タイトルのブロックテキスト
       let bb-title =
-        line-break true true (font-slide ctx) (ib-title ++ inline-fil)
+        let ctx = ctx |> font-slide 28pt in
+        let ib-title = read-inline ctx content#title in
+        line-break true true ctx (ib-title ++ inline-fil)
       in
-      let bb-inner = read-block (font-slide ctx) content#inner in
+      % 本文のブロックテキスト
+      let bb-inner = read-block (ctx |> font-slide 18pt) content#inner in
       (bb-title +++ bb-inner, [])
     in
+
     Frame.make layout f
   % ANCHOR_END: frame-normal
 
   % ANCHOR: frame-command
-  let-block ctx +frame title inner =
-    read-block ctx '<
+  let-block +frame title inner =
+    '<
       +SlydifiScheme.genframe(frame-normal)(1)(|title = title; inner = inner|);
     >
   % ANCHOR_END: frame-command
