@@ -17,58 +17,54 @@
 @require: enumitem/enumitem
 
 type arctic-config = (|
-    font : (|
-      normal : context -> context;
-      bold : context -> context;
-      code : context -> context;
-      slide-title : context -> context;
-      slide-author : context -> context;
-      slide-date : context -> context;
-      section-title : context -> context;
-      frame-title : context -> context;
-      pagenum : context -> context;
-      footnote : context -> context;
-      quote : context -> context;
-    |);
-     color : (|
-       % basic
-       bg : color;
-       fg : color;
-       emph : color;
-       weak : color;
-       red : color;
-       green : color;
-       link : color;
-       bg-code : color;
+  %% font
+  font-normal : context -> context;
+  font-bold : context -> context;
+  font-code : context -> context;
+  font-slide-title : context -> context;
+  font-slide-author : context -> context;
+  font-slide-date : context -> context;
+  font-section-title : context -> context;
+  font-frame-title : context -> context;
+  font-pagenum : context -> context;
+  font-footnote : context -> context;
+  font-quote : context -> context;
 
-       % frame template
-       bg-slide-section : color;
-       bg-slide-author : color;
-       separator : color;
-       pagenum : color;
-       indicator-total : color;
-       indicator-done : color;
+  %% color
+  % basic
+  color-bg : color;
+  color-fg : color;
+  color-emph : color;
+  color-weak : color;
+  color-red : color;
+  color-green : color;
+  color-link : color;
+  color-bg-code : color;
+  % frame template
+  color-bg-slide-section : color;
+  color-bg-slide-author : color;
+  color-separator : color;
+  color-pagenum : color;
+  color-indicator-total : color;
+  color-indicator-done : color;
+  % decoration
+  color-quote : color;
+  color-quote-line : color;
+  % listing
+  color-bullet-dia : color;
+  color-bullet-tria : color;
+  color-bullet-circ : color;
 
-       % decoration
-       quote : color;
-       quote-line : color;
-
-       % listing
-       bullet-dia : color;
-       bullet-tria : color;
-       bullet-circ : color;
-     |);
-      length : (|
-        frame-title-height : length;
-        frame-title-left-margin : length;
-        frame-title-bot-margin : length;
-        frame-body-top-margin : length;
-        indicator-line-thickness: length;
-        indicator-bar-width: length;
-        frame-footer-xmargin: length;
-        frame-footer-ymargin: length;
-      |)
-  |)
+  %% length
+  length-frame-title-height : length;
+  length-frame-title-left-margin : length;
+  length-frame-title-bot-margin : length;
+  length-frame-body-top-margin : length;
+  length-indicator-line-thickness: length;
+  length-indicator-bar-height: length;
+  length-frame-footer-xmargin: length;
+  length-frame-footer-ymargin: length;
+|)
 
 module SlydifiThemeArctic: sig
 
@@ -170,9 +166,9 @@ end = struct
           |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0)
     in
     let code-font ctx =
-      ctx |> set-font Latin          (`system:mplus-1m-regular`, 1.0, 0.0)
-          |> set-font Kana           (`system:mplus-1m-regular`, 1.0, 0.0)
-          |> set-font HanIdeographic (`system:mplus-1m-regular`, 1.0, 0.0)
+      ctx |> set-font Latin          (`lmmono`, 1.0, 0.0)
+          |> set-font Kana           (`lmmono`, 1.0, 0.0)
+          |> set-font HanIdeographic (`lmmono`, 1.0, 0.0)
           |> set-hyphen-min 1000 1000  % ハイフンを無効化
           |> set-space-ratio-between-scripts 0. 0. 0. Latin Kana
           |> set-space-ratio-between-scripts 0. 0. 0. Kana Latin
@@ -186,56 +182,53 @@ end = struct
     in
 
     (|
-      font = (|
-        normal = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 20pt];
-        bold = SlydifiScheme.apply-font-cfg [bold-font];
-        code = SlydifiScheme.apply-font-cfg [code-font];
-        slide-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 32pt];
-        slide-author = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 24pt;];
-        slide-date = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 20pt;];
-        section-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 32pt];
-        frame-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 28pt];
-        pagenum = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
-        footnote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;];
-        quote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 18pt;];
-      |);
-      color = (|
-        % basic
-        bg = Color.of-css `#e8e9ec`;
-        fg = Color.of-css `#33374c`;
-        emph = Color.of-css `#7759b4`;
-        weak = Color.of-css `#8389a3`;
-        red = Color.of-css `#cc517a`;
-        green = Color.of-css `#668e3d`;
-        link = Color.of-css `#2d539e`;
-        bg-code = Color.of-css `#dcdfe7`;
+      %% font
+      font-normal = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 20pt];
+      font-bold = SlydifiScheme.apply-font-cfg [bold-font];
+      font-code = SlydifiScheme.apply-font-cfg [code-font];
+      font-slide-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 32pt];
+      font-slide-author = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 24pt;];
+      font-slide-date = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 20pt;];
+      font-section-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 32pt];
+      font-frame-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 28pt];
+      font-pagenum = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
+      font-footnote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
+      font-quote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 18pt;];
 
-        % frame template
-        bg-slide-author = Color.of-css `#1e2132`;
-        bg-slide-section = Color.of-css `#6b7089`;
-        separator = Color.of-css `#6b7089`;
-        pagenum = Color.of-css `#6b7089`;
-        indicator-total = Color.of-css `#cad0de`;
-        indicator-done = Color.of-css `#3f83a6`;
+      %% color
+      % basic
+      color-bg = Color.of-css `#e8e9ec`;
+      color-fg = Color.of-css `#33374c`;
+      color-emph = Color.of-css `#7759b4`;
+      color-weak = Color.of-css `#8389a3`;
+      color-red = Color.of-css `#cc517a`;
+      color-green = Color.of-css `#668e3d`;
+      color-link = Color.of-css `#2d539e`;
+      color-bg-code = Color.of-css `#dcdfe7`;
+      % frame template
+      color-bg-slide-author = Color.of-css `#1e2132`;
+      color-bg-slide-section = Color.of-css `#6b7089`;
+      color-separator = Color.of-css `#6b7089`;
+      color-pagenum = Color.of-css `#6b7089`;
+      color-indicator-total = Color.of-css `#cad0de`;
+      color-indicator-done = Color.of-css `#3f83a6`;
+      % listing
+      color-bullet-dia = Color.of-css `#3f83a6`;
+      color-bullet-tria = Color.of-css `#3f83a6`;
+      color-bullet-circ = Color.of-css `#3f83a6`;
+      % quotation
+      color-quote = Color.of-css `#33374c`;
+      color-quote-line = Color.of-css `#33374c`;
 
-        % listing
-        bullet-dia = Color.of-css `#3f83a6`;
-        bullet-tria = Color.of-css `#3f83a6`;
-        bullet-circ = Color.of-css `#3f83a6`;
-
-        quote = Color.of-css `#33374c`;
-        quote-line = Color.of-css `#33374c`;
-      |);
-      length = (|
-        frame-title-height = 36pt;
-        frame-title-left-margin = 10pt;
-        frame-title-bot-margin = 10pt;
-        frame-body-top-margin = 14pt;
-        indicator-line-thickness = 5pt;
-        indicator-bar-width = 30pt;
-        frame-footer-xmargin = 10pt;
-        frame-footer-ymargin = 8pt;
-      |)
+      %% length
+      length-frame-title-height = 36pt;
+      length-frame-title-left-margin = 10pt;
+      length-frame-title-bot-margin = 10pt;
+      length-frame-body-top-margin = 14pt;
+      length-indicator-line-thickness = 5pt;
+      length-indicator-bar-height = 30pt;
+      length-frame-footer-xmargin = 10pt;
+      length-frame-footer-ymargin = 8pt;
     |)
 
   let config = SlydifiParam.make default-config
@@ -250,8 +243,8 @@ end = struct
   let-inline ctx \code code =
     let config = SlydifiParam.get config in
     let ctx =
-      ctx |> config#font#code
-          |> set-text-color config#color#fg
+      ctx |> config#font-code
+          |> set-text-color config#color-fg
     in
     let fsize = get-font-size ctx in
     let dpt = fsize *' 0.3 in
@@ -275,7 +268,7 @@ end = struct
     in
 
     let ib = read-inline ctx (embed-string code) in
-    inline-frame-breakable pads (rectangle-round-fill 2pt 1pt config#color#bg-code) ib
+    inline-frame-breakable pads (rectangle-round-fill 2pt 1pt config#color-bg-code) ib
       |> script-guard Latin
 
   let document bt =
@@ -285,8 +278,8 @@ end = struct
       register-cross-reference `pagecount` (arabic numpages)
     in
     let init-ctx ctx =
-      ctx |> config#font#normal
-          |> set-text-color config#color#fg
+      ctx |> config#font-normal
+          |> set-text-color config#color-fg
           |> set-code-text-command (command \code)
     in
     SlydifiScheme.document-scheme layout init-ctx hookf bt
@@ -297,7 +290,7 @@ end = struct
     let f ctx () =
       (block-nil, [
         Gr.rectangle (0pt, 0pt) (layout#paper-width, layout#paper-height)
-          |> fill config#color#bg
+          |> fill config#color-bg
       ])
     in
     Frame.make layout f
@@ -314,13 +307,13 @@ end = struct
         let it-pagenum = pagenum |> arabic |> embed-string in
         let it-total = embed-string total in
         let ctx-pagenum =
-          ctx |> config#font#pagenum
-              |> set-text-color config#color#pagenum
+          ctx |> config#font-pagenum
+              |> set-text-color config#color-pagenum
         in
         let ib = read-inline ctx-pagenum {#it-pagenum;/#it-total;} in
         let (wid, _, dp) = get-natural-metrics ib in
-        let x = layout#paper-width -' wid -' config#length#frame-footer-xmargin in
-        let y = dp +' config#length#frame-footer-ymargin in
+        let x = layout#paper-width -' wid -' config#length-frame-footer-xmargin in
+        let y = dp +' config#length-frame-footer-ymargin in
         [ draw-text (x, y) ib ]
       in
 
@@ -328,13 +321,13 @@ end = struct
         if (section-name |> SlydifiParam.has-changed) then
           let it = section-name |> SlydifiParam.get in
           let ctx-pagenum =
-            ctx |> config#font#pagenum
-                |> set-text-color config#color#pagenum
+            ctx |> config#font-pagenum
+                |> set-text-color config#color-pagenum
           in
           let ib = read-inline ctx-pagenum it in
           let (wid, _, dp) = get-natural-metrics ib in
           let x = (layout#paper-width -' wid) *' 0.5 in
-          [ draw-text (x, dp +' config#length#frame-footer-ymargin) ib ]
+          [ draw-text (x, dp +' config#length-frame-footer-ymargin) ib ]
         else
           []
       in
@@ -350,13 +343,13 @@ end = struct
         in
         let y = (layout#paper-height *' (1.0 -. progress)) in
         % let bar-done =
-        %   Gr.rectangle (0pt, 0pt) (x, config#length#indicator-line-thickness)
-        %     |> fill config#color#indicator-done
+        %   Gr.rectangle (0pt, 0pt) (x, config#length-indicator-line-thickness)
+        %     |> fill config#color-indicator-done
         % in
         let bar-done =
-          let vert-line = Rail.init |> Rail.push-line (0pt, config#length#indicator-bar-width) in
+          let vert-line = Rail.init |> Rail.push-line (0pt, config#length-indicator-bar-height) in
           let side = Rail.(
-            circular-sector ?:(180.) (config#length#indicator-line-thickness *' 0.5)
+            circular-sector ?:(180.) (config#length-indicator-line-thickness *' 0.5)
           )
           in
           Rail.(concat [
@@ -364,14 +357,14 @@ end = struct
             side;
             vert-line |> reverse;
             side ^ 180.
-          ] |> to-loop (layout#paper-width, y -' (config#length#indicator-bar-width *' 0.5))
+          ] |> to-loop (layout#paper-width, y -' (config#length-indicator-bar-height *' 0.5))
           )
-            |> fill config#color#indicator-done
+            |> fill config#color-indicator-done
         in
 
         let bar-total =
-          Gr.rectangle (layout#paper-width -' config#length#indicator-line-thickness, 0pt) (layout#paper-width, layout#paper-height)
-            |> fill config#color#indicator-total
+          Gr.rectangle (layout#paper-width -' config#length-indicator-line-thickness, 0pt) (layout#paper-width, layout#paper-height)
+            |> fill config#color-indicator-total
         in
         [
           bar-total;
@@ -399,16 +392,16 @@ end = struct
 
       let gr-background =
         [
-          Gr.rectangle (0pt, 0pt) (relwid 1.0, relht 0.6) |> fill config#color#bg-slide-author;
-          Gr.rectangle (0pt, relht 0.5) (relwid 1.0, relht 1.0) |> fill config#color#fg;
+          Gr.rectangle (0pt, 0pt) (relwid 1.0, relht 0.6) |> fill config#color-bg-slide-author;
+          Gr.rectangle (0pt, relht 0.5) (relwid 1.0, relht 1.0) |> fill config#color-fg;
         ]
       in
 
       let gr-title =
         let ib =
           let ctx = ctx
-            |> config#font#slide-title
-            |> set-text-color config#color#bg
+            |> config#font-slide-title
+            |> set-text-color config#color-bg
           in
           let bbf ctx =
             content#title |> List.map (fun it ->
@@ -424,8 +417,8 @@ end = struct
       let gr-author =
         let ib =
           let ctx = ctx
-            |> config#font#slide-author
-            |> set-text-color config#color#bg
+            |> config#font-slide-author
+            |> set-text-color config#color-bg
           in
           let bbf ctx =
             content#author |> List.map (fun it ->
@@ -441,8 +434,8 @@ end = struct
       let gr-date =
         let ib =
           let ctx = ctx
-            |> config#font#slide-date
-            |> set-text-color config#color#bg
+            |> config#font-slide-date
+            |> set-text-color config#color-bg
           in
           let bbf ctx =
             content#date |> List.map (fun it ->
@@ -480,14 +473,14 @@ end = struct
       % タイトルのグラフィックス
       let gr-background =
         [
-          Gr.rectangle (0pt, 0pt) (relwid 1.0, title-ymin) |> fill config#color#bg-slide-section;
+          Gr.rectangle (0pt, 0pt) (relwid 1.0, title-ymin) |> fill config#color-bg-slide-section;
         ]
       in
 
       let gr-title =
         let ibf clr =
           let ctx = ctx
-            |> config#font#section-title
+            |> config#font-section-title
             |> set-text-color clr
           in
           let bbf ctx =
@@ -497,7 +490,7 @@ end = struct
           in
           embed-block-bottom ctx title-width bbf
         in
-        let gr-title = draw-text (title-xmin, title-ymin +' title-mgn) (ibf config#color#fg) in
+        let gr-title = draw-text (title-xmin, title-ymin +' title-mgn) (ibf config#color-fg) in
         let gr-title-inv =
           draw-text (0pt, title-mgn) (ibf color-mirror)
             |> mirror-transform
@@ -521,22 +514,22 @@ end = struct
           frame-master config |> Frame.embed ctx ()
       in
 
-      let title-ymin = layout#paper-height -' config#length#frame-title-height in
+      let title-ymin = layout#paper-height -' config#length-frame-title-height in
 
       let gr-separator =
-        let xleft = config#length#frame-title-left-margin in
-        let xright = layout#paper-width -' config#length#frame-title-left-margin in
-        let y = title-ymin -' config#length#frame-title-bot-margin in
-        [Gr.line (xleft, y) (xright, y) |> stroke 1pt config#color#separator]
+        let xleft = config#length-frame-title-left-margin in
+        let xright = layout#paper-width -' config#length-frame-title-left-margin in
+        let y = title-ymin -' config#length-frame-title-bot-margin in
+        [Gr.line (xleft, y) (xright, y) |> stroke 1pt config#color-separator]
       in
 
       % タイトルのブロックボックス列
       let gr-title =
         let ctx-title = ctx
-          |> config#font#frame-title
+          |> config#font-frame-title
         in
         let ib-title = read-inline ctx-title content#title in
-        [draw-text (config#length#frame-title-left-margin, title-ymin) ib-title]
+        [draw-text (config#length-frame-title-left-margin, title-ymin) ib-title]
       in
 
       % 中身のブロックボックス列
@@ -545,10 +538,10 @@ end = struct
       in
       let bb-inner =
         let ctx =
-          ctx |> config#font#normal
-              |> set-text-color config#color#fg
+          ctx |> config#font-normal
+              |> set-text-color config#color-fg
         in
-        bb-blank (config#length#frame-title-height +' config#length#frame-body-top-margin)
+        bb-blank (config#length-frame-title-height +' config#length-frame-body-top-margin)
           +++ (read-block ctx content#inner)
       in
 
@@ -628,8 +621,8 @@ end = struct
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
       SlydifiOverlay.select-from-two dcf (
-        ctx |> config#font#bold
-            |> set-text-color config#color#emph
+        ctx |> config#font-bold
+            |> set-text-color config#color-emph
       ) ctx
     in
     read-inline ctx2 it
@@ -639,7 +632,7 @@ end = struct
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
       SlydifiOverlay.select-from-two dcf (
-        ctx |> set-text-color config#color#weak
+        ctx |> set-text-color config#color-weak
       ) ctx
     in
     read-inline ctx2 it
@@ -648,7 +641,7 @@ end = struct
     let config = SlydifiParam.get config in
     let dcf = Option.from (fun _ -> true) dcf in
     let ctx2 =
-      SlydifiOverlay.select-from-two dcf (config#font#bold ctx) ctx
+      SlydifiOverlay.select-from-two dcf (config#font-bold ctx) ctx
     in
     read-inline ctx2 it
 
@@ -657,15 +650,15 @@ end = struct
     match text with
     | Some(text) ->
         let ctx =
-          ctx |> set-text-color config#color#link
+          ctx |> set-text-color config#color-link
         in
         read-inline ctx {\href(url)(text);}
     | None ->
         let text = embed-string url in
         let ctx =
           ctx
-            |> config#font#code
-            |> set-text-color config#color#link
+            |> config#font-code
+            |> set-text-color config#color-link
         in
         read-inline ctx {\href(url)(text);}
 
@@ -673,15 +666,15 @@ end = struct
     let config = SlydifiParam.get config in
     let deco (x, y) w h d =
       [
-        fill config#color#quote-line (Gr.rectangle (x, y) (x +' 6pt, y +' h))
+        fill config#color-quote-line (Gr.rectangle (x, y) (x +' 6pt, y +' h))
       ]
     in
     block-frame-breakable ctx (20pt, 0pt, 10pt, 10pt)
       (deco, deco, deco, deco)
         (fun ctx -> (
           let ctx2 = ctx
-            |> set-text-color config#color#quote
-            |> config#font#quote
+            |> set-text-color config#color-quote
+            |> config#font-quote
           in
           (read-block ctx2 bt)
         ))
@@ -696,7 +689,7 @@ end = struct
       let gr =
         Rail.(map-repeat (fun i -> edge ^ (90. *. (float i))) 4)
           |> Rail.to-loop (x +' fsize *' 0.25, y +' fsize *' 0.1)
-          |> fill config#color#bullet-dia
+          |> fill config#color-bullet-dia
       in
       [gr]
     in
@@ -712,7 +705,7 @@ end = struct
                |> push-line (0pt -' fsize *' 0.4, fsize *' 0.2)
                |> push-line (0pt, 0pt -' fsize *' 0.4)
                |> to-loop (x, y +' fsize *' 0.1)
-        ) |> fill config#color#bullet-tria
+        ) |> fill config#color-bullet-tria
       in
       [gr]
     in
@@ -727,7 +720,7 @@ end = struct
         |> line-to (xl, yd)
         |> close-with-line
     in
-    let gr (x, y) = [fill config#color#bullet-tria (path (x, y))] in
+    let gr (x, y) = [fill config#color-bullet-tria (path (x, y))] in
     inline-graphics 16pt 8pt 0pt grf
 
   let label-circ (idx :: _) ctx =
@@ -739,7 +732,7 @@ end = struct
       let r = fsize *' 0.15 in
       Gr.circle (cx, cy) r
     in
-    let gr (x, y) = [fill config#color#bullet-circ (path (x, y))] in
+    let gr (x, y) = [fill config#color-bullet-circ (path (x, y))] in
     inline-graphics 16pt 8pt 0pt (gr)
 
   let label-rule idxlst =
@@ -827,7 +820,7 @@ end = struct
     let config = SlydifiParam.get config in
     let bbf num =
       let it-num = embed-string (arabic num) in
-      let ctx = config#font#footnote ctx in
+      let ctx = config#font-footnote ctx in
         line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
     in
       FootnoteScheme.main ctx (Some(ref-label)) (fun _ -> inline-nil) bbf
@@ -862,7 +855,7 @@ end = struct
     in
     let bbf num =
       let it-num = embed-string (arabic num) in
-      let ctx = config#font#footnote ctx in
+      let ctx = config#font-footnote ctx in
         line-break false false ctx (read-inline ctx {#it-num; #it;} ++ inline-fil)
     in
       FootnoteScheme.main ctx None ibf bbf
