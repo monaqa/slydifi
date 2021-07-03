@@ -1,0 +1,244 @@
+% ANCHOR: all
+@require: class-slydifi/slydifi
+@require: class-slydifi/param
+@require: base/color-ext
+
+type my-simple-theme-config = (|
+  font : (|
+    normal : context -> context;
+    frame-title : context -> context;
+    slide-title : context -> context;
+    slide-author : context -> context;
+    slide-date : context -> context;
+    header : context -> context;
+  |);
+  color: (|
+    fg: color;
+    frame-title: color;
+
+    slide-title-bg : color;
+    slide-title-fg : color;
+    header-fg : color;
+  |);
+  header-sign : inline-text option;
+|)
+
+module SlydifiThemeMySimple: sig
+
+  % ANCHOR: signiture
+  val layout: frame-layout
+  val default-config : my-simple-theme-config
+  val config: my-simple-theme-config SlydifiParam.t
+  direct +set-config: [my-simple-theme-config] block-cmd
+  direct +with-config: [my-simple-theme-config; block-text] block-cmd
+
+  val document: inline-text?-> block-text -> document
+
+  val frame-normal: my-simple-theme-config -> ((| title: inline-text; inner: block-text |)) Frame.frame
+  val frame-slide-title: my-simple-theme-config ->
+    ((| title: inline-text list; author: inline-text list; date : inline-text list |)) Frame.frame
+
+  direct +make-title : [(| title: inline-text list; author: inline-text list; date: inline-text list |)] block-cmd
+  direct +frame : [inline-text; block-text;] block-cmd
+  % ANCHOR_END: signiture
+
+end = struct
+
+  % ANCHOR: statement
+  % ANCHOR: layout
+  let layout = (|
+    %% 紙面の横幅。
+    paper-width = 254mm;
+    %% 紙面の縦幅。
+    paper-height = 142.9mm;
+    %% 紙面の左端から、テキスト描画領域の開始点までのx軸方向の長さ。
+    text-horizontal-margin = 20pt;
+    %% 紙面の上端から、テキスト描画領域の開始点までのy軸方向の長さに関するパラメータ。
+    text-vertical-margin = 15pt;
+    %% テキスト描画領域の横幅。
+    text-width = 254mm -' 40pt;
+    %% テキスト描画領域の高さ。
+    text-height = 142.9mm -' 30pt;
+  |)
+  % ANCHOR_END: layout
+
+  let default-config =
+    let set-font-normal ctx =
+      ctx |> set-font Latin          (`fonts-noto-sans:NotoSans-Regular`, 1.0, 0.0)
+          |> set-font Kana           (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0)
+          |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0)
+    in
+    let set-font-title ctx =
+      ctx |> set-font Latin          (`fonts-noto-sans:NotoSans-Bold`, 1.0, 0.0)
+          |> set-font Kana           (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Bold`, 1.0, 0.0)
+          |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Bold`, 1.0, 0.0)
+    in
+    let set-font-metrics fsize ctx =
+      ctx |> set-font-size fsize
+          |> set-leading (fsize *' 1.4)
+          |> set-paragraph-margin (fsize *' 0.6) (fsize *' 0.6)
+    in
+    (|
+      font = (|
+        normal = (fun ctx -> ctx |> set-font-normal |> set-font-metrics 18pt);
+        frame-title = (fun ctx -> ctx |> set-font-title |> set-font-metrics 24pt);
+        slide-title = (fun ctx -> ctx |> set-font-title |> set-font-metrics 32pt);
+        slide-author = (fun ctx -> ctx |> set-font-title |> set-font-metrics 24pt);
+        slide-date = (fun ctx -> ctx |> set-font-normal |> set-font-metrics 20pt);
+        header = (fun ctx -> ctx |> set-font-title |> set-font-metrics 12pt);
+      |);
+      color = (|
+        fg = Color.of-css `#4a4a4a`;
+        frame-title = Color.of-css `#2f2f2f`;
+
+        slide-title-bg = Color.of-css `#eaeaea`;
+        slide-title-fg = Color.of-css `#2a2a6a`;
+        header-fg = Color.of-css `darkred`;
+      |);
+      header-sign = None;
+    |)
+
+  let config = SlydifiParam.make default-config
+
+  let-block +set-config user-cfg = '< +set-param(config)(user-cfg); >
+
+  let-block +with-config user-cfg bt = '< +with-param(config)(user-cfg)(bt); >
+
+  % ANCHOR: document
+  let document ?:header-sign bt =
+    let () = config |> SlydifiParam.set (|
+      (SlydifiParam.get config) with header-sign = header-sign
+    |)
+    in
+    let init-ctx ctx = ctx in
+    let hookf _ _ = () in
+    SlydifiScheme.document-scheme layout init-ctx hookf bt
+  % ANCHOR_END: document
+
+  let frame-master config =
+    let f ctx () =
+      match config#header-sign with
+      | None -> (block-nil, [])
+      | Some(sign) ->
+          let gr-header-sign =
+            let ctx = ctx
+              |> config#font#header
+              |> set-text-color config#color#header-fg
+            in
+            let ib = read-inline ctx sign in
+            let (w, h, _) = get-natural-metrics ib in
+            draw-text (layout#paper-width -' w -' 10pt, layout#paper-height -' h -' 10pt) ib
+          in
+          (block-nil, [gr-header-sign])
+    in
+    Frame.make layout f
+
+  % ANCHOR: frame-normal
+  let frame-normal config =
+    let f ctx content =
+      % frame-master の graphics list を踏襲する
+      let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
+
+      let bb-title =
+        let ctx = ctx
+          |> config#font#frame-title
+          |> set-text-color config#color#frame-title
+        in
+        let ib-title = read-inline ctx content#title in
+        line-break true true ctx (ib-title ++ inline-fil)
+      in
+      let bb-inner =
+        let ctx = ctx
+          |> config#font#normal
+          |> set-text-color config#color#fg
+        in
+        read-block ctx content#inner
+      in
+      (bb-title +++ bb-inner, gr-frame-master)
+    in
+    Frame.make layout f
+  % ANCHOR_END: frame-normal
+
+  let frame-slide-title config =
+    let f ctx content =
+      % frame-master の graphics list を踏襲する
+      let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
+
+      let xoff-title-left = layout#paper-width *' 0.1 in
+      let yoff-title-bottom = layout#paper-height *' 0.55 in
+      let yoff-title-sep = layout#paper-height *' 0.5 in
+      let yoff-author-top = layout#paper-height *' 0.45 in
+      let yoff-date-top = layout#paper-height *' 0.15 in
+      let wid-title = layout#paper-width *' 0.8 in
+
+      let gr-bg =
+        Gr.rectangle (0pt, yoff-title-sep) (layout#paper-width, layout#paper-height)
+          |> fill config#color#slide-title-bg
+      in
+
+      let gr-title =
+        let ctx = ctx
+          |> config#font#slide-title
+          |> set-text-color config#color#slide-title-fg
+        in
+        let bbf ctx =
+          content#title
+            |> List.map (fun it -> inline-fil ++ (read-inline ctx it) ++ inline-fil)
+            |> List.map (fun ib -> line-break false false ctx ib)
+            |> List.fold-left (fun acc bb -> acc +++ bb) block-nil
+        in
+        let ib = embed-block-bottom ctx wid-title bbf in
+        draw-text (xoff-title-left, yoff-title-bottom) ib
+      in
+
+      let gr-author =
+        let ctx = ctx
+          |> config#font#slide-author
+          |> set-text-color config#color#slide-title-fg
+        in
+        let bbf ctx =
+          content#author
+            |> List.map (fun it -> inline-fil ++ (read-inline ctx it) ++ inline-fil)
+            |> List.map (fun ib -> line-break false false ctx ib)
+            |> List.fold-left (fun acc bb -> acc +++ bb) block-nil
+        in
+        let ib = embed-block-top ctx wid-title bbf in
+        draw-text (xoff-title-left, yoff-author-top -' (get-font-size ctx)) ib
+      in
+
+      let gr-date =
+        let ctx = ctx
+          |> config#font#slide-date
+          |> set-text-color config#color#slide-title-fg
+        in
+        let bbf ctx =
+          content#date
+            |> List.map (fun it -> inline-fil ++ (read-inline ctx it) ++ inline-fil)
+            |> List.map (fun ib -> line-break false false ctx ib)
+            |> List.fold-left (fun acc bb -> acc +++ bb) block-nil
+        in
+        let ib = embed-block-top ctx wid-title bbf in
+        draw-text (xoff-title-left, yoff-date-top -' (get-font-size ctx)) ib
+      in
+
+      (block-nil, [[gr-bg; gr-title; gr-author; gr-date]; gr-frame-master] |> List.concat)
+    in
+    Frame.make layout f
+
+  % ANCHOR: frame-command
+  let-block ctx +make-title record =
+    read-block ctx '<
+      +SlydifiScheme.genframe(frame-slide-title (SlydifiParam.get config))(1)(record);
+    >
+
+  let-block ctx +frame title inner =
+    read-block ctx '<
+      +SlydifiScheme.genframe(frame-normal (SlydifiParam.get config))(1)(|title = title; inner = inner|);
+    >
+  % ANCHOR_END: frame-command
+  % ANCHOR_END: statement
+
+end
+
+let document = SlydifiThemeMySimple.document
+% ANCHOR_END: all

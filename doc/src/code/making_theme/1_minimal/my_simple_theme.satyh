@@ -1,0 +1,80 @@
+% ANCHOR: all
+@require: class-slydifi/slydifi
+
+module SlydifiThemeMySimple: sig
+
+  % ANCHOR: signiture
+  val layout: frame-layout
+
+  val document: block-text -> document
+
+  val frame-normal: ((| title: inline-text; inner: block-text |)) Frame.frame
+
+  direct +frame : [inline-text; block-text;] block-cmd
+  % ANCHOR_END: signiture
+
+end = struct
+
+  % ANCHOR: statement
+  % ANCHOR: layout
+  let layout = (|
+    %% 紙面の横幅。
+    paper-width = 254mm;
+    %% 紙面の縦幅。
+    paper-height = 142.9mm;
+    %% 紙面の左端から、テキスト描画領域の開始点までのx軸方向の長さ。
+    text-horizontal-margin = 20pt;
+    %% 紙面の上端から、テキスト描画領域の開始点までのy軸方向の長さに関するパラメータ。
+    text-vertical-margin = 15pt;
+    %% テキスト描画領域の横幅。
+    text-width = 254mm -' 40pt;
+    %% テキスト描画領域の高さ。
+    text-height = 142.9mm -' 30pt;
+  |)
+  % ANCHOR_END: layout
+
+  % ANCHOR: document
+  let document bt =
+    let init-ctx ctx = ctx in
+    let hookf _ _ = () in
+    SlydifiScheme.document-scheme layout init-ctx hookf bt
+  % ANCHOR_END: document
+
+  % ANCHOR: frame-normal
+  let font-slide ctx =
+    ctx |> set-font Latin          (`ipaexg`, 1.0, 0.0)
+        |> set-font Kana           (`ipaexg`, 1.0, 0.0)
+        |> set-font HanIdeographic (`ipaexg`, 1.0, 0.0)
+        |> set-font-size 18pt
+        |> set-leading 24pt
+
+  let frame-normal =
+    let f ctx content =
+      let ib-title =
+        let ctx = ctx
+          |> font-slide
+          |> set-font-size 28pt
+        in
+        read-inline ctx content#title
+      in
+      let bb-title =
+        line-break true true (font-slide ctx) (ib-title ++ inline-fil)
+      in
+      let bb-inner = read-block (font-slide ctx) content#inner in
+      (bb-title +++ bb-inner, [])
+    in
+    Frame.make layout f
+  % ANCHOR_END: frame-normal
+
+  % ANCHOR: frame-command
+  let-block ctx +frame title inner =
+    read-block ctx '<
+      +SlydifiScheme.genframe(frame-normal)(1)(|title = title; inner = inner|);
+    >
+  % ANCHOR_END: frame-command
+  % ANCHOR_END: statement
+
+end
+
+let document = SlydifiThemeMySimple.document
+% ANCHOR_END: all
