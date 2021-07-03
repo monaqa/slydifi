@@ -1,3 +1,5 @@
+% ./akasaka.saty と同じテーマを使っているが、
+% テーマの一部パラメータをユーザが書き換える例。
 % -*- coding: utf-8 -*-
 
 @require: figbox/figbox
@@ -12,9 +14,19 @@ let-inline ctx \cjk it =
   let ctx = ctx |> set-dominant-narrow-script Kana in
   read-inline ctx it
 
+let fancy-config = (|
+  SlydifiThemeAkasaka.default-config with  % 下に書いたフィールド以外はデフォルト値を使う
+    font-frame-title = (fun ctx -> ctx |> SlydifiThemeAkasaka.default-config#font-frame-title |> set-font-size 20pt);
+    color-bg = Color.of-css `lightcyan`;
+    color-emph = Color.of-css `darkred`;
+    length-frame-title-height = 28pt;
+|)
+
 in
 
 document '<
+
+  +set-config(fancy-config);
 
   +make-title(|
     title = {|\SLyDIFi; で|らくらくスライド作成|};

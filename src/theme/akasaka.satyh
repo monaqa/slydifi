@@ -96,9 +96,9 @@ end = struct
   let layout = (|
     paper-width = 254mm;
     paper-height = 142.9mm;
-    text-width = 254mm -' 60pt;
-    text-height = 142.9mm -' 30pt;
-    text-horizontal-margin = 30pt;
+    text-width = 254mm -' 40pt;
+    text-height = 142.9mm -' 20pt;
+    text-horizontal-margin = 20pt;
     text-vertical-margin = 10pt;
   |)
 
@@ -135,7 +135,7 @@ end = struct
       font-section-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 28pt];
       font-frame-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 28pt];
       font-pagenum = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
-      font-footnote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;];
+      font-footnote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
 
       color-bg = Color.of-css `#EEEEEE`;
       color-fg = Color.of-css `#222222`;
