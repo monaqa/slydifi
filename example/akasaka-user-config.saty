@@ -1,6 +1,5 @@
 % ./akasaka.saty と同じテーマを使っているが、
 % テーマの一部パラメータをユーザが書き換える例。
-% -*- coding: utf-8 -*-
 
 @require: figbox/figbox
 @require: enumitem/enumitem
