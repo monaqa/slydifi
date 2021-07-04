@@ -10,6 +10,9 @@
 @require: class-slydifi/footnote
 @require: enumitem/enumitem
 
+let () = Enumitem.item-indent-ratio |> EnumitemParam.set 1.0
+let () = Enumitem.label-width-ratio |> EnumitemParam.set 1.0
+
 type akasaka-config = (|
   font-normal : context -> context;
   font-bold : context -> context;

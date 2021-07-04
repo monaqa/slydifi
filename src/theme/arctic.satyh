@@ -41,8 +41,10 @@ type arctic-config = (|
   color-link : color;
   color-bg-code : color;
   % frame template
-  color-bg-slide-section : color;
   color-bg-slide-author : color;
+  color-fg-section-title : color;
+  color-fg-section-mirror : color;
+  color-bg-section-mirror : color;
   color-separator : color;
   color-pagenum : color;
   color-indicator-total : color;
@@ -150,6 +152,9 @@ end = struct
     text-horizontal-margin = 20pt;
     text-vertical-margin = 10pt;
   |)
+  let xrel xfloat = layout#paper-width *' xfloat
+  let yrel yfloat = layout#paper-height *' yfloat
+  let rel xfloat yfloat = (xrel xfloat, yrel yfloat)
 
 % configuration
 
@@ -207,7 +212,9 @@ end = struct
       color-bg-code = Color.of-css `#dcdfe7`;
       % frame template
       color-bg-slide-author = Color.of-css `#1e2132`;
-      color-bg-slide-section = Color.of-css `#6b7089`;
+      color-fg-section-title = Color.of-css `#33374c`;
+      color-fg-section-mirror = Color.of-css `#636983`;
+      color-bg-section-mirror = Color.of-css `#6b7089`;
       color-separator = Color.of-css `#6b7089`;
       color-pagenum = Color.of-css `#6b7089`;
       color-indicator-total = Color.of-css `#cad0de`;
@@ -311,10 +318,8 @@ end = struct
               |> set-text-color config#color-pagenum
         in
         let ib = read-inline ctx-pagenum {#it-pagenum;/#it-total;} in
-        let (wid, _, dp) = get-natural-metrics ib in
-        let x = layout#paper-width -' wid -' config#length-frame-footer-xmargin in
-        let y = dp +' config#length-frame-footer-ymargin in
-        [ draw-text (x, y) ib ]
+        let pos = (xrel 1.0 -' config#length-frame-footer-xmargin, config#length-frame-footer-ymargin) in
+        SlydifiGraphics.put-text (1., 0.) pos ib
       in
 
       let gr-section-title =
@@ -325,9 +330,8 @@ end = struct
                 |> set-text-color config#color-pagenum
           in
           let ib = read-inline ctx-pagenum it in
-          let (wid, _, dp) = get-natural-metrics ib in
-          let x = (layout#paper-width -' wid) *' 0.5 in
-          [ draw-text (x, dp +' config#length-frame-footer-ymargin) ib ]
+          let pos = (xrel 0.5, config#length-frame-footer-ymargin) in
+          SlydifiGraphics.put-text (0.5, 0.) pos ib
         else
           []
       in
@@ -342,10 +346,6 @@ end = struct
           (float-pagenum -. 1.) /. (float-total -. 1.)
         in
         let y = (layout#paper-height *' (1.0 -. progress)) in
-        % let bar-done =
-        %   Gr.rectangle (0pt, 0pt) (x, config#length-indicator-line-thickness)
-        %     |> fill config#color-indicator-done
-        % in
         let bar-done =
           let vert-line = Rail.init |> Rail.push-line (0pt, config#length-indicator-bar-height) in
           let side = Rail.(
@@ -361,15 +361,11 @@ end = struct
           )
             |> fill config#color-indicator-done
         in
-
         let bar-total =
           Gr.rectangle (layout#paper-width -' config#length-indicator-line-thickness, 0pt) (layout#paper-width, layout#paper-height)
             |> fill config#color-indicator-total
         in
-        [
-          bar-total;
-          bar-done;
-        ]
+        [ bar-total; bar-done; ]
       in
 
       (block-nil, [gr-frame-master; gr-section-title; gr-progress-bar; gr-page-number; ] |> List.concat)
@@ -381,74 +377,43 @@ end = struct
       % frame-master の graphics list を踏襲する
       let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
 
-      % 設定
-      let relwid r = layout#paper-width *' r in
-      let relht r = layout#paper-height *' r in
-      let title-width = relwid 0.8 in
-      let title-xmin = relwid 0.1 in
-      let title-ymin = relht 0.5 in
-      let date-ymax = relht 0.2 in
       let title-mgn = 24pt in
 
       let gr-background =
         [
-          Gr.rectangle (0pt, 0pt) (relwid 1.0, relht 0.6) |> fill config#color-bg-slide-author;
-          Gr.rectangle (0pt, relht 0.5) (relwid 1.0, relht 1.0) |> fill config#color-fg;
+          Gr.rectangle (0pt, 0pt) (xrel 1.0, yrel 0.6) |> fill config#color-bg-slide-author;
+          Gr.rectangle (0pt, yrel 0.5) (xrel 1.0, yrel 1.0) |> fill config#color-fg;
         ]
       in
 
       let gr-title =
-        let ib =
-          let ctx = ctx
-            |> config#font-slide-title
-            |> set-text-color config#color-bg
-          in
-          let bbf ctx =
-            content#title |> List.map (fun it ->
-              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-                |> List.fold-left (+++) block-nil
-          in
-          embed-block-bottom ctx title-width bbf
-        in
-        let (_, ht, dp) = get-natural-metrics ib in
-        draw-text (title-xmin, title-ymin +' title-mgn) ib
+        let ctx = ctx |> config#font-slide-title |> set-text-color config#color-bg in
+        let iblst = content#title |> List.map (read-inline ctx) in
+        let pos = (xrel 0.5, yrel 0.5 +' title-mgn) in
+        SlydifiGraphics.put-texts
+          (| align = (0.5, 0.0); text-align = 0.5; leading = (get-font-size ctx *' 1.6) |)
+            pos iblst
       in
 
       let gr-author =
-        let ib =
-          let ctx = ctx
-            |> config#font-slide-author
-            |> set-text-color config#color-bg
-          in
-          let bbf ctx =
-            content#author |> List.map (fun it ->
-              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-                |> List.fold-left (+++) block-nil
-          in
-          embed-block-top ctx title-width bbf
-        in
-        let (_, ht, dp) = get-natural-metrics ib in
-        draw-text (title-xmin, title-ymin -' title-mgn -' ht) ib
+        let ctx = ctx |> config#font-slide-author |> set-text-color config#color-bg in
+        let iblst = content#author |> List.map (read-inline ctx) in
+        let pos = (xrel 0.5, yrel 0.5 -' title-mgn) in
+        SlydifiGraphics.put-texts
+          (| align = (0.5, 1.0); text-align = 0.5; leading = (get-font-size ctx *' 1.6) |)
+            pos iblst
       in
 
       let gr-date =
-        let ib =
-          let ctx = ctx
-            |> config#font-slide-date
-            |> set-text-color config#color-bg
-          in
-          let bbf ctx =
-            content#date |> List.map (fun it ->
-              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-                |> List.fold-left (+++) block-nil
-          in
-          embed-block-top ctx title-width bbf
-        in
-        let (_, ht, dp) = get-natural-metrics ib in
-        draw-text (title-xmin, date-ymax -' title-mgn -' ht) ib
+        let ctx = ctx |> config#font-slide-date |> set-text-color config#color-bg in
+        let iblst = content#date |> List.map (read-inline ctx) in
+        let pos = (xrel 0.5, yrel 0.15) in
+        SlydifiGraphics.put-texts
+          (| align = (0.5, 1.0); text-align = 0.5; leading = (get-font-size ctx *' 1.6) |)
+            pos iblst
       in
 
-      (block-nil, [gr-frame-master; gr-background; [gr-title; gr-author; gr-date]] |> List.concat)
+      (block-nil, [gr-frame-master; gr-background; gr-title; gr-author; gr-date] |> List.concat)
 
     in
     Frame.make layout f
@@ -459,44 +424,32 @@ end = struct
       let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
 
       % 設定
-      let relwid r = layout#paper-width *' r in
-      let relht r = layout#paper-height *' r in
-      let title-width = layout#paper-width *' 0.8 in
-      let title-xmin = layout#paper-width *' 0.1 in
-      let title-ymin = layout#paper-height *' 0.45 in
-      let date-ymax = layout#paper-height *' 0.2 in
       let title-mgn = 24pt in
-      let color-mirror = Color.of-css `#636983` in
 
       let mirror-transform = linear-transform-graphics 1. 0.0 0. (0. -. 0.8) in
 
       % タイトルのグラフィックス
-      let gr-background =
-        [
-          Gr.rectangle (0pt, 0pt) (relwid 1.0, title-ymin) |> fill config#color-bg-slide-section;
-        ]
+      let gr-background = [
+        Gr.rectangle (0pt, 0pt) (xrel 1.0, yrel 0.45) |> fill config#color-bg-section-mirror;
+      ]
       in
 
       let gr-title =
-        let ibf clr =
-          let ctx = ctx
-            |> config#font-section-title
-            |> set-text-color clr
-          in
-          let bbf ctx =
-            content#title |> List.map (fun it ->
-              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-                |> List.fold-left (+++) block-nil
-          in
-          embed-block-bottom ctx title-width bbf
+        let grf clr =
+          let ctx = ctx |> config#font-section-title |> set-text-color clr in
+          let iblst = content#title |> List.map (read-inline ctx) in
+          SlydifiGraphics.put-texts
+            (| align = (0.5, 0.0); text-align = 0.5; leading = (get-font-size ctx *' 1.6) |)
+              (0pt, title-mgn) iblst
         in
-        let gr-title = draw-text (title-xmin, title-ymin +' title-mgn) (ibf config#color-fg) in
-        let gr-title-inv =
-          draw-text (0pt, title-mgn) (ibf color-mirror)
-            |> mirror-transform
-            |> shift-graphics (title-xmin, title-ymin)
+        let gr-title = grf config#color-fg-section-title
+          |> List.map (shift-graphics (xrel 0.5, yrel 0.45))
         in
-        [ gr-title; gr-title-inv; ]
+        let gr-title-inv = grf config#color-fg-section-mirror
+            |> List.map mirror-transform
+            |> List.map (shift-graphics (xrel 0.5, yrel 0.45))
+        in
+        [gr-title; gr-title-inv] |> List.concat
       in
 
       (block-nil, [gr-frame-master; gr-background; gr-title] |> List.concat)
@@ -545,7 +498,6 @@ end = struct
           +++ (read-block ctx content#inner)
       in
 
-
       (bb-inner, [gr; gr-separator; gr-title] |> List.concat)
 
     in
@@ -581,8 +533,6 @@ end = struct
     let bb-inner = read-block ctx inner in
     let () = section-name |> SlydifiParam.discard in
     bb-inner
-
-
 
   let-block ctx +frame ?:n-frame title inner =
     let () = page-num |> SlydifiParam.set (SlydifiParam.get page-num + 1) in
