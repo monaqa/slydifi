@@ -73,6 +73,9 @@ end = struct
     text-horizontal-margin = 20pt;
     text-vertical-margin = 10pt;
   |)
+  let xrel xfloat = layout#paper-width *' xfloat
+  let yrel yfloat = layout#paper-height *' yfloat
+  let rel xfloat yfloat = (xrel xfloat, yrel yfloat)
 
 % configuration
   let default-config =
@@ -94,7 +97,7 @@ end = struct
       font-section-title = SlydifiScheme.apply-font-cfg [default-font-conf 28pt;];
       font-frame-title = SlydifiScheme.apply-font-cfg [default-font-conf 28pt;];
       font-pagenum = SlydifiScheme.apply-font-cfg [default-font-conf 12pt;];
-      font-footnote = SlydifiScheme.apply-font-cfg [default-font-conf 10.8pt; set-leading 14.4pt; set-paragraph-margin 6pt 6pt;];
+      font-footnote = SlydifiScheme.apply-font-cfg [default-font-conf 12pt;];
       color-bg = Color.white;
     |)
 
@@ -145,57 +148,39 @@ end = struct
       let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
 
       % 設定
-      let title-width = layout#paper-width *' 0.8 in
-      let title-xmin = layout#paper-width *' 0.1 in
-      let title-ymin = layout#paper-height *' 0.45 in
-      let date-ymax = layout#paper-height *' 0.2 in
       let title-mgn = 24pt in
 
       % タイトルのグラフィックス
       let gr-title =
-        let bbs ctx =
-          content#title |> List.map (fun it ->
-            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-        in
-        let ib =
-          let ctx = ctx |> config#font-slide-title in
-          embed-block-top ctx title-width
-          (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
-        in
-        draw-text (title-xmin, title-ymin +' title-mgn) ib
+        let ctx = ctx |> config#font-slide-title in
+        let iblst = content#title |> List.map (read-inline ctx) in
+        let pos = (xrel 0.5, yrel 0.45 +' title-mgn) in
+        SlydifiGraphics.put-texts
+          (| align = (0.5, 0.0); text-align = 0.5; leading = (get-font-size ctx *' 1.6) |)
+            pos iblst
       in
 
       % 著者名のグラフィックス
       let gr-author =
-        let bbs ctx =
-          content#author |> List.map (fun it ->
-            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-        in
-        let ib =
-          let ctx = ctx |> config#font-slide-author in
-          embed-block-top ctx title-width
-          (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
-        in
-        let (_, ht, dp) = get-natural-metrics ib in
-        draw-text (title-xmin, title-ymin -' title-mgn -' ht) ib
+        let ctx = ctx |> config#font-slide-author in
+        let iblst = content#author |> List.map (read-inline ctx) in
+        let pos = (xrel 0.5, yrel 0.45 -' title-mgn) in
+        SlydifiGraphics.put-texts
+          (| align = (0.5, 1.0); text-align = 0.5; leading = (get-font-size ctx *' 1.6) |)
+            pos iblst
       in
 
       % 日付のグラフィックス
       let gr-date =
-        let bbs ctx =
-          content#date |> List.map (fun it ->
-            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-        in
-        let ib =
-          let ctx = ctx |> config#font-slide-date in
-          embed-block-top ctx title-width
-          (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
-        in
-        let (_, ht, dp) = get-natural-metrics ib in
-        draw-text (title-xmin, date-ymax -' title-mgn -' ht) ib
+        let ctx = ctx |> config#font-slide-date in
+        let iblst = content#date |> List.map (read-inline ctx) in
+        let pos = (xrel 0.5, yrel 0.2 -' title-mgn) in
+        SlydifiGraphics.put-texts
+          (| align = (0.5, 1.0); text-align = 0.5; leading = (get-font-size ctx *' 1.6) |)
+            pos iblst
       in
 
-      (block-nil, [gr-frame-master; [gr-title; gr-author; gr-date]] |> List.concat)
+      (block-nil, [gr-frame-master; gr-title; gr-author; gr-date] |> List.concat)
     in
     Frame.make layout f
 
@@ -204,28 +189,17 @@ end = struct
       % frame-master の graphics list を踏襲する
       let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
 
-      % 設定
-      let title-width = layout#paper-width *' 0.8 in
-      let title-xmin = layout#paper-width *' 0.1 in
-      let title-ymin = layout#paper-height *' 0.45 in
-      let date-ymax = layout#paper-height *' 0.2 in
-      let title-mgn = 24pt in
-
       % タイトルのグラフィックス
       let gr-title =
-        let bbs ctx =
-          content#title |> List.map (fun it ->
-            line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-        in
-        let ib =
-          let ctx = ctx |> config#font-section-title in
-          embed-block-top ctx title-width
-          (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
-        in
-        draw-text (title-xmin, title-ymin +' title-mgn) ib
+        let ctx = ctx |> config#font-section-title in
+        let iblst = content#title |> List.map (read-inline ctx) in
+        let pos = (xrel 0.5, yrel 0.5) in
+        SlydifiGraphics.put-texts
+          (| align = (0.5, 0.5); text-align = 0.5; leading = (get-font-size ctx *' 1.6) |)
+            pos iblst
       in
 
-      (block-nil, [gr-frame-master; [gr-title]] |> List.concat)
+      (block-nil, [gr-frame-master; gr-title] |> List.concat)
     in
     Frame.make layout f
 

@@ -104,6 +104,9 @@ end = struct
     text-horizontal-margin = 20pt;
     text-vertical-margin = 10pt;
   |)
+  let xrel xfloat = layout#paper-width *' xfloat
+  let yrel yfloat = layout#paper-height *' yfloat
+  let rel xfloat yfloat = (xrel xfloat, yrel yfloat)
 
 % configuration
   let default-config =
@@ -213,10 +216,8 @@ end = struct
         let it-total = embed-string total in
         let ctx-pagenum = config#font-pagenum ctx in
         let ib = read-inline ctx-pagenum {#it-pagenum;/#it-total;} in
-        let (wid, _, dp) = get-natural-metrics ib in
-        let x = layout#paper-width -' wid -' 10pt in
-        let y = dp +' 12pt in
-        [ draw-text (x, y) ib ]
+        let pos = (xrel 1.0 -' 10pt, 12pt) in
+        SlydifiGraphics.put-text (1., 0.) pos ib
       in
 
       (block-nil, [gr-frame-master; gr-page-number; ] |> List.concat)
@@ -228,75 +229,41 @@ end = struct
       % frame-master の graphics list を踏襲する
       let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
 
-      % 設定
-      let relwid r = layout#paper-width *' r in
-      let relht r = layout#paper-height *' r in
-      let title-width = relwid 0.8 in
-      let title-xmin = relwid 0.1 in
-      let title-ymin = relht 0.45 in
       let title-mgn = 24pt in
-      let date-ymax = relht 0.2 in
 
-      let gr-bgs =
-        [
-          Gr.rectangle (0pt, title-ymin) (relwid 1.0, relht 1.0)
-            |> fill config#color-title;
-        ]
+      let gr-bgs = [
+        Gr.rectangle (0pt, yrel 0.45) (xrel 1.0, yrel 1.0) |> fill config#color-title;
+      ]
       in
 
       let gr-title =
-        let ib =
-          let ctx = ctx
-            |> config#font-slide-title
-            |> set-text-color config#color-bg
-          in
-          let bbf ctx =
-            content#title |> List.map (fun it ->
-              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-                |> List.fold-left (+++) block-nil
-          in
-          embed-block-bottom ctx title-width bbf
-        in
-        let (_, ht, dp) = get-natural-metrics ib in
-        draw-text (title-xmin, title-ymin +' title-mgn) ib
+        let ctx = ctx |> config#font-slide-title |> set-text-color config#color-bg in
+        let iblst = content#title |> List.map (read-inline ctx) in
+        let pos = (xrel 0.5, yrel 0.45 +' title-mgn) in
+        SlydifiGraphics.put-texts
+          (| align = (0.5, 0.0); text-align = 0.5; leading = (get-font-size ctx *' 1.6) |)
+            pos iblst
       in
 
       let gr-author =
-        let ib =
-          let ctx = ctx
-            |> config#font-slide-author
-            |> set-text-color config#color-fg
-          in
-          let bbf ctx =
-            content#author |> List.map (fun it ->
-              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-                |> List.fold-left (+++) block-nil
-          in
-          embed-block-top ctx title-width bbf
-        in
-        let (_, ht, dp) = get-natural-metrics ib in
-        draw-text (title-xmin, title-ymin -' title-mgn -' ht) ib
+        let ctx = ctx |> config#font-slide-author |> set-text-color config#color-fg in
+        let iblst = content#author |> List.map (read-inline ctx) in
+        let pos = (xrel 0.5, yrel 0.45 -' title-mgn) in
+        SlydifiGraphics.put-texts
+          (| align = (0.5, 1.0); text-align = 0.5; leading = (get-font-size ctx *' 1.6) |)
+            pos iblst
       in
 
       let gr-date =
-        let ib =
-          let ctx = ctx
-            |> config#font-slide-date
-            |> set-text-color config#color-fg
-          in
-          let bbf ctx =
-            content#date |> List.map (fun it ->
-              line-break true true ctx (inline-fil ++ (read-inline ctx it) ++ inline-fil))
-                |> List.fold-left (+++) block-nil
-          in
-          embed-block-top ctx title-width bbf
-        in
-        let (_, ht, dp) = get-natural-metrics ib in
-        draw-text (title-xmin, date-ymax -' title-mgn -' ht) ib
+        let ctx = ctx |> config#font-slide-date |> set-text-color config#color-fg in
+        let iblst = content#date |> List.map (read-inline ctx) in
+        let pos = (xrel 0.5, yrel 0.2) in
+        SlydifiGraphics.put-texts
+          (| align = (0.5, 1.0); text-align = 0.5; leading = (get-font-size ctx *' 1.6) |)
+            pos iblst
       in
 
-      (block-nil, [gr-frame-master; gr-bgs; [gr-title; gr-author; gr-date]] |> List.concat)
-
+      (block-nil, [gr-frame-master; gr-bgs; gr-title; gr-author; gr-date] |> List.concat)
     in
     Frame.make layout f
 
@@ -306,23 +273,20 @@ end = struct
       let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
 
       % 設定
-      let relwid r = layout#paper-width *' r in
-      let relht r = layout#paper-height *' r in
-      let title-width = layout#paper-width *' 0.8 in
-      let title-xmin = layout#paper-width *' 0.1 in
-      let title-xmax = layout#paper-width *' 0.1 +' 5pt in
-      let title-ymin = layout#paper-height *' 0.45 in
-      let title-ymax = layout#paper-height *' 0.45 +' 5pt in
       let title-mgn = 24pt in
-      let color-mirror = Color.of-css `#636983` in
+      let ribbon-width = 5pt in
+      let hribbon-t = yrel 0.45 in
+      let hribbon-b = yrel 0.45 -' ribbon-width in
+      let vribbon-r = xrel 0.1 in
+      let vribbon-l = xrel 0.1 -' ribbon-width in
 
       % タイトルのグラフィックス
       let gr-bgs =
-        let north-rect = Gr.rectangle (title-xmin, title-ymax) (title-xmax, relht 1.00) in
-        let south-rect = Gr.rectangle (title-xmin, title-ymin) (title-xmax, relht 0.00) in
-        let east-rect  = Gr.rectangle (title-xmax, title-ymin) (relwid 1.00, title-ymax) in
-        let west-rect  = Gr.rectangle (title-xmin, title-ymin) (relwid 0.00, title-ymax) in
-        let cent-rect  = Gr.rectangle (title-xmin, title-ymin) (title-xmax, title-ymax) in
+        let north-rect = Gr.rectangle (vribbon-l, hribbon-t) (vribbon-r, yrel 1.00) in
+        let south-rect = Gr.rectangle (vribbon-l, hribbon-b) (vribbon-r, yrel 0.00) in
+        let east-rect  = Gr.rectangle (vribbon-r, hribbon-b) (xrel 1.00, hribbon-t) in
+        let west-rect  = Gr.rectangle (vribbon-l, hribbon-b) (xrel 0.00, hribbon-t) in
+        let cent-rect  = Gr.rectangle (vribbon-l, hribbon-b) (vribbon-r, hribbon-t) in
 
         [
           fill config#color-section-ribbon north-rect;
@@ -334,22 +298,12 @@ end = struct
       in
 
       let gr-titles =
-        let bbs ctx =
-          content#title |> List.map (fun it ->
-            line-break true true ctx ((read-inline ctx it) ++ inline-fil))
-        in
-        let ibf clr =
-          let ctx = ctx
-            |> config#font-section-title
-            |> set-text-color clr
-          in
-          embed-block-bottom ctx title-width
-          (fun ctx -> (bbs ctx |> List.fold-left (+++) block-nil))
-        in
-        let gr-title = draw-text (title-xmin +' title-mgn, title-ymin +' title-mgn) (ibf config#color-fg) in
-        [
-          gr-title;
-        ]
+        let ctx = ctx |> config#font-section-title |> set-text-color config#color-fg in
+        let iblst = content#title |> List.map (read-inline ctx) in
+        let pos = (xrel 0.1 +' title-mgn, yrel 0.45 +' title-mgn) in
+        SlydifiGraphics.put-texts
+          (| align = (0.0, 0.0); text-align = 0.0; leading = (get-font-size ctx *' 1.6) |)
+            pos iblst
       in
 
       (block-nil, [gr-frame-master; gr-bgs; gr-titles] |> List.concat)
