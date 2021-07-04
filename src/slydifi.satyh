@@ -55,8 +55,8 @@ module SlydifiScheme: sig
 % common commands
   direct +p: [(int -> bool)?; inline-text] block-cmd
 
-  direct \ctx : [(int -> bool)?; (context -> context); inline-text] inline-cmd
-  direct +ctx : [(int -> bool)?; (context -> context); block-text] block-cmd
+  direct \ctx : [(int -> bool)?; (context -> context) list; inline-text] inline-cmd
+  direct +ctx : [(int -> bool)?; (context -> context) list; block-text] block-cmd
 
   direct \br: [] inline-cmd
   direct \text-color: [(int -> bool)?; color; inline-text] inline-cmd
@@ -198,13 +198,19 @@ end = struct
     in
     inline-frame-breakable (0pt, 0pt, 0pt, 0pt) (pad, pad, pad, pad) ib
 
-  let-inline ctx \ctx ?:dcf ctxf it =
+  let-inline ctx \ctx ?:dcf ctxflst it =
     let dcf = Option.from (fun _ -> true) dcf in
-    read-inline (SlydifiOverlay.select-from-two dcf (ctxf ctx) ctx) it
+    let new-ctx =
+      ctxflst |> List.fold-left (fun acc ctxf -> ctxf acc) ctx
+    in
+    read-inline (SlydifiOverlay.select-from-two dcf new-ctx ctx) it
 
-  let-block  ctx +ctx ?:dcf ctxf bt =
+  let-block  ctx +ctx ?:dcf ctxflst bt =
     let dcf = Option.from (fun _ -> true) dcf in
-    read-block (SlydifiOverlay.select-from-two dcf (ctxf ctx) ctx) bt
+    let new-ctx =
+      ctxflst |> List.fold-left (fun acc ctxf -> ctxf acc) ctx
+    in
+    read-block (SlydifiOverlay.select-from-two dcf new-ctx ctx) bt
 
   let-block ctx +show-in-order btlst =
     let ghost-btlst = btlst |> List.mapi ( fun idx bt ->(
