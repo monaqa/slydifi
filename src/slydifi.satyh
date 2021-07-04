@@ -214,7 +214,7 @@ end = struct
 
   let-block ctx +show-in-order btlst =
     let ghost-btlst = btlst |> List.mapi ( fun idx bt ->(
-      let dcf = SlydifiOverlay.after (idx + 1) in
+      let dcf = SlydifiOverlay.from (idx + 1) in
       SlydifiOverlay.ghost-block dcf (read-block ctx bt)))
     in
     ghost-btlst |> List.fold-left (+++) block-nil

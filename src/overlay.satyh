@@ -1,5 +1,6 @@
 @require: list
 @require: figbox/figbox
+@require: base/fn
 @import: param
 @import: frame
 
@@ -53,12 +54,12 @@ module SlydifiOverlay : sig
   direct \show-layer : [] inline-cmd
 
   % レイヤーの表示条件 (display-condition) を作成するのに便利な関数．
+  val non: (int -> bool) -> int -> bool
   val only: int -> int -> bool
-  val elsewhen: int -> int -> bool
-  val till: int -> int -> bool
-  val after: int -> int -> bool
-  val during: int -> int -> int -> bool
-  val in-case: int list -> int -> bool
+  val until: int -> int -> bool
+  val from: int -> int -> bool
+  val between: int -> int -> int -> bool
+  val on-slides: int list -> int -> bool
 
   % figbox
   val fig-ghost: (int -> bool) -> FigBox.figbox -> FigBox.figbox
@@ -133,13 +134,13 @@ end = struct
   let-inline \select dcf it-true it-false = select-from-two dcf it-true it-false
   let-block +select dcf bt-true bt-false = select-from-two dcf bt-true bt-false
 
+  let non = Fn.non
   let only n n-layer = (n-layer == n)
-  let elsewhen n n-layer = not (n-layer == n)
-  let till n n-layer = (n-layer <= n)
-  let after n n-layer = (n-layer >= n)
-  let during m n n-layer = (n-layer >= m) && (n-layer <= n)
+  let until n n-layer = (n-layer <= n)
+  let from n n-layer = (n-layer >= n)
+  let between m n n-layer = (n-layer >= m) && (n-layer <= n)
 
-  let in-case nlst n-layer =
+  let on-slides nlst n-layer =
     nlst |> List.map (fun n -> n-layer == n)
          |> List.fold-left ( || ) false
 
