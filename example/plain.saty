@@ -6,6 +6,10 @@
 open FigBox
 open SlydifiOverlay
 
+let-inline ctx \cjk it =
+  let ctx = ctx |> set-dominant-narrow-script Kana in
+  read-inline ctx it
+
 in
 
 document '<
@@ -69,12 +73,12 @@ document '<
     +frame?:(4){オーバーレイの例 (\show-layer;/4)}<
       +p{この段落は常に表示される．}
       +p?:(till 2){
-        ① オプション引数を指定して，今何枚目かに応じて表示を出し分けられる．
+        \cjk{① } オプション引数を指定して，今何枚目かに応じて表示を出し分けられる．
         この段落は 1, 2 枚目のとき\emph?:(only 2){のみ}表示される段落．
       }
-      +p?:(during 2 3){② これは 2, 3 枚目のときのみ表示される段落．}
-      +p?:(elsewhen 3){③ これは 3枚目以外のときに表示される段落．}
-      +p?:(in-case [1; 4]){④ これは 1, 4 枚目のときのみ表示される段落．}
+      +p?:(during 2 3){\cjk{② } これは 2, 3 枚目のときのみ表示される段落．}
+      +p?:(elsewhen 3){\cjk{③ } これは 3枚目以外のときに表示される段落．}
+      +p?:(in-case [1; 4]){\cjk{④ } これは 1, 4 枚目のときのみ表示される段落．}
       +p{下の図は 2 枚目以降2枚表示される．}
       +fig-center(
         hconcat ?:0.5 [

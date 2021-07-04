@@ -219,7 +219,10 @@ end = struct
       in
 
       % 中身のブロックボックス列
-      let bb-inner = read-block ctx content#inner in
+      let bb-inner =
+        let ctx = ctx |> config#font-normal in
+        read-block ctx content#inner
+      in
 
       (bb-title +++ bb-inner, gr)
 

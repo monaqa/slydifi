@@ -326,18 +326,17 @@ end = struct
 
       % タイトルのブロックボックス列
       let gr-title =
-        let ctx-title = ctx
-          |> config#font-frame-title
-        in
+        let ctx-title = ctx |> config#font-frame-title in
         let ib-title = read-inline ctx-title content#title in
         [draw-text (config#length-frame-title-left-margin, title-ymin) ib-title]
       in
 
       % 中身のブロックボックス列
-      let bb-blank skip =
-        line-break false false (ctx |> set-paragraph-margin 0pt skip) inline-nil
-      in
       let bb-inner =
+        let ctx = ctx |> config#font-normal in
+        let bb-blank skip =
+          line-break false false (ctx |> set-paragraph-margin 0pt skip) inline-nil
+        in
         bb-blank (config#length-frame-title-height +' config#length-frame-body-top-margin)
           +++ (read-block ctx content#inner)
       in
