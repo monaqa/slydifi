@@ -50,7 +50,6 @@ type hakodate-config = (|
   length-frame-title-left-margin : length;
   length-frame-title-bot-margin : length;
   length-frame-body-top-margin : length;
-  length-title-padding-lr : length;
   length-title-line-width : length;
 |)
 
@@ -188,7 +187,6 @@ end = struct
       length-frame-title-left-margin = 12pt;
       length-frame-title-bot-margin = 10pt;
       length-frame-body-top-margin = 15pt;
-      length-title-padding-lr = 12pt;  % タイトルの左右のパディング（紙面基準）
       length-title-line-width = 3pt;  % タイトルの下線とタイトル文字の間隔
     |)
 

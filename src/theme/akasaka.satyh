@@ -38,10 +38,6 @@ type akasaka-config = (|
   length-frame-title-left-margin : length;
   length-frame-title-bot-margin : length;
   length-frame-body-top-margin : length;
-  length-title-padding-lr : length;
-  length-title-padding-upper-line : length;
-  length-title-padding-lower-line : length;
-  length-title-line-width : length;
 |)
 
 
@@ -156,10 +152,6 @@ end = struct
       length-frame-title-left-margin = 10pt;
       length-frame-title-bot-margin = 10pt;
       length-frame-body-top-margin = 14pt;
-      length-title-padding-lr = 12pt;  % タイトルの左右のパディング（紙面基準）
-      length-title-padding-upper-line = 5pt;  % タイトルの下線とタイトル文字の間隔
-      length-title-padding-lower-line = 0pt;  % タイトルの下線と本文の間隔
-      length-title-line-width = 3pt;  % タイトルの下線とタイトル文字の間隔
     |)
 
   let config = SlydifiParam.make default-config
