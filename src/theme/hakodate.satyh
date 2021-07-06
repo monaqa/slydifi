@@ -153,7 +153,7 @@ end = struct
     in
 
     (|
-      font-normal = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 18pt];
+      font-normal = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 20pt];
       font-bold = SlydifiScheme.apply-font-cfg [bold-font];
       font-code = SlydifiScheme.apply-font-cfg [code-font];
       font-slide-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 32pt];
@@ -199,10 +199,7 @@ end = struct
 
   let-inline ctx \code code =
     let config = SlydifiParam.get config in
-    let ctx =
-      ctx |> config#font-code
-          |> set-text-color config#color-fg
-    in
+    let ctx = ctx |> config#font-code in
     let fsize = get-font-size ctx in
 
     script-guard Latin (read-inline ctx (embed-string code))
