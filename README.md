@@ -142,6 +142,14 @@ And note that, the font settings can be changed freely, too.
 
 A COOL theme based on the colors of [iceberg.vim](https://github.com/cocopon/iceberg.vim).
 
+```
+@require: class-slydifi/theme/arctic
+```
+
+[![example-arctic.png](fig/example-arctic.png)](example/arctic.pdf)
+
+See [here](example/arctic.pdf) for further examples.
+
 The default settings also require a [Noto Sans](https://www.google.com/get/noto/) type font, but you can change the font settings in the document file.
 
 ### Changing Configuration
