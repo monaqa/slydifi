@@ -1,0 +1,120 @@
+% ANCHOR: all
+@require: class-slydifi/slydifi
+@require: class-slydifi/param
+@require: base/option-ext
+
+type my-simple-theme-config = (|
+  font : (|
+    normal : context -> context;
+    frame-title : context -> context;
+  |);
+  color: (|
+    fg: color;
+    frame-title: color;
+  |)
+|)
+
+module SlydifiThemeMySimple: sig
+
+  % ANCHOR: signiture
+  val layout: frame-layout
+  val default-config : my-simple-theme-config
+  val config: my-simple-theme-config SlydifiParam.t
+  direct +set-config: [my-simple-theme-config] block-cmd
+  direct +with-config: [my-simple-theme-config; block-text] block-cmd
+
+  val document: block-text -> document
+
+  val frame-normal: my-simple-theme-config -> ((| title: inline-text; inner: block-text |)) Frame.frame
+
+  direct +frame : [inline-text; block-text;] block-cmd
+  % ANCHOR_END: signiture
+
+end = struct
+
+  % ANCHOR: statement
+  % ANCHOR: layout
+  let layout = (|
+    %% 紙面の横幅。
+    paper-width = 254mm;
+    %% 紙面の縦幅。
+    paper-height = 142.9mm;
+    %% 紙面の左端から、テキスト描画領域の開始点までのx軸方向の長さ。
+    text-horizontal-margin = 20pt;
+    %% 紙面の上端から、テキスト描画領域の開始点までのy軸方向の長さに関するパラメータ。
+    text-vertical-margin = 15pt;
+    %% テキスト描画領域の横幅。
+    text-width = 254mm -' 40pt;
+    %% テキスト描画領域の高さ。
+    text-height = 142.9mm -' 30pt;
+  |)
+  % ANCHOR_END: layout
+
+  let default-config =
+    let default-font fsize ctx =
+      ctx |> set-font Latin          (`ipaexg`, 1.0, 0.0)
+          |> set-font Kana           (`ipaexg`, 1.0, 0.0)
+          |> set-font HanIdeographic (`ipaexg`, 1.0, 0.0)
+          |> set-font-size fsize
+          |> set-leading (fsize *' 1.4)
+          |> set-paragraph-margin (fsize *' 0.6) (fsize *' 0.6)
+    in
+    (|
+      font = (|
+        normal = default-font 18pt;
+        frame-title = default-font 24pt;
+      |);
+      color = (|
+        fg = Color.of-css `#4a4a4a`;
+        frame-title = Color.of-css `#2f2f2f`;
+      |);
+    |)
+
+  let config = SlydifiParam.make default-config
+
+  let-block +set-config user-cfg = '< +set-param(config)(user-cfg); >
+
+  let-block +with-config user-cfg bt = '< +with-param(config)(user-cfg)(bt); >
+
+  % ANCHOR: document
+  let document bt =
+    let init-ctx ctx = ctx in
+    let hookf _ _ = () in
+    SlydifiScheme.document-scheme layout init-ctx hookf bt
+  % ANCHOR_END: document
+
+  % ANCHOR: frame-normal
+  let frame-normal config =
+    let f ctx content =
+      let bb-title =
+        let ctx = ctx
+          |> config#font#frame-title
+          |> set-text-color config#color#frame-title
+        in
+        let ib-title = read-inline ctx content#title in
+        line-break true true ctx (ib-title ++ inline-fil)
+      in
+      let bb-inner =
+        let ctx = ctx
+          |> config#font#normal
+          |> set-text-color config#color#fg
+        in
+        read-block ctx content#inner
+      in
+      (bb-title +++ bb-inner, [])
+    in
+    Frame.make layout f
+  % ANCHOR_END: frame-normal
+
+  % ANCHOR: frame-command
+  let-block ctx +frame title inner =
+    read-block ctx '<
+      +SlydifiScheme.genframe(frame-normal (SlydifiParam.get config))(1)(|title = title; inner = inner|);
+    >
+  % ANCHOR_END: frame-command
+  % ANCHOR_END: statement
+
+end
+
+let document = SlydifiThemeMySimple.document
+% ANCHOR_END: all

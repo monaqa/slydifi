@@ -21,24 +21,18 @@ satyrographos install
 適当なディレクトリ下で，以下のように記述された `minimum.saty` を用意してください:
 
 ```
-@require: code
-@require: annot
-@require: list
 @require: class-slydifi/theme/plain
 
-SlydifiPlain.document(|
-  draft-mode = false;
-|)'<
+document '<
   +frame{\SLyDIFi; のテスト}<
     +p{Hello, \SLyDIFi;!}
   >
 >
 ```
 
-これで SATySFi を走らせて以下のような PDF が生成されたら，正常に動いています
-（必要なフォントは適宜準備してください）．
+これで SATySFi を走らせて以下のような PDF が生成されたら，正常に動いています．
 
-![slydifi-test](fig/slydifi-test.jpg)
+![slydifi-test](fig/slydifi-test.png)
 
 ## Gitpodを使ったデモ
 
@@ -75,11 +69,13 @@ SLyDIFi は以下の機能を有しています．
 * 図表の挿入
 * 脚注の挿入
 
-また，インラインテキストマークアップとして以下のコマンドを用意しています．
+また，インラインテキストマークアップとして以下のコマンドを用意しています（テーマによって異なる場合があります）．
 
-* ``\textbf``
 * ``\emph``
 * ``\link``
+* ``\text-color``
+* ``\uline``
+* ``\stroke``
 
 ### テーマの選択と変更
 
@@ -94,82 +90,49 @@ SLyDIFi はテーマの変更に対応しています．
 
 装飾のないシンプルなテーマ．
 
-![plain-title](fig/plain-title.jpg)
-
-![plain-section](fig/plain-section.jpg)
-
-![plain-frame](fig/plain-frame.jpg)
-
-以下のように記述すれば用いることが出来ます:
-
 ```
 @require: class-slydifi/theme/plain
-
-SlydifiPlain.document(|
-  draft-mode = false;
-|)'<
-
-（本文）
-
->
 ```
+
+[![example-plain.png](fig/example-plain.png)](example/plain.pdf)
+
+より詳しいスライドの例は [こちら](example/plain.pdf) をご覧ください。
 
 #### Hakodate
 
 [Gruvbox](https://github.com/gruvbox-community/gruvbox)
 の色をベースにしたテーマ．
 
-![hakodate-title](fig/hakodate-title.jpg)
-
-![hakodate-section](fig/hakodate-section.jpg)
-
-![hakodate-frame](fig/hakodate-frame.jpg)
-
-以下のように記述すれば用いることが出来ます:
-
 ```
 @require: class-slydifi/theme/hakodate
-
-SlydifiHakodate.document(|
-  draft-mode = false;
-|)'<
-
-（本文）
-
->
 ```
 
-使用するには [M+ フォント](https://mplus-fonts.osdn.jp/about.html)
-のインストールと，hash ファイルによる紐付けが必要です．
-このあたりはいずれ別途パッケージ化するかもしれません．
+[![example-hakodate.png](fig/example-hakodate.png)](example/hakodate.pdf)
 
+より詳しいスライドの例は [こちら](example/hakodate.pdf) をご覧ください。
+
+デフォルトの設定では [M+ フォント](https://mplus-fonts.osdn.jp/about.html) を使用しているため、
+システムに M+ フォントをインストールした上で以下を実行する必要があります。
+
+```
+satyrographos install --system-font-prefix 'system:'
+```
+
+ただし、フォントの設定は文書ファイル内で自由に変更することができます。
 
 #### Akasaka
 
 灰色のスタンダードなテーマ．
 
-![akasaka-title](fig/akasaka-title.jpg)
-
-![akasaka-section](fig/akasaka-section.jpg)
-
-![akasaka-frame](fig/akasaka-frame.jpg)
-
-以下のように記述すれば用いることが出来ます:
-
 ```
 @require: class-slydifi/theme/akasaka
-
-SlydifiAkasaka.document(|
-  draft-mode = false;
-  header-text = {（ヘッダに付与したいテキスト）};
-|)'<
-
-（本文）
-
->
 ```
 
-使用するには [Noto Sans](https://www.google.com/get/noto/) 系のフォント
+[![example-akasaka.png](fig/example-akasaka.png)](example/akasaka.pdf)
+
+より詳しいスライドの例は [こちら](example/akasaka.pdf) をご覧ください。
+
+デフォルトの設定で使用するには [Noto Sans](https://www.google.com/get/noto/) 系のフォント
 （Noto Sans 及び Noto Sans CJK JP）
 のインストールと，hash ファイルによる紐付けが必要です．
 これは既に satyrographos に登録されており，以下のコマンドでインストール可能です:
@@ -180,12 +143,60 @@ opam install satysfi-fonts-noto-sans-cjk-jp
 satyrographos install
 ```
 
-詳細は
+上記パッケージについての詳細は
 [SATySFi-fonts-noto-sans](https://github.com/zeptometer/SATySFi-fonts-noto-sans)
 及び
 [SATySFi-fonts-noto-sans-cjk-jp](https://github.com/zeptometer/SATySFi-fonts-noto-sans-cjk-jp)
 を参照．
+また、フォントの設定は文書ファイル内で自由に変更することができます。
 
+#### Arctic
+
+[iceberg.vim](https://github.com/cocopon/iceberg.vim) の色をベースにした、涼しい印象のテーマ。
+
+```
+@require: class-slydifi/theme/arctic
+```
+
+[![example-arctic.png](fig/example-arctic.png)](example/arctic.pdf)
+
+より詳しいスライドの例は [こちら](example/arctic.pdf) をご覧ください。
+
+こちらもデフォルトの設定では [Noto Sans](https://www.google.com/get/noto/) 系のフォントが必要ですが、
+フォント設定は文書ファイル内で変更できます。
+
+### 設定変更
+
+各テーマにはいくつか設定可能なパラメータがあり、
+文書ファイル内でいくつかの設定値を変更することができます。主に
+
+- フォント（書体、サイズなど）
+- 色（文字色、背景色など）
+- 長さ（紙面とフッタの間など）
+
+といった設定値を操作することが可能です。たとえば Akasaka テーマでは
+
+```
+@require: class-slydifi/theme/akasaka
+
+document '<
+
+  +set-config(|
+    SlydifiThemeAkasaka.default-config with  % 下に書いたフィールド以外はデフォルト値を使う
+      font-frame-title = (fun ctx -> ctx |> SlydifiThemeAkasaka.default-config#font-frame-title |> set-font-size 20pt);
+      color-bg = Color.of-css `lightcyan`;
+      color-emph = Color.of-css `darkred`;
+      length-frame-title-height = 28pt;
+  |);
+
+  +frame{フレーム}<
+    ...
+  >
+>
+```
+
+のように書くことで、フレームのタイトルのフォントサイズやスライドの背景色といった要素を変更することができます。
+詳しい例は [こちら](example/akasaka-user-config.saty) をご覧ください。
 
 ## ToDo
 

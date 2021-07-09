@@ -3,7 +3,7 @@
 
 (library
   (name "class-slydifi")
-  (version "0.3.1")
+  (version "0.4.0")
   (sources
     ((packageDir "src")
      ))
@@ -12,11 +12,12 @@
     ((enumitem ())
      (figbox ())
      (base ())
+     (railway ())
      )))
 
 (libraryDoc
   (name "class-slydifi-doc")
-  (version "0.3.1")
+  (version "0.4.0")
   (workingDirectory "doc")
   (build
     ((satysfi "slydifi.saty" "-o" "slydifi.pdf")))

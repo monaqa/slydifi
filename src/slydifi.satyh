@@ -1,286 +1,160 @@
+@require: pervasives
 @require: gr
-@require: math
-@require: list
-@require: annot
+@require: base/float
+@require: base/eq
+@require: base/map
+@import: frame
+@import: param
+@import: graphics
+@import: overlay
+@import: footnote
 
-@require: figbox/figbox
+%% フォント設定記述方法。
+%% [set-font-size 12pt; set-text-color Color.blue] みたいな感じで書く。
+type font-config = (context -> context) list
 
-@import: functions/color
-@import: functions/param
-@import: functions/footnote
-@import: functions/overlay
-
-% global 型設定
-
-% 紙面の設定を引き渡す際に用いるレコード型．
-type config-paper = (|
-  width  : length;
-  height : length;
-|)
-
-% フォントの設定を引き渡す際に用いるレコード型．
-type config-font = (|
-  size: length;
-  font-latin: string * float * float;
-  font-cjk: string * float * float;
-  par-margin-ratio : float * float;  % フォントサイズに対する段落間空白（上下）の比．
-  leading-ratio : float;  % フォントサイズに対する行送りの比．
-|)
-
-% pbInfo の型．
-type page-info = (|
-  page-number: int;
-|)
-
-% header と footer の型．
-type headerfooter = page-info -> block-boxes
-
-let-inline ctx \SLyDIFi =
-  let size = get-font-size ctx in
-  let f = read-inline ctx in
-  let fd = ctx |> set-manual-rising (0pt -' (size *' 0.25)) |> read-inline in
-  let fI = ctx |> set-font-size (size *' 0.72)
-               |> set-manual-rising (size *' 0.2)
-               |> read-inline
+%% 色の内分。 RGB で計算するだけ。
+let color-inner ?:ratio clr1 clr2 =
+  let ratio = ratio |> Option.from 0.5 in
+  let (r1, g1, b1) = match clr1 with
+    | Gray(x) -> ( x, x, x )
+    | RGB(r, g, b) -> (r, g, b)
   in
-  let ib = 
-    f {SL} ++ kern(size *' 0.05) ++ fd{Y} ++ kern(size *' 0.03) ++ f{DIF}
-      ++ kern(size *' 0.05) ++ fd{I}
+  let (r2, g2, b2) = match clr2 with
+    | Gray(x) -> ( x, x, x )
+    | RGB(r, g, b) -> (r, g, b)
   in
-  script-guard Latin (no-break ib)
+  let (r, g, b) =
+    (
+      r1 *. ratio +. r2 *. (1. -. ratio) |> Float.max 0. |> Float.min 1.,
+      g1 *. ratio +. g2 *. (1. -. ratio) |> Float.max 0. |> Float.min 1.,
+      b1 *. ratio +. b2 *. (1. -. ratio) |> Float.max 0. |> Float.min 1.
+    )
+  in
+  RGB(r, g, b)
 
+%% SLyDIFi のすべてのテーマの元となる scheme。
 module SlydifiScheme: sig
 
-  val set-font-config : config-font -> context -> context
-  val set-fonts       : config-font -> context -> context
+  %% スライド作成用の document 関数を生成する。
+  %% Parameters:
+  %%   layout (frame-layout): フレーム全体に関係するレイアウト。
+  %%   init-ctx (context -> context): 文書全体にかけるテキスト処理文脈の変換関数。
+  %%   hookf ((|page-number : int|) -> (length * length) -> unit):
+  %%     フック関数。スライドの最後に起動する。ページの総数を受け取りたい場合などに便利。
+  %%   inner (block-text): スライド本体のブロックテキスト。
+  val document-scheme: frame-layout -> (context -> context) -> ((|page-number : int|) -> (length * length) -> unit) -> block-text -> document
 
-  val get-standard-context : 'config-text -> 'config-color -> length -> context
-    constraint 'config-text :: (|normal: config-font;|)
-    constraint 'config-color :: (|fg: color;|)
+  %% font-config を受け取り、特定の context を context に変換する。
+  val apply-font-cfg : font-config -> context -> context
 
-  val clear-page-or-nil : bool ref -> block-boxes
-  val put-text : (length * length) -> (float * float) -> inline-boxes -> graphics
+  val +genframe: ['content Frame.frame; int; 'content] block-cmd
+  val +namedframe: ['content Frame.frame; string; 'content] block-cmd
+  val +againframe: [int?; string] block-cmd
 
-  val document-scheme :
-    config-paper -> 'config-text -> 'config-color -> 'config-spacing
-    -> headerfooter -> headerfooter -> block-text -> document
-    constraint 'config-text :: (| normal: config-font; |)
-    constraint 'config-color :: (|fg: color;|)
-    constraint 'config-spacing :: (|
-      text-width: length;
-      text-height: length;
-      text-horizontal-margin: length;
-      text-vertical-margin: length;
-      header-basepos: length;
-      footer-basepos: length;
-      bg-gr-start-point: length;
-    |)
+% common commands
+  direct +p: [(int -> bool)?; inline-text] block-cmd
 
-  % val align-block-middle : context -> length -> block-boxes -> block-boxes
+  direct \ctx : [(int -> bool)?; (context -> context) list; inline-text] inline-cmd
+  direct +ctx : [(int -> bool)?; (context -> context) list; block-text] block-cmd
 
-  val frame-scheme :
-    config-paper  -> 'config-color -> 'config-spacing
-    -> bool ref -> bool ref -> graphics list -> context -> block-boxes -> block-boxes
-    constraint 'config-color :: (|
-      bg: color;
-      main-grid: color;
-      sub-grid: color;
-    |)
-    constraint 'config-spacing :: (|
-      text-vertical-margin: length;
-      bg-gr-start-point: length;
-      text-width: length;
-      main-grid: length;
-      sub-grid: length;
-    |)
-
-  direct +p : [(int -> bool)?; inline-text] block-cmd
   direct \br: [] inline-cmd
   direct \text-color: [(int -> bool)?; color; inline-text] inline-cmd
   direct \uline : [(int -> bool)?; inline-text] inline-cmd
   direct \strike : [(int -> bool)?; inline-text] inline-cmd
-  % 上から順に出す．
-  direct +show-in-order: [block-text list] block-cmd
 
-  direct \ctx : [(int -> bool)?; (context -> context); inline-text] inline-cmd
-  direct +ctx : [(int -> bool)?; (context -> context); block-text] block-cmd
+  direct +show-in-order: [block-text list] block-cmd
 
 end = struct
 
-  % 共通の変数・関数
+% parameter
+  let namedframe = SlydifiParam.make Map.empty
+  let eq-string = Eq.make string-same
 
-  % フォントを一括で設定．
-  % parameters
-  %   cfg-font: config-font レコード型．サイズ，書体，段落幅などが格納されている．
-  %   ctx: 変更前の context．
-  let set-font-config cfg-font ctx =
-    let (upper-ratio, lower-ratio) = cfg-font#par-margin-ratio in
-    let par-margin-upper = cfg-font#size *' upper-ratio in
-    let par-margin-lower = cfg-font#size *' lower-ratio in
-    ctx |> set-font-size           cfg-font#size
-        |> set-font Latin          cfg-font#font-latin
-        |> set-font Kana           cfg-font#font-cjk
-        |> set-font HanIdeographic cfg-font#font-cjk
-        |> set-paragraph-margin    par-margin-upper par-margin-lower
-        |> set-leading             (cfg-font#size *' cfg-font#leading-ratio)
-
-  % 書体のみを設定．
-  let set-fonts cfg-font ctx =
-    ctx |> set-font Latin          cfg-font#font-latin
-        |> set-font Kana           cfg-font#font-cjk
-        |> set-font HanIdeographic cfg-font#font-cjk
+  let-inline ctx \math fml = script-guard Latin (embed-math ctx fml)
 
   % standard な context を設定
-  let get-standard-context cfg-text cfg-color wid =
+  let get-standard-context wid =
     get-initial-context wid (command \math)
       |> set-dominant-wide-script Kana
       |> set-language Kana Japanese
       |> set-language HanIdeographic Japanese
       |> set-dominant-narrow-script Latin
       |> set-language Latin English
-      |> set-font-config cfg-text#normal
-      |> set-math-font `lmodern`
       |> set-hyphen-penalty 100
-      |> set-text-color cfg-color#fg
 
+  let apply-font-cfg cfgs ctx =
+    cfgs |> List.fold-left (fun ctx ctxf -> ctxf ctx) ctx
 
-  % 2ページ以降のときに改ページを入れる．
-  % is-first-page は，現在 first page かどうかを表す bool ref 型の変数．
-  let clear-page-or-nil is-first-page =
-    match !is-first-page with
-    | true -> let () = is-first-page <- false in block-nil
-    | false -> clear-page
-
-  % 絶対座標及び align を指定して inline-boxes を配置する．
-  let put-text point align ib =
-    let (w, h, d) = get-natural-metrics ib in
-    % xalgin: 0. で左揃え，0.5 で中央揃え，1. で右揃え
-    % yalgin: 0. で下揃え，0.5 で中央揃え，1. で上揃え
-    let (xalign, yalign) = align in
-    let (pointx, pointy) = point in
-    let xpos = pointx -' w *' xalign in
-    let ypos = pointy +' d -' (h +' d) *' yalign in
-    draw-text (xpos, ypos) ib  % x, y に関わらず point の絶対座標で決める
-
-  % document-scheme
-
-  % document-scheme: document 関数の雛形．
-  % parameters
-  %   cfg-paper: 紙面サイズに関する config．
-  %   cfg-text: 書体に関する config．
-  %   cfg-color: 色に関する config．
-  %   cfg-spacing: 余白や間隔に関する config．
-  %   header: ヘッダに関する情報．
-  %   footer: ヘッダに関する情報．
-  %   record: document で設定する config. レコード型． draft-mode は必須．
-  %   inner: 本文．
-  let document-scheme cfg-paper cfg-text cfg-color cfg-spacing header footer inner =
-
-    let page = UserDefinedPaper (cfg-paper#width, cfg-paper#height) in
-
+% document scheme
+  let document-scheme layout init-ctx hookf inner =
+    let page = UserDefinedPaper (layout#paper-width, layout#paper-height) in
     let pagecontf _ =
       let () = FootnoteScheme.start-page () in
       (|
-        text-origin = (cfg-spacing#text-horizontal-margin, cfg-spacing#bg-gr-start-point);
-        text-height = cfg-spacing#text-height;
+        text-origin = (layout#text-horizontal-margin, 0pt -' Frame.bg-graphic-box-offset);
+        text-height = layout#text-height +' layout#text-vertical-margin +' Frame.bg-graphic-box-offset;
       |)
     in
-
     let pagepartsf pbinfo =
       (|
-      header-origin  = (0pt, cfg-spacing#header-basepos);
-      header-content = header pbinfo;
-      footer-origin  = (0pt, cfg-paper#height -' cfg-spacing#footer-basepos);
-      footer-content = footer pbinfo;
+      header-origin  = (0pt, 0pt);
+      header-content = block-nil;
+      footer-origin  = (0pt, 0pt);
+      footer-content = block-nil;
       |)
     in
 
     let bb-main =
-      let ctx-doc = (get-standard-context cfg-text cfg-color cfg-spacing#text-width) in
-      read-block ctx-doc inner in
+      let ctx-doc = get-standard-context layout#text-width |> init-ctx in
+      read-block ctx-doc inner
+    in
 
-    let hook = line-break false false (get-standard-context cfg-text cfg-color 0pt)
-        (hook-page-break (fun pbInfo _ -> (
-            let numpages = pbInfo#page-number in
-            register-cross-reference `pagecount` (arabic numpages)
-        )))
+    let hook = line-break false false (get-standard-context 0pt)
+        (hook-page-break hookf)
     in
 
     page-break page pagecontf pagepartsf (bb-main +++ hook)
 
-  % frame-scheme
+  let-block ctx +genframe frame n-layer content =
+    frame |> SlydifiOverlay.multiframe n-layer ctx content
 
-  let-rec range n1 n2 =
-    let-rec aux min max =
-      if min == max  then [min] else min :: (aux (min + 1) max)
+  let-block ctx +specific-frame frame content =
+    frame |> Frame.to-page ctx content
+
+  let-block ctx +namedframe frame name content =
+    let new-map =
+      namedframe |> SlydifiParam.get
+                 |> Map.bind name (1, '<+specific-frame(frame)(content);>)
     in
-    if n1 < n2 then (aux n1 n2) else (aux n2 n1)
+    let () = namedframe |> SlydifiParam.set new-map in
+    read-block ctx '<
+      +SlydifiOverlay.with-layer(1)<
+        +specific-frame(frame)(content);
+      >
+    >
 
-  % frame-scheme: フレームの雛形．
-  % parameters
-  %   cfg-paper: 紙面サイズに関する config．
-  %   cfg-color: 色に関する config．
-  %   cfg-spacing: 余白や間隔に関する config．
-  %   is-first-page: 一枚目かどうかについての bool ref．
-  %   is-draft-mode: draft mode か否かについての bool ref．
-  %   bg-graphics: 背景に描画する graphics のリスト（全て絶対座標指定）．
-  %   ctx: context
-  %   bb-inner: 本文に相当する block-boxes. 長くても改ページが起きない．
-  let frame-scheme cfg-paper cfg-color cfg-spacing is-first-page is-draft-mode bg-graphics ctx bb-inner =
-
-    let rect-bg =
-      fill cfg-color#bg (Gr.rectangle (0pt, 0pt) (cfg-paper#width, cfg-paper#height))
-    in
-
-    let grid-list-bg =
-      % draft-mode のときだけ grid が表示される
-      if !is-draft-mode then
-        let bg-grids grid-wid grid-ht grid-color =
-          let n-grid-vertical   = round(cfg-paper#width  /' grid-wid) in
-          let n-grid-horizontal = round(cfg-paper#height /' grid-ht)  in
-          let vlines =
-            List.map (
-              fun n -> Gr.line (grid-wid *' float(n), 0pt) (grid-wid *' float(n), cfg-paper#height)
-            ) (range 1 n-grid-vertical)
-          in
-          % [Gr.line (grid-wid, 0pt) (grid-wid, cfg-paper#height)] in
-          let hlines =
-            List.map (
-              fun n -> Gr.line (0pt, grid-ht *' float(n)) (cfg-paper#width, grid-ht *' float(n))
-            ) (range 1 n-grid-horizontal)
-          in
-          % let hlines = [Gr.line (0pt, grid-ht) (cfg-paper#width, grid-ht)] in
-          let lines = List.append vlines hlines in
-          List.map (stroke 1pt grid-color) lines
+  let-block ctx +againframe ?:lyr name =
+    let map = namedframe |> SlydifiParam.get in
+    let value = map |> Map.of- eq-string name in
+    match value with
+    | None ->
+        let () = display-message (
+          ``[Warning] Frame with name ` `` ^ name
+            ^ `` ` was not found. No page was inserted here. ``)
         in
-        List.append
-          (bg-grids cfg-spacing#main-grid cfg-spacing#main-grid cfg-color#main-grid)
-          (bg-grids cfg-spacing#sub-grid cfg-spacing#sub-grid cfg-color#sub-grid)
-      else []
-    in
+        block-nil
+    | Some((lyr-prev, it)) ->
+        let lyr = lyr |> Option.from (lyr-prev + 1) in
+        let map = map |> Map.bind name (lyr, it) in
+        let () = namedframe |> SlydifiParam.set map in
+        read-block ctx '<
+          +SlydifiOverlay.with-layer(lyr)<
+            #it;
+          >
+        >
 
-    let spacing-bg-gr = cfg-spacing#text-vertical-margin -' cfg-spacing#bg-gr-start-point in
-    let ctx-bg-gr = ctx |> set-paragraph-margin 0pt spacing-bg-gr in
-    let box-inner =
-      let ib-inner = embed-block-top ctx cfg-spacing#text-width (fun _ -> bb-inner) in
-      line-break false false ctx ib-inner
-    in
-    let gr = List.append (rect-bg :: grid-list-bg) bg-graphics in
-    (clear-page-or-nil is-first-page) +++
-      (line-break true false ctx-bg-gr
-        (inline-graphics 0pt 0pt 0pt (fun _ -> gr))) +++
-          box-inner
-
-  % let align-block-middle ctx ht bb-inner =
-  %   let placeholder-length = length-max 0pt (ht -' (get-natural-length bb-inner)) *' 0.5 in
-  %   let ctx2 = ctx |> set-paragraph-margin 0pt 0pt in
-  %   (line-break false false ctx2
-  %     (inline-graphics 0pt placeholder-length 0pt (fun _ -> []) ++ inline-fil)
-  %   ) +++ bb-inner
-
-
-  % 段落，インラインテキスト修飾
-
+% common commands
   let-block ctx +p ?:dcf it =
     let dcf = Option.from (fun _ -> true) dcf in
     SlydifiOverlay.ghost-block dcf (line-break true true ctx (read-inline ctx it ++ inline-fil))
@@ -289,7 +163,7 @@ end = struct
 
   let-inline ctx \text-color ?:dcf clr it =
     let dcf = Option.from (fun _ -> true) dcf in
-    SlydifiOverlay.select dcf
+    SlydifiOverlay.select-from-two dcf
       (read-inline (ctx |> set-text-color clr) it)
         (read-inline ctx it)
 
@@ -297,7 +171,7 @@ end = struct
     let dcf = Option.from (fun _ -> true) dcf in
     let ib = read-inline ctx it in
     let pad (x, y) w h d =
-      SlydifiOverlay.select dcf (
+      SlydifiOverlay.select-from-two dcf (
         [
           stroke 1pt (get-text-color ctx)
             (Gr.line (x, y -' d) (x +' w, y  -' d))
@@ -312,7 +186,7 @@ end = struct
     let dcf = Option.from (fun _ -> true) dcf in
     let ib = read-inline ctx it in
     let pad (x, y) w h d =
-      SlydifiOverlay.select dcf (
+      SlydifiOverlay.select-from-two dcf (
         let h-base = get-font-size ctx *' 0.3 in
         [
           stroke 1pt (get-text-color ctx)
@@ -324,20 +198,40 @@ end = struct
     in
     inline-frame-breakable (0pt, 0pt, 0pt, 0pt) (pad, pad, pad, pad) ib
 
-  let-inline ctx \ctx ?:dcf ctxf it =
+  let-inline ctx \ctx ?:dcf ctxflst it =
     let dcf = Option.from (fun _ -> true) dcf in
-    read-inline (SlydifiOverlay.select dcf (ctxf ctx) ctx) it
+    let new-ctx =
+      ctxflst |> List.fold-left (fun acc ctxf -> ctxf acc) ctx
+    in
+    read-inline (SlydifiOverlay.select-from-two dcf new-ctx ctx) it
 
-  let-block  ctx +ctx ?:dcf ctxf bt =
+  let-block  ctx +ctx ?:dcf ctxflst bt =
     let dcf = Option.from (fun _ -> true) dcf in
-    read-block (SlydifiOverlay.select dcf (ctxf ctx) ctx) bt
+    let new-ctx =
+      ctxflst |> List.fold-left (fun acc ctxf -> ctxf acc) ctx
+    in
+    read-block (SlydifiOverlay.select-from-two dcf new-ctx ctx) bt
 
-  % overlay
   let-block ctx +show-in-order btlst =
     let ghost-btlst = btlst |> List.mapi ( fun idx bt ->(
-      let dcf = SlydifiOverlay.after (idx + 1) in
+      let dcf = SlydifiOverlay.from (idx + 1) in
       SlydifiOverlay.ghost-block dcf (read-block ctx bt)))
     in
     ghost-btlst |> List.fold-left (+++) block-nil
 
 end
+
+
+let-inline ctx \SLyDIFi =
+  let size = get-font-size ctx in
+  let f = read-inline ctx in
+  let fd = ctx |> set-manual-rising (0pt -' (size *' 0.25)) |> read-inline in
+  let fI = ctx |> set-font-size (size *' 0.72)
+               |> set-manual-rising (size *' 0.2)
+               |> read-inline
+  in
+  let ib = 
+    f {SL} ++ kern(size *' 0.05) ++ fd{Y} ++ kern(size *' 0.03) ++ f{DIF}
+      ++ kern(size *' 0.05) ++ fd{I}
+  in
+  script-guard Latin (no-break ib)
