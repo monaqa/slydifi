@@ -8,16 +8,47 @@ open FigBox
 open SlydifiOverlay
 open EasyTableAlias
 
+let config =
+    let set-font-metrics fsize ctx =
+      ctx |> set-font-size fsize
+          |> set-paragraph-margin (fsize *' 0.6) (fsize *' 0.6)
+          |> set-leading (fsize *' 1.4)
+    in
+    let default-font ctx =
+      ctx |> set-font Latin          (`ipaexg`, 1.0, 0.0)
+          |> set-font Kana           (`ipaexg`, 1.0, 0.0)
+          |> set-font HanIdeographic (`ipaexg`, 1.0, 0.0)
+    in
+    let code-font ctx =
+      ctx |> set-font Latin          (`lmmono`, 1.0, 0.0)
+          |> set-font Kana           (`lmmono`, 1.0, 0.0)
+          |> set-font HanIdeographic (`lmmono`, 1.0, 0.0)
+    in
+    let bold-font ctx =
+      ctx |> set-font Latin          (`ipaexg`, 1.0, 0.0)
+          |> set-font Kana           (`ipaexg`, 1.0, 0.0)
+          |> set-font HanIdeographic (`ipaexg`, 1.0, 0.0)
+    in
+  (|
+    SlydifiThemeAkasaka.default-config with
+      font-normal = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 16pt];
+      font-bold = SlydifiScheme.apply-font-cfg [bold-font];
+      font-code = SlydifiScheme.apply-font-cfg [code-font];
+      font-slide-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 36pt];
+      font-slide-author = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 24pt;];
+      font-slide-date = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 20pt;];
+      font-section-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 28pt];
+      font-frame-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 24pt];
+      font-pagenum = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
+      font-footnote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
+      length-frame-title-height = 32pt;
+  |)
+
 in
 
 document '<
 
-+set-config(|
-  SlydifiThemeAkasaka.default-config with
-    font-normal = (fun ctx -> ctx |> SlydifiThemeAkasaka.default-config#font-normal |> set-font-size 16pt);
-    font-frame-title = (fun ctx -> ctx |> SlydifiThemeAkasaka.default-config#font-frame-title |> set-font-size 24pt);
-    length-frame-title-height = 32pt;
-|);
++set-config(config);
 
 +make-title(|
   title = {|\SLyDIFi; ドキュメント|};
@@ -492,18 +523,18 @@ document '<
     }
 
     +p{
-      表示条件を満たすときに図を表示し、それ以外のときは大きさを0にしたいときは
+      表示条件を満たすとき図を表示し、それ以外では大きさを0にしたいときは
       `fig-ghost` 関数を用いて `figbox |> fig-ghost (cond)` とする。
     }
 
     +p{
-      表示条件を満たすときに図を表示し、それ以外のときは図を不可視としたい
-      （すなわち、元の図と同じ大きさの透明の箱を置きたい）ときは
+      表示条件を満たすとき図を表示し、それ以外では図を不可視としたい
+      （元の図と同じ大きさの透明の箱を置きたい）ときは
       `fig-phantom` 関数を用いて `figbox |> fig-phantom (cond)` とする。
     }
 
     +p{
-      `fig-select` 関数を用いて図の内容や体裁などを切り替えることも可能。
+      `select` 関数を用いて図の内容や体裁などを切り替えることも可能。
     }
 
     +fig-center(

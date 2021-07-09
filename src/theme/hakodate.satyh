@@ -374,7 +374,7 @@ end = struct
       let bb-inner =
         let ctx = ctx |> config#font-normal |> set-text-color config#color-fg in
         let bb-blank skip =
-          line-break false false (ctx |> set-paragraph-margin 0pt skip) inline-nil
+          line-break false false (ctx |> set-paragraph-margin 0pt skip) inline-fil
         in
         bb-blank (config#length-frame-title-height +' config#length-frame-body-top-margin)
           +++ (read-block ctx content#inner)
