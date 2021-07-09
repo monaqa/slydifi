@@ -192,10 +192,10 @@ end = struct
 
   let config = SlydifiParam.make default-config
 
-  let-block +set-config cfg = '< +set-param(config)(cfg); >
-  let-inline \set-config cfg = { \set-param(config)(cfg); }
-  let-block +with-config cfg bt = '< +with-param(config)(cfg)(bt); >
-  let-inline \with-config cfg it = { \with-param(config)(cfg)(it); }
+  let-block +set-config cfg = '< +SlydifiParam.set-param(config)(cfg); >
+  let-inline \set-config cfg = { \SlydifiParam.set-param(config)(cfg); }
+  let-block +with-config cfg bt = '< +SlydifiParam.with-param(config)(cfg)(bt); >
+  let-inline \with-config cfg it = { \SlydifiParam.with-param(config)(cfg)(it); }
 
   let-inline ctx \code code =
     let config = SlydifiParam.get config in

@@ -33,6 +33,10 @@ module SlydifiThemePlain: sig
 % config
   val config: plain-config SlydifiParam.t
   val default-config: plain-config
+  direct +set-config : [plain-config] block-cmd
+  direct \set-config : [plain-config] inline-cmd
+  direct +with-config : [plain-config; block-text] block-cmd
+  direct \with-config : [plain-config; inline-text] inline-cmd
 
 % frames
   %% スライドマスター。
@@ -102,6 +106,11 @@ end = struct
     |)
 
   let config = SlydifiParam.make default-config
+
+  let-block +set-config cfg = '< +SlydifiParam.set-param(config)(cfg); >
+  let-inline \set-config cfg = { \SlydifiParam.set-param(config)(cfg); }
+  let-block +with-config cfg bt = '< +SlydifiParam.with-param(config)(cfg)(bt); >
+  let-inline \with-config cfg it = { \SlydifiParam.with-param(config)(cfg)(it); }
 
   let document bt =
     let config = SlydifiParam.get config in

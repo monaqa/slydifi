@@ -4,7 +4,7 @@
 @require: figbox/figbox
 @require: enumitem/enumitem
 @require: base/color-ext
-@import: ../src/theme/akasaka
+@require: class-slydifi/theme/akasaka
 
 open FigBox
 open SlydifiOverlay
@@ -85,18 +85,18 @@ document '<
 
     +frame?:(4){オーバーレイの例 (\show-layer;/4)}<
       +p{この段落は常に表示される．}
-      +p?:(till 2){
+      +p?:(until 2){
         \cjk{① }オプション引数を指定して，今何枚目かに応じて表示を出し分けられる．
         この段落は 1, 2 枚目のとき\emph?:(only 2){のみ}表示される段落．
       }
-      +p?:(during 2 3){\cjk{② }これは 2, 3 枚目のときのみ表示される段落．}
-      +p?:(elsewhen 3){\cjk{③ }これは 3枚目以外のときに表示される段落．}
-      +p?:(in-case [1; 4]){\cjk{④ }これは 1, 4 枚目のときのみ表示される段落．}
+      +p?:(between 2 3){\cjk{② }これは 2, 3 枚目のときのみ表示される段落．}
+      +p?:(non (only 3)){\cjk{③ }これは 3枚目以外のときに表示される段落．}
+      +p?:(on-slides [1; 4]){\cjk{④ }これは 1, 4 枚目のときのみ表示される段落．}
       +p{下の図は 2 枚目以降2枚表示される．}
       +fig-center(
         hconcat ?:0.5 [
           dummy-box 200pt 50pt |> hmargin 10pt;
-          dummy-box 150pt 100pt |> hmargin 10pt |> fig-phantom (after 2)
+          dummy-box 150pt 100pt |> hmargin 10pt |> fig-phantom (from 2)
         ]
       );
     >

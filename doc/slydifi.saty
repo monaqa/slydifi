@@ -2,7 +2,7 @@
 @require: list
 @require: easytable/easytable
 @require: code
-@import: ../src/theme/akasaka
+@require: class-slydifi/theme/akasaka
 
 open FigBox
 open SlydifiOverlay

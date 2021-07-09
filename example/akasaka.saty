@@ -1,7 +1,7 @@
 @require: figbox/figbox
 @require: enumitem/enumitem
 @require: base/color-ext
-@import: ../src/theme/akasaka
+@require: class-slydifi/theme/akasaka
 
 open FigBox
 open SlydifiOverlay
