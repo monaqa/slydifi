@@ -11,3 +11,5 @@ LaTeX でいうところの [beamer](https://github.com/josephwright/beamer) に
 - SATySFi による静的な型検査、強力なエラー検出機能
 
 といった特徴を兼ね備えています。
+
+本ドキュメントは未完成であり、後日加筆・修正予定です。

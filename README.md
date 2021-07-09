@@ -16,15 +16,10 @@ satyrographos install
 If you want to check the operation to see if it was installed correctly, prepare `minimum.saty` with the following description under an appropriate directory:
 
 ```
-@require: code
-@require: annot
-@require: list
 @require: class-slydifi/theme/plain
 
-SlydifiPlain.document(|
-  draft-mode = false;
-|)'<
-  +frame{Test of \SLyDIFi;}<
+document '<
+  +frame{\SLyDIFi; のテスト}<
     +p{Hello, \SLyDIFi;!}
   >
 >
@@ -32,7 +27,7 @@ SlydifiPlain.document(|
 
 If you run `satysfi` command and the following PDF is generated, it is working properly (please prepare the necessary fonts as appropriate).
 
-![slydifi-test](https://github.com/monaqa/slydifi/blob/i18n/fig/slydifi-test.jpg?raw=true)
+![slydifi-test](fig/slydifi-test.png)
 
 ## Demo with Gitpod
 
@@ -68,11 +63,13 @@ The following markup can be done in the frame.
 - Insertion of figures
 - Insertion of footnotes
 
-In addition, the following commands are available as in-line text markup.
+In addition, the following commands are available as in-line text markup (it varies depending on the theme).
 
-- `\textbf`
-- `\emph`
-- `\link`
+- ``\emph``
+- ``\link``
+- ``\text-color``
+- ``\uline``
+- ``\stroke``
 
 ### Selecting and Changing Themes
 
@@ -84,78 +81,48 @@ The following is the appearance and introduction method of the theme prepared as
 
 A simple theme without decoration.
 
-![plain-title](fig/plain-title.jpg)
-
-![plain-section](fig/plain-section.jpg)
-
-![plain-frame](fig/plain-frame.jpg)
-
-You can use it by writing:
-
 ```
 @require: class-slydifi/theme/plain
-
-SlydifiPlain.document(|
-  draft-mode = false;
-|)'<
-
-(body)
-
->
 ```
+
+[![example-plain.png](fig/example-plain.png)](example/plain.pdf)
+
+See [here](example/plain.pdf) for further examples.
 
 #### Hakodate
 
 A theme based on the colors of [Gruvbox](https://github.com/gruvbox-community/gruvbox) .
 
-![hakodate-title](fig/hakodate-title.jpg)
-
-![hakodate-section](fig/hakodate-section.jpg)
-
-![hakodate-frame](fig/hakodate-frame.jpg)
-
-You can use it by writing:
-
 ```
 @require: class-slydifi/theme/hakodate
-
-SlydifiHakodate.document(|
-  draft-mode = false;
-|)'<
-
-(body)
-
->
 ```
 
-To use it, you need to install [M + font](https://mplus-fonts.osdn.jp/about.html) and link it with a hash file. This installation process may be automated using Satyrographos in the future.
+[![example-hakodate.png](fig/example-hakodate.png)](example/hakodate.pdf)
+
+See [here](example/hakodate.pdf) for further examples.
+
+
+To use this theme with default configuration, you need to install [M + font](https://mplus-fonts.osdn.jp/about.html) and run the following command:
+
+```
+satyrographos install --system-font-prefix 'system:'
+```
+
+Note that the font settings can be changed freely in the document file.
 
 #### Akasaka
 
 Gray standard theme.
 
-![akasaka-title](fig/akasaka-title.jpg)
-
-![akasaka-section](fig/akasaka-section.jpg)
-
-![akasaka-frame](fig/akasaka-frame.jpg)
-
-You can use it by writing:
-
 ```
 @require: class-slydifi/theme/akasaka
-
-SlydifiAkasaka.document(|
-  draft-mode = false;
-  header-text = {(Text you want to add in header)};
-|)'<
-
-(body)
-
->
 ```
 
-To use it, you need to install [Noto Sans](https://www.google.com/get/noto/) font family (Noto Sans and Noto Sans CJK JP) and link it with a hash file.<br>Now it is already registered with Satyrographos and can be installed with the following command:
+[![example-akasaka.png](fig/example-akasaka.png)](example/akasaka.pdf)
+
+See [here](example/akasaka.pdf) for further examples.
+
+To use this theme with default configuration, you need to install [Noto Sans](https://www.google.com/get/noto/) font family (Noto Sans and Noto Sans CJK JP) and link it with a hash file.<br>Now it is already registered with Satyrographos and can be installed with the following command:
 
 ```
 opam install satysfi-fonts-noto-sans
@@ -168,6 +135,64 @@ See
 and
 [SATySFi-fonts-noto-sans-cjk-jp](https://github.com/zeptometer/SATySFi-fonts-noto-sans-cjk-jp)
 for details.
+
+And note that, the font settings can be changed freely, too.
+
+#### Arctic
+
+A COOL theme based on the colors of [iceberg.vim](https://github.com/cocopon/iceberg.vim).
+
+The default settings also require a [Noto Sans](https://www.google.com/get/noto/) type font, but you can change the font settings in the document file.
+
+### Changing Configuration
+
+Each theme has a number of configurable parameters, which you can change on the document file.
+The main types of setting values that can be changed are as follows:
+
+- font (font name, size, etc.)
+- color (text color, background color, etc.)
+- length (margin between paper border and footer, etc.)
+
+For example, in the Akasaka theme, you can change settings such as the font size of the frame title and the background color of the slide as follows:
+
+```
+@require: class-slydifi/theme/akasaka
+
+document '<
+
+  +set-config(|
+    SlydifiThemeAkasaka.default-config with  % 下に書いたフィールド以外はデフォルト値を使う
+      font-frame-title = (fun ctx -> ctx |> SlydifiThemeAkasaka.default-config#font-frame-title |> set-font-size 20pt);
+      color-bg = Color.of-css `lightcyan`;
+      color-emph = Color.of-css `darkred`;
+      length-frame-title-height = 28pt;
+  |);
+
+  +frame{フレーム}<
+    ...
+  >
+>
+```
+```
+@require: class-slydifi/theme/akasaka
+
+document '<
+
+  +set-config(|
+    SlydifiThemeAkasaka.default-config with  % 下に書いたフィールド以外はデフォルト値を使う
+      font-frame-title = (fun ctx -> ctx |> SlydifiThemeAkasaka.default-config#font-frame-title |> set-font-size 20pt);
+      color-bg = Color.of-css `lightcyan`;
+      color-emph = Color.of-css `darkred`;
+      length-frame-title-height = 28pt;
+  |);
+
+  +frame{フレーム}<
+    ...
+  >
+>
+```
+
+See [こちら](example/akasaka-user-config.saty) for more detailed examples.
 
 ## ToDo
 
