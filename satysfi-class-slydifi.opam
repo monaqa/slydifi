@@ -15,9 +15,9 @@ depends: [
   "satysfi" {>= "0.0.6" & < "0.0.7"}
   "satyrographos" {>= "0.0.2" & < "0.0.3"}
   "satysfi-enumitem" {>= "2.0.0" & < "3.0.0"}
-  "satysfi-figbox" {>= "0.1.3"}
-  "satysfi-base" {>= "1.0.0"}
-  "satysfi-railway" {>= "0.1.0"}
+  "satysfi-figbox" {>= "0.1.3" & < "0.2.0"}
+  "satysfi-base" {>= "1.0.0" &  < "2.0.0"}
+  "satysfi-railway" {>= "0.1.0" < "0.2.0"}
 ]
 build: [ ]
 install: [
