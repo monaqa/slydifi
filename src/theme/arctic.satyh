@@ -121,12 +121,15 @@ module SlydifiThemeArctic: sig
   direct +quote : [block-text] block-cmd
 
 % listing
+  val listing-itemfmt : context -> int list -> itemconfig
   direct +listing : [(context -> int list -> itemconfig)?; itemize] block-cmd
+  direct \listing : [(context -> int list -> itemconfig)?; itemize] inline-cmd
   direct +itemize : [(context -> int list -> itemconfig)?; block-text] block-cmd
+  direct +ditem: [inline-text; inline-text; block-text] block-cmd
   direct +oitem : [(int -> bool); inline-text; block-text] block-cmd
-  val label-dia  : context -> inline-boxes
-  val label-tria : context -> inline-boxes
-  val label-circ : context -> inline-boxes
+  val \label-dia : [] inline-cmd
+  val \label-tria : [] inline-cmd
+  val \label-circ : [] inline-cmd
 
 % 脚注
   direct \footnote : [inline-text] inline-cmd
@@ -160,15 +163,22 @@ end = struct
         |> set-leading (fsize *' 1.4)
 
   let default-config =
+    let set-font-metrics fsize ctx =
+      ctx |> set-font-size fsize
+          |> set-paragraph-margin (fsize *' 0.75) (fsize *' 0.75)
+          |> set-min-gap-of-lines 0pt
+          |> set-leading (fsize *' 1.4)
+    in
     let default-font ctx =
-      ctx |> set-font Latin          (`fonts-noto-sans:NotoSans-Regular`, 1.0, 0.0)
-          |> set-font Kana           (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0)
-          |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0)
+      ctx |> set-font Latin          (`system:IBMPlexSansJP`, 1.0, 0.0)
+          |> set-font Kana           (`system:IBMPlexSansJP`, 1.0, 0.0)
+          |> set-font HanIdeographic (`system:IBMPlexSansJP`, 1.0, 0.0)
     in
     let code-font ctx =
-      ctx |> set-font Latin          (`lmmono`, 1.0, 0.0)
-          |> set-font Kana           (`lmmono`, 1.0, 0.0)
-          |> set-font HanIdeographic (`lmmono`, 1.0, 0.0)
+      ctx |> set-font Latin          (`system:mplus-1m-regular`, 1.0, 0.0)
+          |> set-font Kana           (`system:mplus-1m-regular`, 1.0, 0.0)
+          |> set-font HanIdeographic (`system:mplus-1m-regular`, 1.0, 0.0)
+          |> set-space-ratio 0.5 0.5 0.5  % mplus の space ratio に合わせる
           |> set-hyphen-min 1000 1000  % ハイフンを無効化
           |> set-space-ratio-between-scripts 0. 0. 0. Latin Kana
           |> set-space-ratio-between-scripts 0. 0. 0. Kana Latin
@@ -176,9 +186,14 @@ end = struct
           |> set-space-ratio-between-scripts 0. 0. 0. HanIdeographic Latin
     in
     let bold-font ctx =
-      ctx |> set-font Latin          (`fonts-noto-sans:NotoSans-Bold`, 1.0, 0.0)
-          |> set-font Kana           (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Bold`, 1.0, 0.0)
-          |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Bold`, 1.0, 0.0)
+      ctx |> set-font Latin          (`system:IBMPlexSansJP-Bold`, 1.0, 0.0)
+          |> set-font Kana           (`system:IBMPlexSansJP-Bold`, 1.0, 0.0)
+          |> set-font HanIdeographic (`system:IBMPlexSansJP-Bold`, 1.0, 0.0)
+    in
+    let light-font ctx =
+      ctx |> set-font Latin          (`system:IBMPlexSansJP-Light`, 1.0, 0.0)
+          |> set-font Kana           (`system:IBMPlexSansJP-Light`, 1.0, 0.0)
+          |> set-font HanIdeographic (`system:IBMPlexSansJP-Light`, 1.0, 0.0)
     in
 
     (|
@@ -190,7 +205,7 @@ end = struct
       font-slide-author = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 24pt;];
       font-slide-date = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 20pt;];
       font-section-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 32pt];
-      font-frame-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 28pt];
+      font-frame-title = SlydifiScheme.apply-font-cfg [light-font; set-font-metrics 28pt];
       font-pagenum = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
       font-footnote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
       font-quote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 18pt;];
@@ -219,8 +234,8 @@ end = struct
       color-bullet-tria = Color.of-css `#3f83a6`;
       color-bullet-circ = Color.of-css `#3f83a6`;
       % quotation
-      color-quote = Color.of-css `#33374c`;
-      color-quote-line = Color.of-css `#33374c`;
+      color-quote = (Color.of-css `#33374c`) |> color-inner ?:0.15 (Color.of-css `#e8e9ec`);
+      color-quote-line = (Color.of-css `#33374c`) |> color-inner ?:0.7 (Color.of-css `#e8e9ec`);
 
       %% length
       length-frame-title-height = 36pt;
@@ -608,10 +623,10 @@ end = struct
     let config = SlydifiParam.get config in
     let deco (x, y) w h d =
       [
-        fill config#color-quote-line (Gr.rectangle (x, y) (x +' 6pt, y +' h))
+        fill config#color-quote-line (Gr.rectangle (x, y) (x +' 4pt, y +' h))
       ]
     in
-    block-frame-breakable ctx (20pt, 0pt, 10pt, 10pt)
+    block-frame-breakable ctx (15pt, 0pt, 10pt, 10pt)
       (deco, deco, deco, deco)
         (fun ctx -> (
           let ctx2 = ctx
@@ -623,7 +638,7 @@ end = struct
 
 % listing
 
-  let label-dia ctx =
+  let-inline ctx \label-dia =
     let config = SlydifiParam.get config in
     let fsize = get-font-size ctx in
     let grf (x, y) =
@@ -637,7 +652,7 @@ end = struct
     in
     inline-graphics 16pt 8pt 0pt grf
 
-  let label-tria ctx =
+  let-inline ctx \label-tria =
     let config = SlydifiParam.get config in
     let fsize = get-font-size ctx in
     let grf (x, y) =
@@ -665,7 +680,7 @@ end = struct
     let gr (x, y) = [fill config#color-bullet-tria (path (x, y))] in
     inline-graphics 16pt 8pt 0pt grf
 
-  let label-circ ctx =
+  let-inline ctx \label-circ =
     let config = SlydifiParam.get config in
     let fsize = get-font-size ctx in
     let path (x, y) =
@@ -682,18 +697,12 @@ end = struct
     | 0 -> 1.
     | _ -> (power-float-int r (m - 1)) *. r
 
-  let list-itemfmt ctx idxlst =
+  let listing-itemfmt ctx idxlst =
     let fsize =
       let config = SlydifiParam.get config in
       get-font-size (config#font-normal ctx)
     in
-    let label = match (List.length idxlst) with
-      | 1 -> label-dia ctx
-      | 2 -> label-tria ctx
-      | _ -> label-circ ctx
-    in
-    let indent wid = wid in
-    let context-body ctxorig =
+    let context-body ctxorig _ =
       let shrink-ratio =
         let depth = List.length idxlst in
         0.95 |> Float.pow (float (depth - 1))
@@ -702,20 +711,29 @@ end = struct
       in
       ctxorig |> set-font-metrics (fsize *' shrink-ratio)
     in
-    (|
-      EnumitemFormat.default with
-        label = label;
-        indent = indent;
-        context-body = context-body;
-    |)
+    let fmt =
+      {|\label-dia;|\label-tria;|\label-circ;|\label-circ;|\label-circ;|}
+        |> List.map EnumitemAlias.text-label |> EnumitemAlias.with-depth
+        |> EnumitemFormat.set-context-body context-body
+    in
+    fmt ctx idxlst
 
   let-block ctx +listing ?:itemfmt item =
-    let itemfmt = itemfmt |> Option.from list-itemfmt in
+    let itemfmt = itemfmt |> Option.from listing-itemfmt in
     read-block ctx '< +listing?:(itemfmt)(item); >
 
+  let-inline ctx \listing ?:itemfmt item =
+    let itemfmt = itemfmt |> Option.from listing-itemfmt in
+    read-inline ctx {\EnumitemAlias.listing?:(itemfmt)(item);}
+
   let-block ctx +itemize ?:itemfmt bt =
-    let itemfmt = itemfmt |> Option.from list-itemfmt in
+    let itemfmt = itemfmt |> Option.from listing-itemfmt in
     read-block ctx '< +itemize(itemfmt)(bt); >
+
+  let-block +ditem dt it-dd bt-dd =
+    '<
+      +EnumitemAlias.ditem?:(fun it -> {\emph{#it;}})(dt)(it-dd)(bt-dd);
+    >
 
   let-block +oitem dcf it bt =
     '< +ghost(dcf)< +item(it)(bt); > >

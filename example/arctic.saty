@@ -1,5 +1,4 @@
 @require: figbox/figbox
-@require: enumitem/enumitem
 @require: base/color-ext
 @require: class-slydifi/theme/arctic
 
@@ -72,7 +71,7 @@ document '<
   +section{|\SLyDIFi; でオーバーレイ|}<
 
     +frame?:(4){オーバーレイの例 (\show-layer;/4)}<
-      +itemize?:(EnumitemFormatAlias.paren-arabic)<
+      +itemize?:(EnumitemAlias.paren-arabic)<
         +item{この項目は常に表示される。}<>
         +oitem(until 2){
           オプション引数を指定して，今何枚目かに応じて表示を出し分けられる．
@@ -89,26 +88,6 @@ document '<
           dummy-box 150pt 100pt |> hmargin 10pt |> fig-phantom (from 2)
         ]
       );
-    >
-
-    +frame?:(4){オーバーレイの例2}<
-      +show-in-order[
-        '<+p{
-          実際には，オーバーレイは上から順に表示させる用途で用いられることが多い．
-          }>;
-        '<+p{
-          そのような需要に簡潔に応えるために `+show-in-order` というコマンドが用意されている．
-          }>;
-        '<+p{
-          `+show-in-order: [block-text list] block-cmd `
-          }>;
-        '<+p{
-          順に表示させたいブロックテキストの列を与えれば，順々に表示してくれる．
-          }>;
-        '<+p{
-          そのような需要に簡潔に答えるために `+show-in-order` というコマンドが用意されている．
-          }>;
-      ];
     >
 
   >
