@@ -2,11 +2,18 @@
 @require: list
 @require: easytable/easytable
 @require: code
-@require: class-slydifi/theme/akasaka
+@require: class-slydifi/theme/arctic
 
 open FigBox
 open SlydifiOverlay
 open EasyTableAlias
+
+let-block ctx +code code = 
+  let ctx =
+    let fsize = get-font-size ctx in
+    ctx |> set-leading (fsize *' 1.45)
+  in
+  read-block ctx '< +Code.code(code);>
 
 let config =
     let set-font-metrics fsize ctx =
@@ -30,7 +37,7 @@ let config =
           |> set-font HanIdeographic (`ipaexg`, 1.0, 0.0)
     in
   (|
-    SlydifiThemeAkasaka.default-config with
+    SlydifiThemeArctic.default-config with
       font-normal = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 16pt];
       font-bold = SlydifiScheme.apply-font-cfg [bold-font];
       font-code = SlydifiScheme.apply-font-cfg [code-font];
@@ -56,7 +63,7 @@ document '<
     | monaqa
     | GitHub: \link(`https://github.com/monaqa`);
     |};
-  date = {|2020年7月23日|};
+  date = {|2021年11月14日|};
 |);
 
 +section{|はじめに|}<%
@@ -74,7 +81,7 @@ document '<
       * カスタマイズ/自作の可能なテーマ
     }
     +p{
-      このドキュメントも\SLyDIFi;を用いて書かれており、使用テーマは Akasaka である。
+      このドキュメントも\SLyDIFi;を用いて書かれており、使用テーマは Arctic である。
       ただし紙面を十分に確保するため、フォントサイズを通常より縮めた設定を入れている。
     }
   >%
@@ -102,6 +109,7 @@ document '<
 
         ** `akasaka.satyh`
         ** `arctic.satyh`
+        ** `hakodate.satyh`
         ** `plain.satyh`
 
     }
@@ -122,18 +130,18 @@ document '<
 
     ```);
     +p{
-      テーマはデフォルトで以下の三種類が用意されている。
+      テーマはデフォルトで以下の4種類が用意されている。
     }
-    +listing{
-      * `plain`:
-        最も簡素なテーマ。
 
-      * `arctic`:
-        \link?:({iceberg})(`https://github.com/cocopon/iceberg.vim`); の色をベースにしたテーマ。
+    +fig-center(
+      textbox {\easytable?:[t; b][l; l]{
+      | `plain`    | 最も簡素なテーマ
+      | `akasaka`  | 灰色のスタンダードなテーマ
+      | `arctic`   | \link?:({iceberg})(`https://github.com/cocopon/iceberg.vim`); の色をベースにしたテーマ（本ドキュメントで使用）
+      | `hakodate` | \link?:({gruvbox})(`https://github.com/gruvbox-community/gruvbox`);の色をベースにしたテーマ
+      |}}
+    );
 
-      * `akasaka`:
-        灰色のスタンダードなテーマ（このドキュメントでも使用）。
-    }
   >%
 
 >%
@@ -162,7 +170,7 @@ document '<
 
         ** 入り切らないブロックは描画領域からはみ出て見えなくなるだけ。
         ** 「1枚のフレームでどの情報まで表示するか」という発表時の戦略に関わる部分は
-           手動で制御したほうが良い、という考えから。
+           手動で制御するのが望ましいと考え、自動で分割する機能は入れていない。
     }
     
 
@@ -261,14 +269,13 @@ document '<
 
 +section{|オーバーレイ|}<%
 
-  +frame{オーバーレイ}<%
+  +frame{オーバーレイとは}<%
     +p{
       1枚のフレームの中で、プレゼンターの操作によって初めはなかった文字が現れたり、
       文字が順々に表示されたりすることがある。
       このようなフレームの動きをオーバーレイと呼ぶ。
-      % PowerPoint においてこれはアニメーション機能により実現されるが、
       元は \LaTeX; の Beamer で実装されている機能の名称だが、
-      \SLyDIFi; にも簡単なオーバーレイ機能が備わっている。
+      \SLyDIFi; でも同じ名称を用いる。
     }
     +fig-on-right(
       textblock ?:(set-font-size 12pt) 300pt '<
@@ -284,15 +291,18 @@ document '<
       >
     )<%
       +p{
-        最も単純なオーバーレイの実現方法としては、
-        右のコードのように一部が共通しているフレームを複数作成することが挙げられる。
+        「オーバーレイ」を最も単純に実現したい場合、
+        右のように一部が共通しているフレームを複数作成する方法が考えられる。
         しかしこの方法には以下の問題がある：
         \listing{
-          * 同じ内容を2回書かなければならない
+          * 同じ内容を2回以上書かなければならない
           * 共通する部分を変更する際に複数箇所を編集する必要がある
         }
       }
     >%
+    +p{
+      \SLyDIFi; には、より簡単な記法でオーバーレイを実現するための手法が備わっている。
+    }
 
   >%
 
@@ -309,7 +319,7 @@ document '<
     )<%
       +p{
         \SLyDIFi; では、右のように書くことで同一の内容を複数回書くことなくオーバーレイを実現できる。
-        具体的には、`+p?:(only 2){ ... }` と書かれている段落が2枚目でのみ表示されるようになる。
+        具体的には、`+p?:(only 2){ ... }` と書かれている段落が2枚目のレイヤーでのみ表示されるようになる。
       }
     >%
 
@@ -350,8 +360,8 @@ document '<
   +frame{挙動を変えるためのコマンド一覧2}<%
 
     +p{
-      特定のスライドで書式を変えるだけでなく、
-      特定のスライドだけ表示したい、非表示にしたいということもよくある。
+      特定のレイヤーで書式を変えるだけでなく、
+      特定のレイヤーでのみ表示したい、非表示にしたいということもよくある。
       以下のコマンドでそういった表示そのものを制御できる。
     }
     +fig-center(
@@ -372,7 +382,7 @@ document '<
     +p{
       `+p` のオプション引数などに与える `cond` は `int -> bool` 型の関数であれば何でも良いが、
       簡単のためエイリアス的な関数をいくつか用意している。
-      「${m}枚目から${n}枚目まで」のように比較的単純な条件であれば以下の関数を用いると楽。
+      「${m}枚目から${n}枚目のレイヤーまで」のように比較的単純な条件であれば以下の関数を用いると楽。
     }
     +p{
       いずれも `SlydifiOverlay` モジュール中にあるため、
@@ -416,6 +426,12 @@ document '<
       open FigBox
     ```);
 
+    +p{
+      `figbox` パッケージの詳細な使い方は
+      \link?:({パッケージのドキュメント})(`https://satyrographos-packages.netlify.app/packages/figbox`);
+      を参照すること。
+    }
+
   >%
 
   +frame{図の配置コマンド}<%
@@ -441,8 +457,7 @@ document '<
 
   +frame{「図」として配置可能なもの}<%
     +p{
-      FigBox.t 型のコンテンツは以下のようにして作成する。
-      つまり、以下が「図」として配置可能なものの一覧である。
+      FigBox.t 型として配置することのできる基本的なコンテンツは以下のとおり。
     }
 
     +fig-center(
@@ -463,7 +478,7 @@ document '<
 
   +frame{図の結合}<%
     +p{
-      複数の図を並べたい、という需要は少なくない。
+      複数の図を並べたくなることは多い。
       \SLyDIFi; では複数の図を簡単に並べることができる。
     }
 
@@ -506,7 +521,7 @@ document '<
         | 上下左右に異なる大きさの余白を追加 | `figbox |> margin left right top bottom`
         | フレーム（外枠）を描画             | `figbox |> frame line-width line-color`
         | 図の背景色を設定                   | `figbox |> bgcolor color`
-        |}} |> vmargin 10pt
+        |}} |> vmargin 6pt
     );
 
     +listing{
@@ -539,18 +554,19 @@ document '<
 
     +fig-center(
       vconcat [
-        textbox {This box appears on the first and fourth frame.}
-          |> glass-box ?:(align-center, align-center) 450pt 30pt
+        gap 10pt;
+        textbox {This box appears on the first and fourth layers.}
+          |> glass-box ?:(align-center, align-center) 500pt 30pt
           |> bgcolor (Color.gray 0.8)
           |> fig-phantom (on-slides [1; 4]);
-        gap 20pt;
-        textbox-with-width 400pt
+        gap 10pt;
+        textbox-with-width 450pt
           {
             The line color of this box is blue on the first and second frame, and red after that.
             Therefore, the line color of this box is
             \select(until 2){\text-color(Color.blue){blue}}{\text-color(Color.red){red}} now.
           }
-          |> glass-box ?:(align-center, align-center) 450pt 80pt
+          |> glass-box ?:(align-center, align-center) 500pt 80pt
           |> frame 3pt (select-from-two (until 2) Color.blue Color.red)
       ]
     );
