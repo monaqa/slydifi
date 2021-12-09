@@ -22,7 +22,7 @@ depends: [
 build: [ ]
 install: [
   ["satyrographos" "opam" "install"
-   "-name" "class-slydifi"
-   "-prefix" "%{prefix}%"
-   "-script" "%{build}%/Satyristes"]
+   "--name" "class-slydifi"
+   "--prefix" "%{prefix}%"
+   "--script" "%{build}%/Satyristes"]
 ]

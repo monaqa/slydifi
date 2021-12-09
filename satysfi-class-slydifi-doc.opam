@@ -19,13 +19,13 @@ depends: [
 ]
 build: [
   ["satyrographos" "opam" "build"
-   "-name" "class-slydifi-doc"
-   "-prefix" "%{prefix}%"
-   "-script" "%{build}%/Satyristes"]
+   "--name" "class-slydifi-doc"
+   "--prefix" "%{prefix}%"
+   "--script" "%{build}%/Satyristes"]
 ]
 install: [
   ["satyrographos" "opam" "install"
-   "-name" "class-slydifi-doc"
-   "-prefix" "%{prefix}%"
-   "-script" "%{build}%/Satyristes"]
+   "--name" "class-slydifi-doc"
+   "--prefix" "%{prefix}%"
+   "--script" "%{build}%/Satyristes"]
 ]
