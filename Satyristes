@@ -17,7 +17,7 @@
 
 (libraryDoc
   (name "class-slydifi-doc")
-  (version "0.4.0")
+  (version "0.5.0")
   (workingDirectory "doc")
   (build
     ((satysfi "slydifi.saty" "-o" "slydifi.pdf")))
