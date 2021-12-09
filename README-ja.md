@@ -162,8 +162,9 @@ satyrographos install
 
 より詳しいスライドの例は [こちら](example/arctic.pdf) をご覧ください。
 
-こちらもデフォルトの設定では [Noto Sans](https://www.google.com/get/noto/) 系のフォントが必要ですが、
-フォント設定は文書ファイル内で変更できます。
+こちらもデフォルトの設定では
+[IBM Plex Sans JP](https://github.com/IBM/plex/releases/tag/v5.2.1)
+系のフォントが必要ですが、フォント設定は文書ファイル内で変更できます。
 
 ### 設定変更
 
