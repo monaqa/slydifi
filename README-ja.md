@@ -166,6 +166,26 @@ satyrographos install
 [IBM Plex Sans JP](https://github.com/IBM/plex/releases/tag/v5.2.1)
 系のフォントが必要ですが、フォント設定は文書ファイル内で変更できます。
 
+#### Arctic-Noto
+
+Noto Sans 系統のフォントを使用した Arctic theme です。書体以外のレイアウトや配色は Arctic と全く同じです。
+
+```
+@require: class-slydifi/theme/arctic-noto
+```
+
+より詳しいスライドの例は [こちら](example/arctic-noto.pdf) をご覧ください。
+
+Noto Sans フォントは Satyrographos で管理されているため、ユーザがインストールせずとも
+
+```
+opam install satysfi-fonts-noto-sans
+opam install satysfi-fonts-noto-sans-cjk-jp
+satyrographos install
+```
+
+でインストールできます。
+
 ### 設定変更
 
 各テーマにはいくつか設定可能なパラメータがあり、

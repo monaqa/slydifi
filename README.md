@@ -154,6 +154,24 @@ Although the default settings require a
 [IBM Plex Sans JP](https://github.com/IBM/plex/releases/tag/v5.2.1) type font,
 you can change the font settings in the document file.
 
+#### Arctic-Noto
+
+Arctic theme with Noto Sans.
+
+```
+@require: class-slydifi/theme/arctic-noto
+```
+
+See [here](example/arctic-noto.pdf) for further examples.
+
+This theme requires [Noto Sans](https://www.google.com/get/noto/) font family:
+
+```
+opam install satysfi-fonts-noto-sans
+opam install satysfi-fonts-noto-sans-cjk-jp
+satyrographos install
+```
+
 ### Changing Configuration
 
 Each theme has a number of configurable parameters, which you can change on the document file.
