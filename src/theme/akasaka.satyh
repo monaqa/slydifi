@@ -10,9 +10,6 @@
 @require: class-slydifi/footnote
 @require: enumitem/enumitem
 
-let () = Enumitem.item-indent-ratio |> EnumitemParam.set 1.0
-let () = Enumitem.label-width-ratio |> EnumitemParam.set 1.0
-
 type akasaka-config = (|
   font-normal : context -> context;
   font-bold : context -> context;
@@ -82,6 +79,9 @@ module SlydifiThemeAkasaka: sig
   direct \textbf : [(int -> bool)?; inline-text] inline-cmd
   direct \link : [inline-text?; string] inline-cmd
   direct \code : [string] inline-cmd
+
+% listing
+  direct +oitem : [(int -> bool); inline-text; block-text] block-cmd
 
 % 脚注
   direct \footnote : [inline-text] inline-cmd
@@ -358,6 +358,10 @@ end = struct
     read-block ctx '<
       +SlydifiScheme.genframe(frame-normal (SlydifiParam.get config))(n-frame)(|title = title; inner = inner|);
     >
+
+% listing
+  let-block +oitem dcf it bt =
+    '< +ghost(dcf)< +item(it)(bt); > >
 
 % inline commands
   let-inline ctx \emph ?:dcf it =

@@ -70,42 +70,73 @@ document '<
 
   +section{|\SLyDIFi; でオーバーレイ|}<
 
-    +frame?:(4){オーバーレイの例 (\show-layer;/4)}<
-      +p{この段落は常に表示される．}
-      +p?:(until 2){
-        \cjk{① } オプション引数を指定して，今何枚目かに応じて表示を出し分けられる．
-        この段落は 1, 2 枚目のとき\emph?:(only 2){のみ}表示される段落．
+    +frame?:(3){オーバーレイの基礎}<
+
+      +p{
+        オーバーレイは、同じスライドに対して「レイヤーを上から重ねる」かのように
+        順々にアイテムを表示できる機能。
       }
-      +p?:(between 2 3){\cjk{② } これは 2, 3 枚目のときのみ表示される段落．}
-      +p?:(only 3 |> non){\cjk{③ } これは 3枚目以外のときに表示される段落．}
-      +p?:(on-slides [1; 4]){\cjk{④ } これは 1, 4 枚目のときのみ表示される段落．}
-      +p{下の図は 2 枚目以降2枚表示される．}
-      +fig-center(
-        hconcat ?:0.5 [
-          dummy-box 200pt 50pt |> hmargin 10pt;
-          dummy-box 150pt 100pt |> hmargin 10pt |> fig-phantom (from 2)
-        ]
-      );
+
+      +ghost(only 1)<
+        +listing{
+          * 表示を一方的に追加していくだけでなく、特定の番号でのみアイテムを削除したり、
+            書式を変更したりすることも可能。
+          * 「何枚目のときに表示するか否か」を表す `int -> bool` 型の関数を用いて指定する。
+        }
+      >
+
+      +ghost(from 2)<
+        +listing{
+          * `+p?:(only 3){}` とすれば、3枚目に限り段落が出現する。
+          * `\emph?:(only 2){}` とすれば、2枚目に限り\emph?:(only 2){強調}できる。
+          * `+ghost(from 2)<>` とすれば、2枚目以降で出現するブロックが作れる。
+        }
+      >
+
+      +p?:(from 3){
+        いくつかのコマンドはオプション引数に条件を指定して、
+        条件を満たすときのみ表示を有効にすることができる。
+      }
+
     >
 
-    +frame?:(4){オーバーレイの例2}<
-      +show-in-order[
-        '<+p{
-          実際には，オーバーレイは上から順に表示させる用途で用いられることが多い．
-          }>;
-        '<+p{
-          そのような需要に簡潔に応えるために `+show-in-order` というコマンドが用意されている．
-          }>;
-        '<+p{
-          `+show-in-order: [block-text list] block-cmd `
-          }>;
-        '<+p{
-          順に表示させたいブロックテキストの列を与えれば，順々に表示してくれる．
-          }>;
-        '<+p{
-          そのような需要に簡潔に答えるために `+show-in-order` というコマンドが用意されている．
-          }>;
-      ];
+    +frame?:(4){オーバーレイの例 (\show-layer;/4)}<
+      +p{
+        箇条書きの要素のオーバーレイ表示。
+      }
+
+      +itemize(EnumitemAlias.paren-arabic)<
+        +item{この項目は常に表示される。}<>
+        +oitem(until 2){
+          `+oitem` コマンドを用いると「今オーバーレイの何枚目か」に応じて表示を出し分けられる。
+          この段落は 1, 2 枚目のとき\emph?:(only 2){のみ}表示される。
+        }<>
+        +oitem(between 2 3){これは 2, 3 枚目のときのみ表示される段落。}<>
+        +oitem(non (only 3)){これは 3枚目以外で表示される段落。}<>
+        +oitem(on-slides [1; 4]){これは 1, 4 枚目のときのみ表示される段落。}<>
+      >
+    >
+
+    +frame?:(4){オーバーレイの例2 (\show-layer;/4)}<
+      +p{
+        図のオーバーレイ表示も可能。
+      }
+
+      +fig-center(
+        vconcat ?:0.5 [
+          hconcat ?:0.5 [
+            dummy-box 150pt 60pt;
+            gap 20pt;
+            dummy-box 150pt 80pt |> fig-phantom (from 2);
+            gap 20pt;
+            dummy-box 150pt 100pt |> fig-phantom (from 3);
+          ];
+          gap 15pt;
+          textbox { 図が少しずつ大きくなっていく様子。 } |> fig-ghost (until 3);
+          textbox { 図が大きくなりきった様子。 } |> fig-ghost (only 4);
+        ] |> hvmargin 15pt |> frame 1pt (Color.gray 0.7)
+      );
+
     >
 
   >

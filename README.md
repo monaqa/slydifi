@@ -150,7 +150,27 @@ A COOL theme based on the colors of [iceberg.vim](https://github.com/cocopon/ice
 
 See [here](example/arctic.pdf) for further examples.
 
-The default settings also require a [Noto Sans](https://www.google.com/get/noto/) type font, but you can change the font settings in the document file.
+Although the default settings require a
+[IBM Plex Sans JP](https://github.com/IBM/plex/releases/tag/v5.2.1) type font,
+you can change the font settings in the document file.
+
+#### Arctic-Noto
+
+Arctic theme with Noto Sans.
+
+```
+@require: class-slydifi/theme/arctic-noto
+```
+
+See [here](example/arctic-noto.pdf) for further examples.
+
+This theme requires [Noto Sans](https://www.google.com/get/noto/) font family:
+
+```
+opam install satysfi-fonts-noto-sans
+opam install satysfi-fonts-noto-sans-cjk-jp
+satyrographos install
+```
 
 ### Changing Configuration
 

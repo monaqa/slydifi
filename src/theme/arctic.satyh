@@ -11,6 +11,7 @@
 @require: railway/railway
 @require: base/color-ext
 @require: base/int
+@require: base/float
 @require: base/typeset/base
 @require: class-slydifi/slydifi
 @require: class-slydifi/footnote
@@ -120,15 +121,15 @@ module SlydifiThemeArctic: sig
   direct +quote : [block-text] block-cmd
 
 % listing
-  direct +listing : [int?; itemize] block-cmd
-  direct \listing : [int?; itemize] inline-cmd
-  direct +listing-overlay : [int?; itemize] block-cmd
-  direct +enumerate-overlay : [int?; itemize] block-cmd
-  direct \cond-item : [(int -> bool)] inline-cmd
-  val label-dia  : int list -> context -> inline-boxes
-  val label-tria : int list -> context -> inline-boxes
-  val label-circ : int list -> context -> inline-boxes
-  val label-rule : int list -> context -> inline-boxes
+  val listing-itemfmt : context -> int list -> itemconfig
+  direct +listing : [(context -> int list -> itemconfig)?; itemize] block-cmd
+  direct \listing : [(context -> int list -> itemconfig)?; itemize] inline-cmd
+  direct +itemize : [(context -> int list -> itemconfig)?; block-text] block-cmd
+  direct +ditem: [inline-text; inline-text; block-text] block-cmd
+  direct +oitem : [(int -> bool); inline-text; block-text] block-cmd
+  val \label-dia : [] inline-cmd
+  val \label-tria : [] inline-cmd
+  val \label-circ : [] inline-cmd
 
 % 脚注
   direct \footnote : [inline-text] inline-cmd
@@ -155,22 +156,23 @@ end = struct
 
 % configuration
 
+  let set-font-metrics fsize ctx =
+    ctx |> set-font-size fsize
+        |> set-paragraph-margin (fsize *' 0.75) (fsize *' 0.75)
+        |> set-min-gap-of-lines 0pt
+        |> set-leading (fsize *' 1.4)
+
   let default-config =
-    let set-font-metrics fsize ctx =
-      ctx |> set-font-size fsize
-          |> set-paragraph-margin (fsize *' 0.65) (fsize *' 0.65)
-          |> set-min-gap-of-lines 0pt
-          |> set-leading (fsize *' 1.4)
-    in
     let default-font ctx =
-      ctx |> set-font Latin          (`fonts-noto-sans:NotoSans-Regular`, 1.0, 0.0)
-          |> set-font Kana           (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0)
-          |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Regular`, 1.0, 0.0)
+      ctx |> set-font Latin          (`system:IBMPlexSansJP`, 1.0, 0.0)
+          |> set-font Kana           (`system:IBMPlexSansJP`, 1.0, 0.0)
+          |> set-font HanIdeographic (`system:IBMPlexSansJP`, 1.0, 0.0)
     in
     let code-font ctx =
-      ctx |> set-font Latin          (`lmmono`, 1.0, 0.0)
-          |> set-font Kana           (`lmmono`, 1.0, 0.0)
-          |> set-font HanIdeographic (`lmmono`, 1.0, 0.0)
+      ctx |> set-font Latin          (`system:mplus-1m-regular`, 1.0, 0.0)
+          |> set-font Kana           (`system:mplus-1m-regular`, 1.0, 0.0)
+          |> set-font HanIdeographic (`system:mplus-1m-regular`, 1.0, 0.0)
+          |> set-space-ratio 0.5 0.5 0.5  % mplus の space ratio に合わせる
           |> set-hyphen-min 1000 1000  % ハイフンを無効化
           |> set-space-ratio-between-scripts 0. 0. 0. Latin Kana
           |> set-space-ratio-between-scripts 0. 0. 0. Kana Latin
@@ -178,9 +180,14 @@ end = struct
           |> set-space-ratio-between-scripts 0. 0. 0. HanIdeographic Latin
     in
     let bold-font ctx =
-      ctx |> set-font Latin          (`fonts-noto-sans:NotoSans-Bold`, 1.0, 0.0)
-          |> set-font Kana           (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Bold`, 1.0, 0.0)
-          |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Bold`, 1.0, 0.0)
+      ctx |> set-font Latin          (`system:IBMPlexSansJP-Bold`, 1.0, 0.0)
+          |> set-font Kana           (`system:IBMPlexSansJP-Bold`, 1.0, 0.0)
+          |> set-font HanIdeographic (`system:IBMPlexSansJP-Bold`, 1.0, 0.0)
+    in
+    let light-font ctx =
+      ctx |> set-font Latin          (`system:IBMPlexSansJP-Light`, 1.0, 0.0)
+          |> set-font Kana           (`system:IBMPlexSansJP-Light`, 1.0, 0.0)
+          |> set-font HanIdeographic (`system:IBMPlexSansJP-Light`, 1.0, 0.0)
     in
 
     (|
@@ -192,7 +199,7 @@ end = struct
       font-slide-author = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 24pt;];
       font-slide-date = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 20pt;];
       font-section-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 32pt];
-      font-frame-title = SlydifiScheme.apply-font-cfg [bold-font; set-font-metrics 28pt];
+      font-frame-title = SlydifiScheme.apply-font-cfg [light-font; set-font-metrics 28pt];
       font-pagenum = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
       font-footnote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 12pt;];
       font-quote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 18pt;];
@@ -221,8 +228,8 @@ end = struct
       color-bullet-tria = Color.of-css `#3f83a6`;
       color-bullet-circ = Color.of-css `#3f83a6`;
       % quotation
-      color-quote = Color.of-css `#33374c`;
-      color-quote-line = Color.of-css `#33374c`;
+      color-quote = (Color.of-css `#33374c`) |> color-inner ?:0.15 (Color.of-css `#e8e9ec`);
+      color-quote-line = (Color.of-css `#33374c`) |> color-inner ?:0.7 (Color.of-css `#e8e9ec`);
 
       %% length
       length-frame-title-height = 36pt;
@@ -253,7 +260,7 @@ end = struct
     let fsize = get-font-size ctx in
     let dpt = fsize *' 0.3 in
     let hgt = fsize *' 1.0 in
-    let pads = (fsize *' 0.15, fsize *' 0.15, fsize *' 0.1, fsize *' 0.1) in
+    let pads = (fsize *' 0.15, fsize *' 0.15, fsize *' 0.0, fsize *' 0.0) in
 
     let rectangle-round-fill r extra color =
       let decoS (x, y) wid _ _ =
@@ -610,10 +617,10 @@ end = struct
     let config = SlydifiParam.get config in
     let deco (x, y) w h d =
       [
-        fill config#color-quote-line (Gr.rectangle (x, y) (x +' 6pt, y +' h))
+        fill config#color-quote-line (Gr.rectangle (x, y) (x +' 4pt, y +' h))
       ]
     in
-    block-frame-breakable ctx (20pt, 0pt, 10pt, 10pt)
+    block-frame-breakable ctx (15pt, 0pt, 10pt, 10pt)
       (deco, deco, deco, deco)
         (fun ctx -> (
           let ctx2 = ctx
@@ -625,7 +632,7 @@ end = struct
 
 % listing
 
-  let label-dia (idx :: _) ctx =
+  let-inline ctx \label-dia =
     let config = SlydifiParam.get config in
     let fsize = get-font-size ctx in
     let grf (x, y) =
@@ -639,7 +646,7 @@ end = struct
     in
     inline-graphics 16pt 8pt 0pt grf
 
-  let label-tria (idx :: _) ctx =
+  let-inline ctx \label-tria =
     let config = SlydifiParam.get config in
     let fsize = get-font-size ctx in
     let grf (x, y) =
@@ -667,7 +674,7 @@ end = struct
     let gr (x, y) = [fill config#color-bullet-tria (path (x, y))] in
     inline-graphics 16pt 8pt 0pt grf
 
-  let label-circ (idx :: _) ctx =
+  let-inline ctx \label-circ =
     let config = SlydifiParam.get config in
     let fsize = get-font-size ctx in
     let path (x, y) =
@@ -679,84 +686,86 @@ end = struct
     let gr (x, y) = [fill config#color-bullet-circ (path (x, y))] in
     inline-graphics 16pt 8pt 0pt (gr)
 
-  let label-rule idxlst =
-    match (List.length idxlst) with
-    | 1 -> label-dia idxlst
-    | 2 -> label-tria idxlst
-    | _ -> label-circ idxlst
-
-  let gen-label-rule d idxlst =
-    match (List.length idxlst + d - 1) with
-    | 1 -> label-dia idxlst
-    | 2 -> label-tria idxlst
-    | _ -> label-circ idxlst
-
   let-rec power-float-int r m =
     match m with
     | 0 -> 1.
     | _ -> (power-float-int r (m - 1)) *. r
 
-  let max-float f1 f2 = if (1pt *' f1) >' (1pt *' f2) then f1 else f2
-
-  let gen-arctic-item d ctx depth ib-label text =
-    let shrink-ratio =
-      max-float (power-float-int 0.95 (depth + d - 1)) 0.85
+  let listing-itemfmt ctx idxlst =
+    let fsize =
+      let config = SlydifiParam.get config in
+      get-font-size (config#font-normal ctx)
     in
-    let ctx-item =
-      let fsize = (get-font-size ctx) *' shrink-ratio in
-      ctx |> set-font-size fsize
-          % |> set-paragraph-margin (fsize *' 0.75) (fsize *' 0.75)
+    let context-body ctxorig _ =
+      let shrink-ratio =
+        let depth = List.length idxlst in
+        0.95 |> Float.pow (float (depth - 1))
+          |> Float.max 0.85
+          |> Float.min 1.0
+      in
+      ctxorig |> set-font-metrics (fsize *' shrink-ratio)
     in
-    let text-indent =
-      let fsize = get-font-size ctx-item in
-      fsize *' (1.2 *. (float depth))
+    let fmt =
+      {|\label-dia;|\label-tria;|\label-circ;|\label-circ;|\label-circ;|}
+        |> List.map EnumitemAlias.text-label |> EnumitemAlias.with-depth
+        |> EnumitemFormat.set-context-body context-body
     in
-    let ib-text =
-      let index-width = get-natural-width ib-label in
-      let item-text-width = (get-text-width ctx) -' text-indent -' index-width in
-      embed-block-top ctx-item item-text-width (fun ctx ->
-        line-break true true ctx (read-inline ctx text ++ inline-fil)
-      )
-    in
-    line-break true true ctx-item
-      ((inline-skip text-indent) ++ ib-label ++ ib-text)
+    fmt ctx idxlst
 
-  let arctic-item = gen-arctic-item 1
+  let-block ctx +listing ?:itemfmt item =
+    let itemfmt = itemfmt |> Option.from listing-itemfmt in
+    read-block ctx '< +listing?:(itemfmt)(item); >
 
-  let-block ctx +listing ?:depth item =
-    let depth = depth |> Option.from 1 in
-    read-block ctx '< +genlisting(gen-label-rule depth)(gen-arctic-item depth)(item); >
+  let-inline ctx \listing ?:itemfmt item =
+    let itemfmt = itemfmt |> Option.from listing-itemfmt in
+    read-inline ctx {\EnumitemAlias.listing?:(itemfmt)(item);}
 
-  let-inline ctx \listing ?:depth item =
-    let depth = depth |> Option.from 1 in
-    read-inline ctx {\listing-from-block<+listing?:(depth)(item);>}
+  let-block ctx +itemize ?:itemfmt bt =
+    let itemfmt = itemfmt |> Option.from listing-itemfmt in
+    read-block ctx '< +itemize(itemfmt)(bt); >
 
-  let param-item-overlay = EnumitemBase.make-param (fun x -> false)
-  let-inline \cond-item dcf = {\set-item(param-item-overlay)(dcf);}
+  let-block +ditem dt it-dd bt-dd =
+    '<
+      +EnumitemAlias.ditem?:(fun it -> {\emph{#it;}})(dt)(it-dd)(bt-dd);
+    >
 
-  let-block ctx +listing-overlay ?:depth item =
-    let depth = depth |> Option.from 1 in
-    let itemf = SlydifiOverlay.select-from-two (EnumitemParam.get param-item-overlay)
-      (gen-arctic-item depth)
-        (fun _ _ _ _ -> block-nil)
-    in
-    read-block ctx '< +xgenlisting(gen-label-rule depth)(itemf)(item); >
+  let-block +oitem dcf it bt =
+    '< +ghost(dcf)< +item(it)(bt); > >
 
-  let-block ctx +enumerate-overlay ?:depth item =
-    let depth = depth |> Option.from 1 in
-    read-block ctx '< +xgenlisting(Enumitem.dot-arabic)(
-      fun ctx dp label inner -> (
-        let () = display-message (
-          `param-item-overlay: ` ^
-            (if (EnumitemParam.get param-item-overlay 1) then `1` else ` `) ^
-            (if (EnumitemParam.get param-item-overlay 2) then `2` else ` `) ^
-            (if (EnumitemParam.get param-item-overlay 3) then `3` else ` `)
-        )
-        in
-        SlydifiOverlay.select-from-two (EnumitemParam.get param-item-overlay)
-          (gen-arctic-item depth ctx dp label inner) block-nil
-      )
-    )(item); >
+  % let-block ctx +listing ?:depth item =
+  %   let depth = depth |> Option.from 1 in
+  %   read-block ctx '< +genlisting(gen-label-rule depth)(gen-arctic-item depth)(item); >
+  % 
+  % let-inline ctx \listing ?:depth item =
+  %   let depth = depth |> Option.from 1 in
+  %   read-inline ctx {\listing-from-block<+listing?:(depth)(item);>}
+  % 
+  % let param-item-overlay = EnumitemBase.make-param (fun x -> false)
+  % let-inline \cond-item dcf = {\set-item(param-item-overlay)(dcf);}
+  % 
+  % let-block ctx +listing-overlay ?:depth item =
+  %   let depth = depth |> Option.from 1 in
+  %   let itemf = SlydifiOverlay.select-from-two (EnumitemParam.get param-item-overlay)
+  %     (gen-arctic-item depth)
+  %       (fun _ _ _ _ -> block-nil)
+  %   in
+  %   read-block ctx '< +xgenlisting(gen-label-rule depth)(itemf)(item); >
+  % 
+  % let-block ctx +enumerate-overlay ?:depth item =
+  %   let depth = depth |> Option.from 1 in
+  %   read-block ctx '< +xgenlisting(Enumitem.dot-arabic)(
+  %     fun ctx dp label inner -> (
+  %       let () = display-message (
+  %         `param-item-overlay: ` ^
+  %           (if (EnumitemParam.get param-item-overlay 1) then `1` else ` `) ^
+  %           (if (EnumitemParam.get param-item-overlay 2) then `2` else ` `) ^
+  %           (if (EnumitemParam.get param-item-overlay 3) then `3` else ` `)
+  %       )
+  %       in
+  %       SlydifiOverlay.select-from-two (EnumitemParam.get param-item-overlay)
+  %         (gen-arctic-item depth ctx dp label inner) block-nil
+  %     )
+  %   )(item); >
 
 % \footnote{} command
 

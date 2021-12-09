@@ -9,9 +9,6 @@
 @import: ../footnote
 @require: enumitem/enumitem
 
-let () = Enumitem.item-indent-ratio |> EnumitemParam.set 1.0
-let () = Enumitem.label-width-ratio |> EnumitemParam.set 1.0
-
 type plain-config = (|
   font-normal : context -> context;
   font-emph : context -> context;
@@ -59,6 +56,9 @@ module SlydifiThemePlain: sig
 
 % inline commands
   direct \emph : [(int -> bool)?; inline-text] inline-cmd
+
+% listing
+  direct +oitem : [(int -> bool); inline-text; block-text] block-cmd
 
 % 脚注
   direct \footnote : [inline-text] inline-cmd
@@ -266,6 +266,10 @@ end = struct
       SlydifiOverlay.select-from-two dcf (config#font-emph ctx) ctx
     in
     read-inline ctx2 it
+
+% listing
+  let-block +oitem dcf it bt =
+    '< +ghost(dcf)< +item(it)(bt); > >
 
 % \footnote{} command
 

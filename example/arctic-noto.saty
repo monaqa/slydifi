@@ -1,6 +1,7 @@
 @require: figbox/figbox
 @require: base/color-ext
-@require: class-slydifi/theme/arctic
+% @require: class-slydifi/theme/arctic-noto
+@import: ../src/theme/arctic-noto
 
 open FigBox
 open SlydifiOverlay
