@@ -1,7 +1,7 @@
 @require: class-slydifi/slydifi
 @require: class-slydifi/theme/arctic
 
-let () =
+let slydifi-theme-arctic-noto-config =
   let set-font-metrics fsize ctx =
     ctx |> set-font-size fsize
         |> set-paragraph-margin (fsize *' 0.75) (fsize *' 0.75)
@@ -33,7 +33,6 @@ let () =
         |> set-font HanIdeographic (`fonts-noto-sans-cjk-jp:NotoSansCJKjp-Bold`, 1.0, 0.0)
   in
 
-  SlydifiThemeArctic.config |> SlydifiParam.set
   (|
     SlydifiThemeArctic.default-config with
       %% font
@@ -50,3 +49,6 @@ let () =
       font-quote = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 18pt;];
 
   |)
+
+let () =
+  SlydifiThemeArctic.config |> SlydifiParam.set slydifi-theme-arctic-noto-config
