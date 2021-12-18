@@ -19,10 +19,12 @@ let color-inner ?:ratio clr1 clr2 =
   let (r1, g1, b1) = match clr1 with
     | Gray(x) -> ( x, x, x )
     | RGB(r, g, b) -> (r, g, b)
+    | CMYK(c, m, y, k) -> ((1. -. c) *. (1. -. k), (1. -. m) *. (1. -. k), (1. -. y) *. (1. -. k))
   in
   let (r2, g2, b2) = match clr2 with
     | Gray(x) -> ( x, x, x )
     | RGB(r, g, b) -> (r, g, b)
+    | CMYK(c, m, y, k) -> ((1. -. c) *. (1. -. k), (1. -. m) *. (1. -. k), (1. -. y) *. (1. -. k))
   in
   let (r, g, b) =
     (
