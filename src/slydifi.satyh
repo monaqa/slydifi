@@ -47,6 +47,8 @@ module SlydifiScheme: sig
   %%   inner (block-text): スライド本体のブロックテキスト。
   val document-scheme: frame-layout -> (context -> context) -> ((|page-number : int|) -> (length * length) -> unit) -> block-text -> document
 
+  val get-standard-context: length -> context
+
   %% font-config を受け取り、特定の context を context に変換する。
   val apply-font-cfg : font-config -> context -> context
 
@@ -67,11 +69,49 @@ module SlydifiScheme: sig
 
   direct +show-in-order: [block-text list] block-cmd
 
+  val register-header: int -> graphics list -> unit
+  val get-sections: unit -> ((| title: inline-text; range: (int * int) option |)) list
+  val add-section: (int * int)?-> inline-text -> unit
+
+  val eval-after-page-break: (int -> graphics list) -> graphics
+
 end = struct
 
 % parameter
   let namedframe = SlydifiParam.make Map.empty
   let eq-string = Eq.make string-same
+
+  % inline-text list
+  let sections = SlydifiParam.make []
+
+  % n ページ目に入れるヘッダを格納する。
+  % int (graphics list) map 型
+  let header-map = SlydifiParam.make Map.empty
+
+  let register-header pagenum grlst =
+    let new-map =
+      header-map |> SlydifiParam.get
+                 |> Map.bind pagenum grlst
+    in
+    header-map |> SlydifiParam.set new-map
+
+  let eval-after-page-break grf =
+    let hookf pbinfo _ =
+      register-header pbinfo#page-number (grf pbinfo#page-number)
+    in
+    let ib = hook-page-break hookf in
+    draw-text (0pt, 0pt) ib
+
+  let add-section ?:range it =
+    let sects = SlydifiParam.get sections in
+    let sect = (|
+      title = it;
+      range = range;
+    |)
+    in
+    sections |> SlydifiParam.set (sect :: sects)
+
+  let get-sections () = SlydifiParam.get sections |> List.reverse
 
   let-inline ctx \math fml = script-guard Latin (embed-math ctx fml)
 
@@ -99,9 +139,18 @@ end = struct
       |)
     in
     let pagepartsf pbinfo =
+      let header-grlst =
+        SlydifiParam.get header-map
+          |> Map.of-(Int.eq) pbinfo#page-number
+          |> Option.from []
+      in
+      let header-content =
+        let ib = inline-graphics 0pt 0pt 0pt (fun _ -> header-grlst) in
+        line-break false false (get-standard-context 0pt) ib
+      in
       (|
       header-origin  = (0pt, 0pt);
-      header-content = block-nil;
+      header-content = header-content;
       footer-origin  = (0pt, 0pt);
       footer-content = block-nil;
       |)

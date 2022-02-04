@@ -1,6 +1,7 @@
 @require: figbox/figbox
 @require: base/color-ext
-@require: class-slydifi/theme/arctic
+% @require: class-slydifi/theme/arctic
+@import: ../src/theme/arctic
 
 open FigBox
 open SlydifiOverlay
@@ -19,6 +20,10 @@ document '<
     date = {| 2021年6月6日 |};
   |);
 
+
+  +table-of-contents{目次}
+
+  +table-of-contents?:(1){目次}
 
   +section{|セクションスライドの|具体例|}<
 
@@ -68,6 +73,8 @@ document '<
     >
   >
 
+  +table-of-contents?:(2){目次}
+
   +section{|\SLyDIFi; でオーバーレイ|}<
 
     +frame?:(3){オーバーレイの基礎}<
@@ -113,7 +120,7 @@ document '<
         }<>
         +oitem(between 2 3){これは 2, 3 枚目のときのみ表示される段落。}<>
         +oitem(non (only 3)){これは 3枚目以外で表示される段落。}<>
-        +oitem(on-slides [1; 4]){これは 1, 4 枚目のときのみ表示される段落。}<>
+        +oitem(on-slides []){これは 1, 4 枚目のときのみ表示される段落。}<>
       >
     >
 

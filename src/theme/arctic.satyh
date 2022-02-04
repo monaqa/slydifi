@@ -13,9 +13,11 @@
 @require: base/int
 @require: base/float
 @require: base/typeset/base
-@require: class-slydifi/slydifi
-@require: class-slydifi/footnote
+% @require: class-slydifi/slydifi
+% @require: class-slydifi/footnote
 @require: enumitem/enumitem
+% @import: ../crossref
+@import: ../slydifi
 
 type arctic-config = (|
   %% font
@@ -104,6 +106,7 @@ module SlydifiThemeArctic: sig
   direct +make-title : [(| title: inline-text list; author: inline-text list; date: inline-text list|);] block-cmd
   %% frame-section-title に従って通常のスライドを生成する。
   direct +section : [inline-text?; inline-text list; block-text;] block-cmd
+  direct +table-of-contents: [int?; inline-text; ] block-cmd
 
   direct +section-noframe : [inline-text?; block-text;] block-cmd
   %% frame-normal に従って通常のスライドを生成する。
@@ -284,6 +287,7 @@ end = struct
 
   let document bt =
     let config = SlydifiParam.get config in
+    % let () = SlydifiCrossrefManager.init () in
     let hookf _ _ =
       let numpages = SlydifiParam.get page-num in
       register-cross-reference `pagecount` (arabic numpages)
@@ -295,6 +299,173 @@ end = struct
     in
     SlydifiScheme.document-scheme layout init-ctx hookf bt
 
+% inline commands
+
+  let-inline ctx \emph ?:dcf it =
+    let config = SlydifiParam.get config in
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ctx2 =
+      SlydifiOverlay.select-from-two dcf (
+        ctx |> config#font-bold
+            |> set-text-color config#color-emph
+      ) ctx
+    in
+    read-inline ctx2 it
+
+  let-inline ctx \weak ?:dcf it =
+    let config = SlydifiParam.get config in
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ctx2 =
+      SlydifiOverlay.select-from-two dcf (
+        ctx |> set-text-color config#color-weak
+      ) ctx
+    in
+    read-inline ctx2 it
+
+  let-inline ctx \textbf ?:dcf it =
+    let config = SlydifiParam.get config in
+    let dcf = Option.from (fun _ -> true) dcf in
+    let ctx2 =
+      SlydifiOverlay.select-from-two dcf (config#font-bold ctx) ctx
+    in
+    read-inline ctx2 it
+
+  let-inline ctx \link ?:text url =
+    let config = SlydifiParam.get config in
+    match text with
+    | Some(text) ->
+        let ctx =
+          ctx |> set-text-color config#color-link
+        in
+        read-inline ctx {\href(url)(text);}
+    | None ->
+        let text = embed-string url in
+        let ctx =
+          ctx
+            |> config#font-code
+            |> set-text-color config#color-link
+        in
+        read-inline ctx {\href(url)(text);}
+
+  let-block ctx +quote bt =
+    let config = SlydifiParam.get config in
+    let deco (x, y) w h d =
+      [
+        fill config#color-quote-line (Gr.rectangle (x, y) (x +' 4pt, y +' h))
+      ]
+    in
+    block-frame-breakable ctx (15pt, 0pt, 10pt, 10pt)
+      (deco, deco, deco, deco)
+        (fun ctx -> (
+          let ctx2 = ctx
+            |> set-text-color config#color-quote
+            |> config#font-quote
+          in
+          (read-block ctx2 bt)
+        ))
+
+
+% listing
+
+  let-inline ctx \label-dia =
+    let config = SlydifiParam.get config in
+    let fsize = get-font-size ctx in
+    let grf (x, y) =
+      let edge = Rail.( init |> push-line (fsize *' 0.25, fsize *' 0.25) ) in
+      let gr =
+        Rail.(map-repeat (fun i -> edge ^ (90. *. (float i))) 4)
+          |> Rail.to-loop (x +' fsize *' 0.25, y +' fsize *' 0.1)
+          |> fill config#color-bullet-dia
+      in
+      [gr]
+    in
+    inline-graphics 16pt 8pt 0pt grf
+
+  let-inline ctx \label-tria =
+    let config = SlydifiParam.get config in
+    let fsize = get-font-size ctx in
+    let grf (x, y) =
+      let gr =
+        Rail.(
+          init |> push-line (fsize *' 0.4, fsize *' 0.2)
+               |> push-line (0pt -' fsize *' 0.4, fsize *' 0.2)
+               |> push-line (0pt, 0pt -' fsize *' 0.4)
+               |> to-loop (x, y +' fsize *' 0.1)
+        ) |> fill config#color-bullet-tria
+      in
+      [gr]
+    in
+    let path (x, y) =
+      let yc = y +' fsize *' 0.3 in
+      let xl = x in
+      let xr = x +' fsize *' 0.4 in
+      let yu = yc +' fsize *' 0.2 in
+      let yd = yc -' fsize *' 0.2 in
+      start-path (xl, yu)
+        |> line-to (xr, yc)
+        |> line-to (xl, yd)
+        |> close-with-line
+    in
+    let gr (x, y) = [fill config#color-bullet-tria (path (x, y))] in
+    inline-graphics 16pt 8pt 0pt grf
+
+  let-inline ctx \label-circ =
+    let config = SlydifiParam.get config in
+    let fsize = get-font-size ctx in
+    let path (x, y) =
+      let cx = x +' fsize *' 0.3 in
+      let cy = y +' fsize *' 0.3 in
+      let r = fsize *' 0.15 in
+      Gr.circle (cx, cy) r
+    in
+    let gr (x, y) = [fill config#color-bullet-circ (path (x, y))] in
+    inline-graphics 16pt 8pt 0pt (gr)
+
+  let-rec power-float-int r m =
+    match m with
+    | 0 -> 1.
+    | _ -> (power-float-int r (m - 1)) *. r
+
+  let listing-itemfmt ctx idxlst =
+    let fsize =
+      let config = SlydifiParam.get config in
+      get-font-size (config#font-normal ctx)
+    in
+    let context-body ctxorig _ =
+      let shrink-ratio =
+        let depth = List.length idxlst in
+        0.95 |> Float.pow (float (depth - 1))
+          |> Float.max 0.85
+          |> Float.min 1.0
+      in
+      ctxorig |> set-font-metrics (fsize *' shrink-ratio)
+    in
+    let fmt =
+      {|\label-dia;|\label-tria;|\label-circ;|\label-circ;|\label-circ;|}
+        |> List.map EnumitemAlias.text-label |> EnumitemAlias.with-depth
+        |> EnumitemFormat.set-context-body context-body
+    in
+    fmt ctx idxlst
+
+  let-block ctx +listing ?:itemfmt item =
+    let itemfmt = itemfmt |> Option.from listing-itemfmt in
+    read-block ctx '< +listing?:(itemfmt)(item); >
+
+  let-inline ctx \listing ?:itemfmt item =
+    let itemfmt = itemfmt |> Option.from listing-itemfmt in
+    read-inline ctx {\EnumitemAlias.listing?:(itemfmt)(item);}
+
+  let-block ctx +itemize ?:itemfmt bt =
+    let itemfmt = itemfmt |> Option.from listing-itemfmt in
+    read-block ctx '< +itemize(itemfmt)(bt); >
+
+  let-block +ditem dt it-dd bt-dd =
+    '<
+      +EnumitemAlias.ditem?:(fun it -> {\emph{#it;}})(dt)(it-dd)(bt-dd);
+    >
+
+  let-block +oitem dcf it bt =
+    '< +ghost(dcf)< +item(it)(bt); > >
 % frames
 
   let frame-master config =
@@ -461,6 +632,42 @@ end = struct
     in
     Frame.make layout f
 
+  let frame-toc-content config =
+    let f ctx content =
+      % content#footer の値に応じてフッターをつけるかどうか変える
+
+      let gr =
+        let grf pagenum =
+          let sects =
+            let to-item i x =
+              let title = x#title in
+              match content#index with
+              | Some(p) when p == i + 1 ->
+                  '< +item{\emph{#title;}}<> >
+              | Some(_) ->
+                  '< +item{\weak{#title;}}<> >
+              | None ->
+                  '< +item{#title;}<> >
+            in
+            SlydifiScheme.get-sections ()
+              |> List.mapi to-item
+              |> List.fold-left (fun acc x -> '<#acc;#x;>) '<>
+          in
+          let ib =
+            embed-block-bottom ctx layout#text-width (fun ctx -> read-block ctx '<
+              +itemize?:(EnumitemAlias.dot-arabic)(sects);
+            >)
+          in
+          let (_, h, _) = get-natural-metrics ib in
+          [draw-text (layout#text-horizontal-margin, layout#paper-height -' layout#text-vertical-margin -' config#length-frame-title-height -' config#length-frame-body-top-margin -' h) ib]
+        in
+        SlydifiScheme.eval-after-page-break grf
+      in
+
+      (block-nil, [gr] )
+    in
+    Frame.make layout f
+
   let frame-normal config =
     let f ctx content =
       % content#footer の値に応じてフッターをつけるかどうか変える
@@ -504,8 +711,17 @@ end = struct
     in
     Frame.make layout f
 
-% frame commands
+  let frame-toc config =
+    let f ctx content =
+      let (_, gr-normal) =
+        frame-normal config |> Frame.embed ctx (| title = content#title; inner = '<>; footer = false; |)
+      in
+      let (_, gr-toc-content) = frame-toc-content config |> Frame.embed ctx (| index = content#index |) in
+      (block-nil, [gr-normal; gr-toc-content] |> List.concat)
+    in
+    Frame.make layout f
 
+% frame commands
   let-block ctx +make-title content =
     read-block ctx '<
       +SlydifiScheme.genframe(frame-slide-title (SlydifiParam.get config))(1)(content);
@@ -521,8 +737,19 @@ end = struct
       short-name |> Option.from default
     in
     let () = section-name |> SlydifiParam.set it-title in
+    let page-start = SlydifiParam.get page-num in
     let bb-inner = read-block ctx inner in
+    let page-end = SlydifiParam.get page-num in
     let () = section-name |> SlydifiParam.discard in
+    % let section = (|
+    %   key = SlydifiCrossrefManager.generate-id ();
+    %   title = (read-inline ctx it-title) |> extract-string;
+    %   page-start = page-start + 1;
+    %   page-end = page-end;
+    % |)
+    % in
+    % let () = SlydifiCrossrefManager.register-section section in
+    let () = SlydifiScheme.add-section ?:(page-start, page-end) it-title in
 
     bb-section +++ bb-inner
 
@@ -540,6 +767,11 @@ end = struct
     let n-frame = n-frame |> Option.from 1 in
     read-block ctx '<
       +SlydifiScheme.genframe(frame-normal (SlydifiParam.get config))(n-frame)(|title = title; inner = inner; footer = true|);
+    >
+
+  let-block ctx +table-of-contents ?:index title =
+    read-block ctx '<
+      +SlydifiScheme.genframe(frame-toc (SlydifiParam.get config))(1)(|title = title; index = index|);
     >
 
   let-block ctx +frame-nofooter ?:n-frame title inner =
@@ -564,173 +796,6 @@ end = struct
     | None -> read-block ctx '<
       +SlydifiScheme.againframe(name);
     >
-
-% inline commands
-
-  let-inline ctx \emph ?:dcf it =
-    let config = SlydifiParam.get config in
-    let dcf = Option.from (fun _ -> true) dcf in
-    let ctx2 =
-      SlydifiOverlay.select-from-two dcf (
-        ctx |> config#font-bold
-            |> set-text-color config#color-emph
-      ) ctx
-    in
-    read-inline ctx2 it
-
-  let-inline ctx \weak ?:dcf it =
-    let config = SlydifiParam.get config in
-    let dcf = Option.from (fun _ -> true) dcf in
-    let ctx2 =
-      SlydifiOverlay.select-from-two dcf (
-        ctx |> set-text-color config#color-weak
-      ) ctx
-    in
-    read-inline ctx2 it
-
-  let-inline ctx \textbf ?:dcf it =
-    let config = SlydifiParam.get config in
-    let dcf = Option.from (fun _ -> true) dcf in
-    let ctx2 =
-      SlydifiOverlay.select-from-two dcf (config#font-bold ctx) ctx
-    in
-    read-inline ctx2 it
-
-  let-inline ctx \link ?:text url =
-    let config = SlydifiParam.get config in
-    match text with
-    | Some(text) ->
-        let ctx =
-          ctx |> set-text-color config#color-link
-        in
-        read-inline ctx {\href(url)(text);}
-    | None ->
-        let text = embed-string url in
-        let ctx =
-          ctx
-            |> config#font-code
-            |> set-text-color config#color-link
-        in
-        read-inline ctx {\href(url)(text);}
-
-  let-block ctx +quote bt =
-    let config = SlydifiParam.get config in
-    let deco (x, y) w h d =
-      [
-        fill config#color-quote-line (Gr.rectangle (x, y) (x +' 4pt, y +' h))
-      ]
-    in
-    block-frame-breakable ctx (15pt, 0pt, 10pt, 10pt)
-      (deco, deco, deco, deco)
-        (fun ctx -> (
-          let ctx2 = ctx
-            |> set-text-color config#color-quote
-            |> config#font-quote
-          in
-          (read-block ctx2 bt)
-        ))
-
-% listing
-
-  let-inline ctx \label-dia =
-    let config = SlydifiParam.get config in
-    let fsize = get-font-size ctx in
-    let grf (x, y) =
-      let edge = Rail.( init |> push-line (fsize *' 0.25, fsize *' 0.25) ) in
-      let gr =
-        Rail.(map-repeat (fun i -> edge ^ (90. *. (float i))) 4)
-          |> Rail.to-loop (x +' fsize *' 0.25, y +' fsize *' 0.1)
-          |> fill config#color-bullet-dia
-      in
-      [gr]
-    in
-    inline-graphics 16pt 8pt 0pt grf
-
-  let-inline ctx \label-tria =
-    let config = SlydifiParam.get config in
-    let fsize = get-font-size ctx in
-    let grf (x, y) =
-      let gr =
-        Rail.(
-          init |> push-line (fsize *' 0.4, fsize *' 0.2)
-               |> push-line (0pt -' fsize *' 0.4, fsize *' 0.2)
-               |> push-line (0pt, 0pt -' fsize *' 0.4)
-               |> to-loop (x, y +' fsize *' 0.1)
-        ) |> fill config#color-bullet-tria
-      in
-      [gr]
-    in
-    let path (x, y) =
-      let yc = y +' fsize *' 0.3 in
-      let xl = x in
-      let xr = x +' fsize *' 0.4 in
-      let yu = yc +' fsize *' 0.2 in
-      let yd = yc -' fsize *' 0.2 in
-      start-path (xl, yu)
-        |> line-to (xr, yc)
-        |> line-to (xl, yd)
-        |> close-with-line
-    in
-    let gr (x, y) = [fill config#color-bullet-tria (path (x, y))] in
-    inline-graphics 16pt 8pt 0pt grf
-
-  let-inline ctx \label-circ =
-    let config = SlydifiParam.get config in
-    let fsize = get-font-size ctx in
-    let path (x, y) =
-      let cx = x +' fsize *' 0.3 in
-      let cy = y +' fsize *' 0.3 in
-      let r = fsize *' 0.15 in
-      Gr.circle (cx, cy) r
-    in
-    let gr (x, y) = [fill config#color-bullet-circ (path (x, y))] in
-    inline-graphics 16pt 8pt 0pt (gr)
-
-  let-rec power-float-int r m =
-    match m with
-    | 0 -> 1.
-    | _ -> (power-float-int r (m - 1)) *. r
-
-  let listing-itemfmt ctx idxlst =
-    let fsize =
-      let config = SlydifiParam.get config in
-      get-font-size (config#font-normal ctx)
-    in
-    let context-body ctxorig _ =
-      let shrink-ratio =
-        let depth = List.length idxlst in
-        0.95 |> Float.pow (float (depth - 1))
-          |> Float.max 0.85
-          |> Float.min 1.0
-      in
-      ctxorig |> set-font-metrics (fsize *' shrink-ratio)
-    in
-    let fmt =
-      {|\label-dia;|\label-tria;|\label-circ;|\label-circ;|\label-circ;|}
-        |> List.map EnumitemAlias.text-label |> EnumitemAlias.with-depth
-        |> EnumitemFormat.set-context-body context-body
-    in
-    fmt ctx idxlst
-
-  let-block ctx +listing ?:itemfmt item =
-    let itemfmt = itemfmt |> Option.from listing-itemfmt in
-    read-block ctx '< +listing?:(itemfmt)(item); >
-
-  let-inline ctx \listing ?:itemfmt item =
-    let itemfmt = itemfmt |> Option.from listing-itemfmt in
-    read-inline ctx {\EnumitemAlias.listing?:(itemfmt)(item);}
-
-  let-block ctx +itemize ?:itemfmt bt =
-    let itemfmt = itemfmt |> Option.from listing-itemfmt in
-    read-block ctx '< +itemize(itemfmt)(bt); >
-
-  let-block +ditem dt it-dd bt-dd =
-    '<
-      +EnumitemAlias.ditem?:(fun it -> {\emph{#it;}})(dt)(it-dd)(bt-dd);
-    >
-
-  let-block +oitem dcf it bt =
-    '< +ghost(dcf)< +item(it)(bt); > >
 
   % let-block ctx +listing ?:depth item =
   %   let depth = depth |> Option.from 1 in
