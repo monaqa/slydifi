@@ -10,13 +10,15 @@
 @require: annot
 @require: railway/railway
 @require: base/color-ext
+@require: base/list-ext
 @require: base/int
 @require: base/float
 @require: base/tuple
 @require: base/typeset/base
-@require: class-slydifi/slydifi
-@require: class-slydifi/footnote
+% @require: class-slydifi/slydifi
+% @require: class-slydifi/footnote
 @require: enumitem/enumitem
+@import: ../slydifi
 
 type arctic-config = (|
   %% font
@@ -50,8 +52,10 @@ type arctic-config = (|
   color-separator : color;
   color-pagenum : color;
   color-indicator-total : color;
-  color-indicator-section : color;
   color-indicator-done : color;
+  color-indicator-current-page : color;
+  color-indicator-section-page : color;
+  color-indicator-other-page : color;
   % decoration
   color-quote : color;
   color-quote-line : color;
@@ -232,8 +236,11 @@ end = struct
       color-separator = Color.of-css `#6b7089`;
       color-pagenum = Color.of-css `#6b7089`;
       color-indicator-total = Color.of-css `#cad0de`;
-      color-indicator-section = Color.of-css `#a2a8b6`;
-      color-indicator-done = Color.of-css `#3f83a6`;
+      color-indicator-done = Color.of-css `#cad0de`;
+      color-indicator-current-page = Color.of-css `#3f83a6`;
+      color-indicator-section-page = Color.of-css `#7a808e`;
+      color-indicator-other-page = Color.of-css `#8e94a2`;
+
       % listing
       color-bullet-dia = Color.of-css `#3f83a6`;
       color-bullet-tria = Color.of-css `#3f83a6`;
@@ -526,64 +533,101 @@ end = struct
   let frame-progressbar config =
     let f ctx () =
 
-      let current-pagenum = SlydifiParam.get page-num in
+      let pg-current = SlydifiParam.get page-num in
 
       let total = get-cross-reference `pagecount` |> Option.from `1` |> Int.of-string ?* in
       let float-total = float (if total <= 0 then 1 else total) in  % ゼロ割などの回避
 
-      let gr-lazy = SlydifiScheme.eval-after-page-break (fun _ -> (
-        let page-to-progress pg = (float pg -. 0.5) /. float-total in
-        let page-to-height pg = layout#paper-height *' (1.0 -. page-to-progress pg) in
+      let page-to-progress pg = (float pg -. 0.5) /. float-total in
+      let page-to-height pg = layout#paper-height *' (1.0 -. page-to-progress pg) in
 
-        let gr-bar-total =
-          Gr.rectangle (layout#paper-width -' config#length-indicator-line-thickness, 0pt) (layout#paper-width, layout#paper-height)
+      let gr-bar-bg =
+        let done =
+          Gr.rectangle (layout#paper-width -' config#length-indicator-line-thickness, page-to-height pg-current)
+            (layout#paper-width, layout#paper-height)
+            |> fill config#color-indicator-done
+        in
+        let undone =
+          Gr.rectangle (layout#paper-width -' config#length-indicator-line-thickness, 0pt)
+            (layout#paper-width, page-to-height pg-current)
             |> fill config#color-indicator-total
         in
+        [done; undone]
+      in
 
-        let gr-section-range (pg-start, pg-end) =
-          let track-height = page-to-height pg-start -' page-to-height pg-end in
+      let gr-section-range (pg-start, pg-end) =
+        let track-height = page-to-height pg-start -' page-to-height pg-end in
 
-          let x = layout#paper-width -' config#length-indicator-line-thickness *' 0.5 in
-          Gr.line (x, page-to-height pg-start) (x, page-to-height pg-end)
-            |> stroke (config#length-indicator-line-thickness *' 0.3) config#color-indicator-section
+        let x = layout#paper-width -' config#length-indicator-line-thickness *' 0.5 in
+
+        let strokef =
+          if pg-start <= pg-current && pg-current <= pg-end then
+            stroke (config#length-indicator-line-thickness *' 0.3) config#color-indicator-section-page
+          else
+            stroke (config#length-indicator-line-thickness *' 0.2) config#color-indicator-other-page
+        in
+        Gr.line (x, page-to-height pg-start) (x, page-to-height pg-end) |> strokef
+      in
+
+      let icon-current-page pg =
+        Rail.(
+          let l ratio = config#length-indicator-line-thickness *' ratio in
+          let ml ratio = 0pt -' l ratio in
+          let arrow-feather =
+            init |> push-line (l 0.5, l 0.5) |> push-line (0pt, l 1.5) |> push-line (ml 0.5, ml 0.5)
+          in
+          concat [
+            arrow-feather;
+            arrow-feather |> reflect-x |> reverse;
+          ] |> to-loop (layout#paper-width -' l 0.5, page-to-height pg -' l 1.0)
+        ) |> fill config#color-indicator-current-page
+      in
+
+      let icon-current-section pg =
+        Gr.circle (
+          layout#paper-width -' config#length-indicator-line-thickness *' 0.5,
+          page-to-height pg
+        ) (config#length-indicator-line-thickness *' 0.4) |> fill config#color-indicator-section-page
+      in
+
+      let icon-other pg =
+        Gr.circle (
+          layout#paper-width -' config#length-indicator-line-thickness *' 0.5,
+          page-to-height pg
+        ) (config#length-indicator-line-thickness *' 0.3) |> fill config#color-indicator-other-page
+      in
+
+      let gr-lazy = SlydifiScheme.eval-after-page-break (fun _ -> (
+        let section-ranges =
+          SlydifiScheme.get-sections ()
+          |> List.map (fun sect -> sect#range |> Option.to-list)
+          |> List.concat
         in
 
-        let grlst-section-range =
-          SlydifiScheme.get-sections ()
-            |> List.map (fun sect -> sect#range |> Option.to-list)
-            |> List.concat
-            |> List.map gr-section-range
+        let grlst-section-range = section-ranges |> List.map gr-section-range in
+        % 描画対象（アイコン）がカレントページのセクションに属しているかどうか。
+        let is-current-section-range pg =
+          section-ranges
+            |> List.find (fun (s, e) -> s <= pg-current && pg-current <= e)
+            |> Option.map (fun (s, e) -> s <= pg && pg <= e)
+            |> Option.from false
         in
 
         let grlst-pages =
           let grf idx =
-            let pagenum = idx + 1 in
-            if pagenum == current-pagenum then
-              Rail.(
-                let l ratio = config#length-indicator-line-thickness *' ratio in
-                let ml ratio = 0pt -' l ratio in
-                let right-arrow = 
-                  init
-                    |> push-line (l 0.5, l 0.5)
-                    |> push-line (0pt, l 1.5)
-                    |> push-line (ml 0.5, ml 0.5)
-                in
-                concat [
-                  right-arrow;
-                  right-arrow |> reflect-x |> reverse;
-                ] |> to-loop (layout#paper-width -' l 0.5,
-                  page-to-height current-pagenum -' l 1.0)
-              ) |> fill config#color-indicator-done
+            let pg = idx + 1 in
+            if pg == pg-current then
+              icon-current-page pg
             else
-              Gr.circle (
-                layout#paper-width -' config#length-indicator-line-thickness *' 0.5,
-                page-to-height pagenum
-              ) (config#length-indicator-line-thickness *' 0.4) |> fill config#color-indicator-section
+              if is-current-section-range pg then
+                icon-current-section pg
+              else
+                icon-other pg
           in
           range total |> List.map grf
         in
 
-        [[gr-bar-total]; grlst-section-range; grlst-pages; ] |> List.concat
+        [gr-bar-bg; grlst-section-range; grlst-pages; ] |> List.concat
       ))
       in
 
