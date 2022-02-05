@@ -12,12 +12,11 @@
 @require: base/color-ext
 @require: base/int
 @require: base/float
+@require: base/tuple
 @require: base/typeset/base
-% @require: class-slydifi/slydifi
-% @require: class-slydifi/footnote
+@require: class-slydifi/slydifi
+@require: class-slydifi/footnote
 @require: enumitem/enumitem
-% @import: ../crossref
-@import: ../slydifi
 
 type arctic-config = (|
   %% font
@@ -51,6 +50,7 @@ type arctic-config = (|
   color-separator : color;
   color-pagenum : color;
   color-indicator-total : color;
+  color-indicator-section : color;
   color-indicator-done : color;
   % decoration
   color-quote : color;
@@ -89,7 +89,7 @@ module SlydifiThemeArctic: sig
   %% スライドマスター。
   val frame-master: arctic-config -> unit Frame.frame
   %% ページ番号の付いたスライドマスター。
-  val frame-master-with-footer: arctic-config -> unit Frame.frame
+  % val frame-master-with-footer: arctic-config -> unit Frame.frame
   %% スライド全体のタイトルフレーム。
   %% title: スライドのタイトル
   %% title: スライドのタイトル
@@ -156,6 +156,13 @@ end = struct
   let xrel xfloat = layout#paper-width *' xfloat
   let yrel yfloat = layout#paper-height *' yfloat
   let rel xfloat yfloat = (xrel xfloat, yrel yfloat)
+
+% util
+
+  let range n =
+    let-rec aux m = if m < 0 then [] else m :: aux (m - 1) in
+    aux (n - 1) |> List.reverse
+
 
 % configuration
 
@@ -225,6 +232,7 @@ end = struct
       color-separator = Color.of-css `#6b7089`;
       color-pagenum = Color.of-css `#6b7089`;
       color-indicator-total = Color.of-css `#cad0de`;
+      color-indicator-section = Color.of-css `#a2a8b6`;
       color-indicator-done = Color.of-css `#3f83a6`;
       % listing
       color-bullet-dia = Color.of-css `#3f83a6`;
@@ -287,7 +295,6 @@ end = struct
 
   let document bt =
     let config = SlydifiParam.get config in
-    % let () = SlydifiCrossrefManager.init () in
     let hookf _ _ =
       let numpages = SlydifiParam.get page-num in
       register-cross-reference `pagecount` (arabic numpages)
@@ -477,15 +484,12 @@ end = struct
     in
     Frame.make layout f
 
-  let frame-master-with-footer config =
+  let frame-pagenum config =
     let f ctx () =
-      % frame-master の graphics list を踏襲する
-      let (_, gr-frame-master) = frame-master config |> Frame.embed ctx () in
-
-      let pagenum = SlydifiParam.get page-num in
-      let total = get-cross-reference `pagecount` |> Option.from `1` in
-
       let gr-page-number =
+        let pagenum = SlydifiParam.get page-num in
+        let total = get-cross-reference `pagecount` |> Option.from `??` in
+
         let it-pagenum = pagenum |> arabic |> embed-string in
         let it-total = embed-string total in
         let ctx-pagenum =
@@ -496,7 +500,12 @@ end = struct
         let pos = (xrel 1.0 -' config#length-frame-footer-xmargin, config#length-frame-footer-ymargin) in
         SlydifiGraphics.put-text (1., 0.) pos ib
       in
+      (block-nil, [gr-page-number; ] |> List.concat)
+    in
+    Frame.make layout f
 
+  let frame-sectitle config =
+    let f ctx () =
       let gr-section-title =
         if (section-name |> SlydifiParam.has-changed) then
           let it = section-name |> SlydifiParam.get in
@@ -510,40 +519,75 @@ end = struct
         else
           []
       in
+      (block-nil, [gr-section-title; ] |> List.concat)
+    in
+    Frame.make layout f
 
-      let gr-progress-bar =
-        let progress =
-          let float-pagenum = float pagenum in
-          let float-total =
-            let int-total = Int.of-string total in
-            float (if int-total <= 1 then 2 else int-total)  % ゼロ割などの回避
-          in
-          (float-pagenum -. 1.) /. (float-total -. 1.)
-        in
-        let y = (layout#paper-height *' (1.0 -. progress)) in
-        let bar-done =
-          let vert-line = Rail.init |> Rail.push-line (0pt, config#length-indicator-bar-height) in
-          let side = Rail.(
-            circular-sector ?:(180.) (config#length-indicator-line-thickness *' 0.5)
-          )
-          in
-          Rail.(concat [
-            vert-line;
-            side;
-            vert-line |> reverse;
-            side ^ 180.
-          ] |> to-loop (layout#paper-width, y -' (config#length-indicator-bar-height *' 0.5))
-          )
-            |> fill config#color-indicator-done
-        in
-        let bar-total =
+  let frame-progressbar config =
+    let f ctx () =
+
+      let current-pagenum = SlydifiParam.get page-num in
+
+      let total = get-cross-reference `pagecount` |> Option.from `1` |> Int.of-string ?* in
+      let float-total = float (if total <= 0 then 1 else total) in  % ゼロ割などの回避
+
+      let gr-lazy = SlydifiScheme.eval-after-page-break (fun _ -> (
+        let page-to-progress pg = (float pg -. 0.5) /. float-total in
+        let page-to-height pg = layout#paper-height *' (1.0 -. page-to-progress pg) in
+
+        let gr-bar-total =
           Gr.rectangle (layout#paper-width -' config#length-indicator-line-thickness, 0pt) (layout#paper-width, layout#paper-height)
             |> fill config#color-indicator-total
         in
-        [ bar-total; bar-done; ]
+
+        let gr-section-range (pg-start, pg-end) =
+          let track-height = page-to-height pg-start -' page-to-height pg-end in
+
+          let x = layout#paper-width -' config#length-indicator-line-thickness *' 0.5 in
+          Gr.line (x, page-to-height pg-start) (x, page-to-height pg-end)
+            |> stroke (config#length-indicator-line-thickness *' 0.3) config#color-indicator-section
+        in
+
+        let grlst-section-range =
+          SlydifiScheme.get-sections ()
+            |> List.map (fun sect -> sect#range |> Option.to-list)
+            |> List.concat
+            |> List.map gr-section-range
+        in
+
+        let grlst-pages =
+          let grf idx =
+            let pagenum = idx + 1 in
+            if pagenum == current-pagenum then
+              Rail.(
+                let l ratio = config#length-indicator-line-thickness *' ratio in
+                let ml ratio = 0pt -' l ratio in
+                let right-arrow = 
+                  init
+                    |> push-line (l 0.5, l 0.5)
+                    |> push-line (0pt, l 1.5)
+                    |> push-line (ml 0.5, ml 0.5)
+                in
+                concat [
+                  right-arrow;
+                  right-arrow |> reflect-x |> reverse;
+                ] |> to-loop (layout#paper-width -' l 0.5,
+                  page-to-height current-pagenum -' l 1.0)
+              ) |> fill config#color-indicator-done
+            else
+              Gr.circle (
+                layout#paper-width -' config#length-indicator-line-thickness *' 0.5,
+                page-to-height pagenum
+              ) (config#length-indicator-line-thickness *' 0.4) |> fill config#color-indicator-section
+          in
+          range total |> List.map grf
+        in
+
+        [[gr-bar-total]; grlst-section-range; grlst-pages; ] |> List.concat
+      ))
       in
 
-      (block-nil, [gr-frame-master; gr-section-title; gr-progress-bar; gr-page-number; ] |> List.concat)
+      (block-nil, [gr-lazy] )
     in
     Frame.make layout f
 
@@ -636,46 +680,57 @@ end = struct
     let f ctx content =
       % content#footer の値に応じてフッターをつけるかどうか変える
 
-      let gr =
-        let grf pagenum =
-          let sects =
-            let to-item i x =
-              let title = x#title in
-              match content#index with
-              | Some(p) when p == i + 1 ->
-                  '< +item{\emph{#title;}}<> >
-              | Some(_) ->
-                  '< +item{\weak{#title;}}<> >
-              | None ->
-                  '< +item{#title;}<> >
-            in
-            SlydifiScheme.get-sections ()
-              |> List.mapi to-item
-              |> List.fold-left (fun acc x -> '<#acc;#x;>) '<>
+      let gr-lazy = SlydifiScheme.eval-after-page-break (fun _ -> (
+        let sects =
+          let to-item i x =
+            let title = x#title in
+            match content#index with
+            | Some(p) when p == i + 1 ->
+                '< +item{\emph{#title;}}<> >
+            | Some(_) ->
+                '< +item{\weak{#title;}}<> >
+            | None ->
+                '< +item{#title;}<> >
           in
-          let ib =
-            embed-block-bottom ctx layout#text-width (fun ctx -> read-block ctx '<
-              +itemize?:(EnumitemAlias.dot-arabic)(sects);
-            >)
-          in
-          let (_, h, _) = get-natural-metrics ib in
-          [draw-text (layout#text-horizontal-margin, layout#paper-height -' layout#text-vertical-margin -' config#length-frame-title-height -' config#length-frame-body-top-margin -' h) ib]
+          SlydifiScheme.get-sections ()
+            |> List.mapi to-item
+            |> List.fold-left (fun acc x -> '<#acc;#x;>) '<>
         in
-        SlydifiScheme.eval-after-page-break grf
+        let ib =
+          embed-block-bottom ctx layout#text-width (fun ctx -> read-block ctx '<
+            +itemize?:(EnumitemAlias.dot-arabic)(sects);
+          >)
+        in
+        let (_, h, _) = get-natural-metrics ib in
+        let pos-start-block =
+          layout#paper-height
+            -' layout#text-vertical-margin
+              -' config#length-frame-title-height
+                -' config#length-frame-body-top-margin
+        in
+        [draw-text (layout#text-horizontal-margin, pos-start-block -' h) ib]
+      ))
       in
 
-      (block-nil, [gr] )
+      (block-nil, [gr-lazy] )
     in
     Frame.make layout f
 
   let frame-normal config =
     let f ctx content =
       % content#footer の値に応じてフッターをつけるかどうか変える
-      let (_, gr) =
+      let (_, gr-master) = frame-master config |> Frame.embed ctx () in
+      let gr-footer =
         if content#footer then
-          frame-master-with-footer config |> Frame.embed ctx ()
+          [
+            frame-pagenum config |> Frame.embed ctx ();
+            frame-sectitle config |> Frame.embed ctx ();
+            frame-progressbar config |> Frame.embed ctx ();
+          ]
+            |> List.map Pair.snd
+            |> List.concat
         else
-          frame-master config |> Frame.embed ctx ()
+          []
       in
 
       let title-ymin = layout#paper-height -' config#length-frame-title-height in
@@ -706,7 +761,7 @@ end = struct
           +++ (read-block ctx content#inner)
       in
 
-      (bb-inner, [gr; gr-separator; gr-title] |> List.concat)
+      (bb-inner, [gr-master; gr-footer; gr-separator; gr-title] |> List.concat)
 
     in
     Frame.make layout f
@@ -741,15 +796,7 @@ end = struct
     let bb-inner = read-block ctx inner in
     let page-end = SlydifiParam.get page-num in
     let () = section-name |> SlydifiParam.discard in
-    % let section = (|
-    %   key = SlydifiCrossrefManager.generate-id ();
-    %   title = (read-inline ctx it-title) |> extract-string;
-    %   page-start = page-start + 1;
-    %   page-end = page-end;
-    % |)
-    % in
-    % let () = SlydifiCrossrefManager.register-section section in
-    let () = SlydifiScheme.add-section ?:(page-start, page-end) it-title in
+    let () = SlydifiScheme.add-section ?:(page-start + 1, page-end) it-title in
 
     bb-section +++ bb-inner
 
@@ -796,41 +843,6 @@ end = struct
     | None -> read-block ctx '<
       +SlydifiScheme.againframe(name);
     >
-
-  % let-block ctx +listing ?:depth item =
-  %   let depth = depth |> Option.from 1 in
-  %   read-block ctx '< +genlisting(gen-label-rule depth)(gen-arctic-item depth)(item); >
-  % 
-  % let-inline ctx \listing ?:depth item =
-  %   let depth = depth |> Option.from 1 in
-  %   read-inline ctx {\listing-from-block<+listing?:(depth)(item);>}
-  % 
-  % let param-item-overlay = EnumitemBase.make-param (fun x -> false)
-  % let-inline \cond-item dcf = {\set-item(param-item-overlay)(dcf);}
-  % 
-  % let-block ctx +listing-overlay ?:depth item =
-  %   let depth = depth |> Option.from 1 in
-  %   let itemf = SlydifiOverlay.select-from-two (EnumitemParam.get param-item-overlay)
-  %     (gen-arctic-item depth)
-  %       (fun _ _ _ _ -> block-nil)
-  %   in
-  %   read-block ctx '< +xgenlisting(gen-label-rule depth)(itemf)(item); >
-  % 
-  % let-block ctx +enumerate-overlay ?:depth item =
-  %   let depth = depth |> Option.from 1 in
-  %   read-block ctx '< +xgenlisting(Enumitem.dot-arabic)(
-  %     fun ctx dp label inner -> (
-  %       let () = display-message (
-  %         `param-item-overlay: ` ^
-  %           (if (EnumitemParam.get param-item-overlay 1) then `1` else ` `) ^
-  %           (if (EnumitemParam.get param-item-overlay 2) then `2` else ` `) ^
-  %           (if (EnumitemParam.get param-item-overlay 3) then `3` else ` `)
-  %       )
-  %       in
-  %       SlydifiOverlay.select-from-two (EnumitemParam.get param-item-overlay)
-  %         (gen-arctic-item depth ctx dp label inner) block-nil
-  %     )
-  %   )(item); >
 
 % \footnote{} command
 
