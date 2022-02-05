@@ -89,6 +89,12 @@ module SlydifiThemeArctic: sig
   direct +with-config : [arctic-config; block-text] block-cmd
   direct \with-config : [arctic-config; inline-text] inline-cmd
 
+  val set-font-metrics: length -> context -> context
+  val default-font: context -> context
+  val code-font: context -> context
+  val bold-font: context -> context
+  val light-font: context -> context
+
 % frames
   %% スライドマスター。
   val frame-master: arctic-config -> unit Frame.frame
@@ -176,34 +182,33 @@ end = struct
         |> set-min-gap-of-lines 0pt
         |> set-leading (fsize *' 1.4)
 
-  let default-config =
-    let default-font ctx =
-      ctx |> set-font Latin          (`system:IBMPlexSansJP`, 1.0, 0.0)
-          |> set-font Kana           (`system:IBMPlexSansJP`, 1.0, 0.0)
-          |> set-font HanIdeographic (`system:IBMPlexSansJP`, 1.0, 0.0)
-    in
-    let code-font ctx =
-      ctx |> set-font Latin          (`system:mplus-1m-regular`, 1.0, 0.0)
-          |> set-font Kana           (`system:mplus-1m-regular`, 1.0, 0.0)
-          |> set-font HanIdeographic (`system:mplus-1m-regular`, 1.0, 0.0)
-          |> set-space-ratio 0.5 0.5 0.5  % mplus の space ratio に合わせる
-          |> set-hyphen-min 1000 1000  % ハイフンを無効化
-          |> set-space-ratio-between-scripts 0. 0. 0. Latin Kana
-          |> set-space-ratio-between-scripts 0. 0. 0. Kana Latin
-          |> set-space-ratio-between-scripts 0. 0. 0. Latin HanIdeographic
-          |> set-space-ratio-between-scripts 0. 0. 0. HanIdeographic Latin
-    in
-    let bold-font ctx =
-      ctx |> set-font Latin          (`system:IBMPlexSansJP-Bold`, 1.0, 0.0)
-          |> set-font Kana           (`system:IBMPlexSansJP-Bold`, 1.0, 0.0)
-          |> set-font HanIdeographic (`system:IBMPlexSansJP-Bold`, 1.0, 0.0)
-    in
-    let light-font ctx =
-      ctx |> set-font Latin          (`system:IBMPlexSansJP-Light`, 1.0, 0.0)
-          |> set-font Kana           (`system:IBMPlexSansJP-Light`, 1.0, 0.0)
-          |> set-font HanIdeographic (`system:IBMPlexSansJP-Light`, 1.0, 0.0)
-    in
+  let default-font ctx =
+    ctx |> set-font Latin          (`system:IBMPlexSansJP`, 1.0, 0.0)
+        |> set-font Kana           (`system:IBMPlexSansJP`, 1.0, 0.0)
+        |> set-font HanIdeographic (`system:IBMPlexSansJP`, 1.0, 0.0)
 
+  let code-font ctx =
+    ctx |> set-font Latin          (`system:mplus-1m-regular`, 1.0, 0.0)
+        |> set-font Kana           (`system:mplus-1m-regular`, 1.0, 0.0)
+        |> set-font HanIdeographic (`system:mplus-1m-regular`, 1.0, 0.0)
+        |> set-space-ratio 0.5 0.5 0.5  % mplus の space ratio に合わせる
+        |> set-hyphen-min 1000 1000  % ハイフンを無効化
+        |> set-space-ratio-between-scripts 0. 0. 0. Latin Kana
+        |> set-space-ratio-between-scripts 0. 0. 0. Kana Latin
+        |> set-space-ratio-between-scripts 0. 0. 0. Latin HanIdeographic
+        |> set-space-ratio-between-scripts 0. 0. 0. HanIdeographic Latin
+
+  let bold-font ctx =
+    ctx |> set-font Latin          (`system:IBMPlexSansJP-Bold`, 1.0, 0.0)
+        |> set-font Kana           (`system:IBMPlexSansJP-Bold`, 1.0, 0.0)
+        |> set-font HanIdeographic (`system:IBMPlexSansJP-Bold`, 1.0, 0.0)
+
+  let light-font ctx =
+    ctx |> set-font Latin          (`system:IBMPlexSansJP-Light`, 1.0, 0.0)
+        |> set-font Kana           (`system:IBMPlexSansJP-Light`, 1.0, 0.0)
+        |> set-font HanIdeographic (`system:IBMPlexSansJP-Light`, 1.0, 0.0)
+
+  let default-config =
     (|
       %% font
       font-normal = SlydifiScheme.apply-font-cfg [default-font; set-font-metrics 20pt];
