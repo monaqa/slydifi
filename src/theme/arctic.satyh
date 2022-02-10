@@ -561,17 +561,18 @@ end = struct
       in
 
       let gr-section-range (pg-start, pg-end) =
-        let track-height = page-to-height pg-start -' page-to-height pg-end in
-
-        let x = layout#paper-width -' config#length-indicator-line-thickness *' 0.5 in
-
-        let strokef =
-          if pg-start <= pg-current && pg-current <= pg-end then
-            stroke (config#length-indicator-line-thickness *' 0.3) config#color-indicator-section-page
-          else
-            stroke (config#length-indicator-line-thickness *' 0.2) config#color-indicator-other-page
-        in
-        Gr.line (x, page-to-height pg-start) (x, page-to-height pg-end) |> strokef
+        if pg-start > pg-end then
+          []
+        else
+          let track-height = page-to-height pg-start -' page-to-height pg-end in
+          let x = layout#paper-width -' config#length-indicator-line-thickness *' 0.5 in
+          let strokef =
+            if pg-start <= pg-current && pg-current <= pg-end then
+              stroke (config#length-indicator-line-thickness *' 0.3) config#color-indicator-section-page
+            else
+              stroke (config#length-indicator-line-thickness *' 0.2) config#color-indicator-other-page
+          in
+          [Gr.line (x, page-to-height pg-start) (x, page-to-height pg-end) |> strokef]
       in
 
       let icon-current-page pg =
@@ -609,7 +610,7 @@ end = struct
           |> List.concat
         in
 
-        let grlst-section-range = section-ranges |> List.map gr-section-range in
+        let grlst-section-range = section-ranges |> List.map gr-section-range |> List.concat in
         % 描画対象（アイコン）がカレントページのセクションに属しているかどうか。
         let is-current-section-range pg =
           section-ranges
