@@ -6,7 +6,15 @@ ports:
   - port: 3000
     onOpen: open-preview
 
-# List the start up tasks. You can start them in parallel in multiple terminals. See https://www.gitpod.io/docs/config-start-tasks/
+vscode:
+  extensions:
+    - pickoba.satysfi-workshop
+    - tomoki1207.pdf
+
 tasks:
-  - before: export PATH=/home/gitpod/.opam/4.10.0/bin:$PATH;./entrypoint.sh
-    command: satysfi demo/demo.saty; open demo/demo.saty demo/demo.pdf
+  - before: |
+      opam install -y satysfi-class-slydifi
+      satyrographos install
+    command: |
+      satysfi demo/demo.saty
+      open demo/demo.saty demo/demo.pdf

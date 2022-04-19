@@ -1,4 +1,4 @@
-FROM amutake/satysfi:latest
+FROM pickoba/gitpod-satysfi:0.0.6
 
 # Install custom tools, runtime, etc. using apt-get
 # For example, the command below would install "bastet" - a command line tetris clone:
