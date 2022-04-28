@@ -40,8 +40,9 @@ document '<
 
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/monaqa/slydifi)
 
-`demo/demo.saty` を自由に編集し，ターミナル上で `satysfi demo/demo.saty` とすることでPDF (`demo/demo.pdf`) を生成できます．
-[SATySFi の docker image](https://github.com/amutake/satysfi-docker) を使用しているため，
+`example/plain.saty` を自由に編集し，ターミナル上で `satysfi example/plain.saty` とすることでPDF (`example/plain.pdf`) を生成できます．
+
+[pickoba/gitpod-satysfi](https://github.com/pickoba/gitpod-satysfi) を使用しており，
 `opam` / `satyrographos` コマンドで他のパッケージを入れることもできます．
 
 ![gitpod-demo-gif](https://user-images.githubusercontent.com/48883418/93006630-8d70c200-f599-11ea-8777-d3d5afbacf25.gif)

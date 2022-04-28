@@ -35,8 +35,9 @@ Try it in [Gitpod](https://gitpod.io)!
 
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/monaqa/slydifi)
 
-You can create PDF (`demo/demo.pdf`) by editing `demo/demo.saty` freely and run `satysfi demo/demo.saty` on console.
-You can also install other packages via `opam` / `satyrographos` command, because this demo uses [SATySFi's docker image](https://github.com/amutake/satysfi-docker).
+You can create PDF (`example/plain.pdf`) by editing `example/plain.saty` freely and run `satysfi example/plain.saty` on console.
+This demo uses [pickoba/gitpod-satysfi](https://github.com/pickoba/gitpod-satysfi)
+and you can also install other packages via `opam` / `satyrographos` command.
 
 ![gitpod-demo-gif](https://user-images.githubusercontent.com/48883418/93006630-8d70c200-f599-11ea-8777-d3d5afbacf25.gif)
 
