@@ -1,288 +1,112 @@
-@require: pervasives
-@require: gr
-@require: base/float
-@require: base/eq
-@require: base/map
-@import: frame
-@import: param
-@import: graphics
-@import: overlay
-@import: footnote
+module Slydifi = struct
 
-%% フォント設定記述方法。
-%% [set-font-size 12pt; set-text-color Color.blue] みたいな感じで書く。
-type font-config = (context -> context) list
+  type frame 'content = context -> 'content -> list graphics * block-boxes * list graphics
+  type layout = (|
+    paper-width: length,
+    paper-height: length,
+    text-width: length,
+    text-height: length,
+    text-horizontal-margin: length,
+    text-vertical-margin: length,
+  |)
 
-%% 色の内分。 RGB で計算するだけ。
-let color-inner ?:ratio clr1 clr2 =
-  let ratio = ratio |> Option.from 0.5 in
-  let (r1, g1, b1) = match clr1 with
-    | Gray(x) -> ( x, x, x )
-    | RGB(r, g, b) -> (r, g, b)
-    | CMYK(c, m, y, k) -> ((1. -. c) *. (1. -. k), (1. -. m) *. (1. -. k), (1. -. y) *. (1. -. k))
-  in
-  let (r2, g2, b2) = match clr2 with
-    | Gray(x) -> ( x, x, x )
-    | RGB(r, g, b) -> (r, g, b)
-    | CMYK(c, m, y, k) -> ((1. -. c) *. (1. -. k), (1. -. m) *. (1. -. k), (1. -. y) *. (1. -. k))
-  in
-  let (r, g, b) =
-    (
-      r1 *. ratio +. r2 *. (1. -. ratio) |> Float.max 0. |> Float.min 1.,
-      g1 *. ratio +. g2 *. (1. -. ratio) |> Float.max 0. |> Float.min 1.,
-      b1 *. ratio +. b2 *. (1. -. ratio) |> Float.max 0. |> Float.min 1.
-    )
-  in
-  RGB(r, g, b)
+  signature Theme = sig
+    type title-content :: o
+    % レイアウト
+    val layout: layout
+    val init-ctxf: context -> context
 
-%% SLyDIFi のすべてのテーマの元となる scheme。
-module SlydifiScheme: sig
+    val frame-normal:  frame (| title: inline-text, body: block-text |)
+    val frame-title:  frame title-content
+    val \emph: inline [inline-text]
 
-  %% スライド作成用の document 関数を生成する。
-  %% Parameters:
-  %%   layout (frame-layout): フレーム全体に関係するレイアウト。
-  %%   init-ctx (context -> context): 文書全体にかけるテキスト処理文脈の変換関数。
-  %%   hookf ((|page-number : int|) -> (length * length) -> unit):
-  %%     フック関数。スライドの最後に起動する。ページの総数を受け取りたい場合などに便利。
-  %%   inner (block-text): スライド本体のブロックテキスト。
-  val document-scheme: frame-layout -> (context -> context) -> ((|page-number : int|) -> (length * length) -> unit) -> block-text -> document
+  end
 
-  val get-standard-context: length -> context
+  % 2ページ以降のときに改ページを入れる．
+  % is-first-page は，現在 first page かどうかを表す bool ref 型の変数．
+  % テーマを変えたときにも is-first-page の値が引き継がれるよう、Slydifi module の直下に配置。
+  val mutable is-first-page <- true
+  val clear-page-or-nil is-first-page =
+    match !is-first-page with
+      | true -> let () = is-first-page <- false in block-nil
+      | false -> clear-page
+    end
 
-  %% font-config を受け取り、特定の context を context に変換する。
-  val apply-font-cfg : font-config -> context -> context
+  module Make = fun (T: Theme) -> struct
+    val bg-graphic-box-offset = 100pt
 
-  val +genframe: ['content Frame.frame; int; 'content] block-cmd
-  val +namedframe: ['content Frame.frame; string; 'content] block-cmd
-  val +againframe: [int?; string] block-cmd
-
-% common commands
-  direct +p: [(int -> bool)?; inline-text] block-cmd
-
-  direct \ctx : [(int -> bool)?; (context -> context) list; inline-text] inline-cmd
-  direct +ctx : [(int -> bool)?; (context -> context) list; block-text] block-cmd
-
-  direct \br: [] inline-cmd
-  direct \text-color: [(int -> bool)?; color; inline-text] inline-cmd
-  direct \uline : [(int -> bool)?; inline-text] inline-cmd
-  direct \strike : [(int -> bool)?; inline-text] inline-cmd
-
-  direct +show-in-order: [block-text list] block-cmd
-
-  val register-header: int -> graphics list -> unit
-  val get-sections: unit -> ((| title: inline-text; range: (int * int) option |)) list
-  val add-section: (int * int)?-> inline-text -> unit
-
-  val eval-after-page-break: (int -> graphics list) -> graphics
-
-end = struct
-
-% parameter
-  let namedframe = SlydifiParam.make Map.empty
-  let eq-string = Eq.make string-same
-
-  % inline-text list
-  let sections = SlydifiParam.make []
-
-  % n ページ目に入れるヘッダを格納する。
-  % int (graphics list) map 型
-  let header-map = SlydifiParam.make Map.empty
-
-  let register-header pagenum grlst =
-    let new-map =
-      header-map |> SlydifiParam.get
-                 |> Map.bind pagenum grlst
-    in
-    header-map |> SlydifiParam.set new-map
-
-  let eval-after-page-break grf =
-    let hookf pbinfo _ =
-      register-header pbinfo#page-number (grf pbinfo#page-number)
-    in
-    let ib = hook-page-break hookf in
-    draw-text (0pt, 0pt) ib
-
-  let add-section ?:range it =
-    let sects = SlydifiParam.get sections in
-    let sect = (|
-      title = it;
-      range = range;
-    |)
-    in
-    sections |> SlydifiParam.set (sect :: sects)
-
-  let get-sections () = SlydifiParam.get sections |> List.reverse
-
-  let-inline ctx \math fml = script-guard Latin (embed-math ctx fml)
-
-  % standard な context を設定
-  let get-standard-context wid =
-    get-initial-context wid (command \math)
-      |> set-dominant-wide-script Kana
-      |> set-language Kana Japanese
-      |> set-language HanIdeographic Japanese
-      |> set-dominant-narrow-script Latin
-      |> set-language Latin English
-      |> set-hyphen-penalty 100
-
-  let apply-font-cfg cfgs ctx =
-    cfgs |> List.fold-left (fun ctx ctxf -> ctxf ctx) ctx
-
-% document scheme
-  let document-scheme layout init-ctx hookf inner =
-    let page = UserDefinedPaper (layout#paper-width, layout#paper-height) in
-    let pagecontf _ =
-      let () = FootnoteScheme.start-page () in
-      (|
-        text-origin = (layout#text-horizontal-margin, 0pt -' Frame.bg-graphic-box-offset);
-        text-height = layout#text-height +' layout#text-vertical-margin +' Frame.bg-graphic-box-offset;
-      |)
-    in
-    let pagepartsf pbinfo =
-      let header-grlst =
-        SlydifiParam.get header-map
-          |> Map.of-(Int.eq) pbinfo#page-number
-          |> Option.from []
+    %% frame 型の値を block-boxes に直す関数。
+    val frame-to-bb ctx frame content =
+      let (grlst-bg, bb-inner, grlst-fg) = frame ctx content in
+      let box-inner =
+        let ib-inner = embed-block-top ctx T.layout#text-width (fun _ -> bb-inner) in
+        line-break false false ctx ib-inner
       in
-      let header-content =
-        let ib = inline-graphics 0pt 0pt 0pt (fun _ -> header-grlst) in
-        line-break false false (get-standard-context 0pt) ib
+      let bb-gr =
+        let spacing-bg-gr = T.layout#text-vertical-margin +' bg-graphic-box-offset in
+        let ctx-bg-gr = ctx |> set-paragraph-margin 0pt spacing-bg-gr in
+        line-break true false ctx-bg-gr (inline-graphics 0pt 0pt 0pt (fun _ -> grlst-bg) ++ inline-fil)
       in
-      (|
-      header-origin  = (0pt, 0pt);
-      header-content = header-content;
-      footer-origin  = (0pt, 0pt);
-      footer-content = block-nil;
-      |)
-    in
+      (clear-page-or-nil is-first-page) +++ bb-gr +++ box-inner
 
-    let bb-main =
-      let ctx-doc = get-standard-context layout#text-width |> init-ctx in
-      read-block ctx-doc inner
-    in
+    val inline ctx \math fml = script-guard Latin (embed-math ctx fml)
 
-    let hook = line-break false false (get-standard-context 0pt)
-        (hook-page-break hookf)
-    in
+    % standard な context を設定
+    val get-standard-context wid =
+      get-initial-context wid (command \math)
+        |> set-dominant-wide-script Kana
+        |> set-language Kana Japanese
+        |> set-language HanIdeographic Japanese
+        |> set-dominant-narrow-script Latin
+        |> set-language Latin English
+        |> set-hyphen-penalty 100
 
-    page-break page pagecontf pagepartsf (bb-main +++ hook)
+    val document bt =
+      let page = UserDefinedPaper (T.layout#paper-width, T.layout#paper-height) in
 
-  let-block ctx +genframe frame n-layer content =
-    frame |> SlydifiOverlay.multiframe n-layer ctx content
+      let pagecontf _ =
+        (|
+          text-origin = (T.layout#text-horizontal-margin, 0pt -' bg-graphic-box-offset),
+          text-height = (T.layout#text-height +' T.layout#text-vertical-margin +' bg-graphic-box-offset),
+        |)
+      in
+      let pagepartsf pbinfo =
+        (|
+          header-origin  = (0pt, 0pt),
+          header-content = block-nil,
+          footer-origin  = (0pt, 0pt),
+          footer-content = block-nil,
+        |)
+      in
 
-  let-block ctx +specific-frame frame content =
-    frame |> Frame.to-page ctx content
+      let bb =
+        let ctx = get-standard-context T.layout#text-width in
+        read-block ctx bt
+      in
 
-  let-block ctx +namedframe frame name content =
-    let new-map =
-      namedframe |> SlydifiParam.get
-                 |> Map.bind name (1, '<+specific-frame(frame)(content);>)
-    in
-    let () = namedframe |> SlydifiParam.set new-map in
-    read-block ctx '<
-      +SlydifiOverlay.with-layer(1)<
-        +specific-frame(frame)(content);
-      >
+      page-break page pagecontf pagepartsf bb
+
+    % frame 'content 型の値と 'content 型のコンテンツを指定してフレームを作成する。
+    val block ctx +genframe frame content =
+      let ctx = T.init-ctxf ctx in
+      frame-to-bb ctx frame content
+
+    % frame-normal に基づいてフレームを作成する。
+    val block +frame it-title bt-body = '<
+      +genframe(T.frame-normal)(|title = it-title, body = bt-body|);
     >
 
-  let-block ctx +againframe ?:lyr name =
-    let map = namedframe |> SlydifiParam.get in
-    let value = map |> Map.of- eq-string name in
-    match value with
-    | None ->
-        let () = display-message (
-          ``[Warning] Frame with name ` `` ^ name
-            ^ `` ` was not found. No page was inserted here. ``)
-        in
-        block-nil
-    | Some((lyr-prev, it)) ->
-        let lyr = lyr |> Option.from (lyr-prev + 1) in
-        let map = map |> Map.bind name (lyr, it) in
-        let () = namedframe |> SlydifiParam.set map in
-        read-block ctx '<
-          +SlydifiOverlay.with-layer(lyr)<
-            #it;
-          >
-        >
+    val block +make-title content = '<
+      +genframe(T.frame-title)(content);
+    >
 
-% common commands
-  let-block ctx +p ?:dcf it =
-    let dcf = Option.from (fun _ -> true) dcf in
-    SlydifiOverlay.ghost-block dcf (line-break true true ctx (read-inline ctx it ++ inline-fil))
+    val block ctx +p inner =
+      let ib = read-inline ctx inner in
+      line-break false false ctx (ib ++ inline-fil)
 
-  let-inline ctx \br = discretionary (- 1000) inline-nil inline-fil inline-nil
+    % T に入っているコマンド群が使えるようにする
+    include T
+  end
 
-  let-inline ctx \text-color ?:dcf clr it =
-    let dcf = Option.from (fun _ -> true) dcf in
-    SlydifiOverlay.select-from-two dcf
-      (read-inline (ctx |> set-text-color clr) it)
-        (read-inline ctx it)
-
-  let-inline ctx \uline ?:dcf it =
-    let dcf = Option.from (fun _ -> true) dcf in
-    let ib = read-inline ctx it in
-    let pad (x, y) w h d =
-      SlydifiOverlay.select-from-two dcf (
-        [
-          stroke 1pt (get-text-color ctx)
-            (Gr.line (x, y -' d) (x +' w, y  -' d))
-        ]
-      )(
-        []
-      )
-    in
-    inline-frame-breakable (0pt, 0pt, 0pt, 0pt) (pad, pad, pad, pad) ib
-
-  let-inline ctx \strike ?:dcf it =
-    let dcf = Option.from (fun _ -> true) dcf in
-    let ib = read-inline ctx it in
-    let pad (x, y) w h d =
-      SlydifiOverlay.select-from-two dcf (
-        let h-base = get-font-size ctx *' 0.3 in
-        [
-          stroke 1pt (get-text-color ctx)
-            (Gr.line (x, y +' h-base) (x +' w, y +' h-base))
-        ]
-      )(
-        []
-      )
-    in
-    inline-frame-breakable (0pt, 0pt, 0pt, 0pt) (pad, pad, pad, pad) ib
-
-  let-inline ctx \ctx ?:dcf ctxflst it =
-    let dcf = Option.from (fun _ -> true) dcf in
-    let new-ctx =
-      ctxflst |> List.fold-left (fun acc ctxf -> ctxf acc) ctx
-    in
-    read-inline (SlydifiOverlay.select-from-two dcf new-ctx ctx) it
-
-  let-block  ctx +ctx ?:dcf ctxflst bt =
-    let dcf = Option.from (fun _ -> true) dcf in
-    let new-ctx =
-      ctxflst |> List.fold-left (fun acc ctxf -> ctxf acc) ctx
-    in
-    read-block (SlydifiOverlay.select-from-two dcf new-ctx ctx) bt
-
-  let-block ctx +show-in-order btlst =
-    let ghost-btlst = btlst |> List.mapi ( fun idx bt ->(
-      let dcf = SlydifiOverlay.from (idx + 1) in
-      SlydifiOverlay.ghost-block dcf (read-block ctx bt)))
-    in
-    ghost-btlst |> List.fold-left (+++) block-nil
 
 end
-
-
-let-inline ctx \SLyDIFi =
-  let size = get-font-size ctx in
-  let f = read-inline ctx in
-  let fd = ctx |> set-manual-rising (0pt -' (size *' 0.25)) |> read-inline in
-  let fI = ctx |> set-font-size (size *' 0.72)
-               |> set-manual-rising (size *' 0.2)
-               |> read-inline
-  in
-  let ib = 
-    f {SL} ++ kern(size *' 0.05) ++ fd{Y} ++ kern(size *' 0.03) ++ f{DIF}
-      ++ kern(size *' 0.05) ++ fd{I}
-  in
-  script-guard Latin (no-break ib)
