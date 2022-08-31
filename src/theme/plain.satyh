@@ -1,5 +1,8 @@
+%SATySFi v0.1.0
 @require: color
+@require: code
 @import: ../slydifi
+% @require: list
 
 module Plain = struct
 
@@ -7,11 +10,16 @@ module Plain = struct
     val normal: context -> context
     val emph: context -> context
     val slide-title: context -> context
+    val slide-author: context -> context
+    val slide-date: context -> context
+    val section-title: context -> context
     val frame-title: context -> context
+    val pagenum: context -> context
   end
 
   signature Color = sig
     val fg: color
+    val bg: color
   end
 
   signature Length = sig
@@ -24,104 +32,148 @@ module Plain = struct
     module Length: Length
   end
 
-  module PlainTemplate = fun (C: Config) -> struct
-    type title-content = (| title: inline-text |)
+  module Make = fun (C: Config) -> struct
+    module Template = struct
+      type title-content = (| title: inline-text |)
 
-    val layout = (|
-      paper-width = 254mm,
-      paper-height = 142.9mm,
-      text-width = 254mm -' 40pt,
-      text-height = 142.9mm -' 30pt,
-      text-horizontal-margin = 20pt,
-      text-vertical-margin = 10pt,
-    |)
-    val init-ctxf ctx = ctx |> C.Font.normal
+      val layout = (|
+        paper-width = 254mm,
+        paper-height = 142.9mm,
+        text-width = 254mm -' 40pt,
+        text-height = 142.9mm -' 30pt,
+        text-horizontal-margin = 20pt,
+        text-vertical-margin = 10pt,
+      |)
+      val init-ctxf ctx = ctx |> C.Font.normal
 
-    val frame-title ctx content =
-      let it-title = content#title in
-      let ib-title =
-        let ctx = ctx |> C.Font.slide-title in
-        read-inline ctx it-title
-      in
-      let bb-skip = block-skip 100pt in
-      let bb-title = line-break false false ctx (inline-fil ++ ib-title ++ inline-fil) in
-      ([], bb-skip +++ bb-title, [])
-
-    val frame-normal ctx content =
-      let bb-title =
-        let ctx =
-          ctx
-            |> C.Font.frame-title
-            |> set-paragraph-margin 0pt C.Length.margin-bot-frame-title
+      val frame-element-master =
+        let gr-bg =
+          Gr.rectangle (0pt, 0pt) (layout#paper-width, layout#paper-height)
+            |> fill C.Color.bg
         in
+        Frame.gr gr-bg
+
+      val frame-element-footer ctx =
+        let gr-pagenum =
+          let it-pagenum = !Slydifi.page-num |> arabic |> embed-string in
+          let it-total = Slydifi.get-totalpage () |> embed-string in
+          let ctx-pagenum = C.Font.pagenum ctx in
+          let ib = read-inline ctx-pagenum {#it-pagenum;/#it-total;} in
+          let (wid, _, dp) = get-natural-metrics ib in
+
+          let x = layout#paper-width -' wid -' 10pt in
+          let y = dp +' 10pt in
+          draw-text (x, y) ib
+        in
+        Frame.gr gr-pagenum
+
+
+      val frame-title ctx content =
         let it-title = content#title in
         let ib-title =
+          let ctx = ctx |> C.Font.slide-title in
           read-inline ctx it-title
         in
-        line-break false false ctx (inline-fil ++ ib-title ++ inline-fil)
-      in
-      let bb-body = read-block ctx content#body in
-      ([], bb-title +++ bb-body, [])
+        let bb-skip = block-skip 100pt in
+        let bb-title = line-break false false ctx (inline-fil ++ ib-title ++ inline-fil) in
+        ([frame-element-master], bb-skip +++ bb-title, [])
 
-    val inline ctx \emph it =
-      let ctx = ctx |> C.Font.emph in
-      read-inline ctx it
+      val frame-normal ctx content =
+        let bb-title =
+          let ctx =
+            ctx
+              |> C.Font.frame-title
+              |> set-paragraph-margin 0pt C.Length.margin-bot-frame-title
+          in
+          let it-title = content#title in
+          let ib-title =
+            read-inline ctx it-title
+          in
+          line-break false false ctx (inline-fil ++ ib-title ++ inline-fil)
+        in
+        let bb-body = read-block ctx content#body in
+        ([frame-element-master, frame-element-footer ctx], bb-title +++ bb-body, [])
 
+      val inline ctx \emph ?(cond = cond-opt) it =
+        let cond = cond-opt |> Option.from (fun _ -> true) in
+        let ctx =
+          Overlay.Func.select-from-two cond
+            (C.Font.emph ctx)
+              ctx
+        in
+        read-inline ctx it
+    end
+
+    include Slydifi.Make Template
+
+    val block +frame-dummy it-title bt-body =
+      let () = Slydifi.increment-page-num 2 in
+      '<
+        +genframe(1)(frame-normal)(|title = it-title, body = bt-body|);
+      >
   end
 
   module DefaultConfig :> Config = struct
     module Font = struct
       val set-fonts fsize ctx = ctx
-        |> set-font Latin          (`Junicode`, 1.0, 0.0)
-        |> set-font Kana           (`ipaexm`, 1.0, 0.0)
-        |> set-font HanIdeographic (`ipaexm`, 1.0, 0.0)
+        |> set-font Latin          (`lmsans`, 1.0, 0.0)
+        |> set-font Kana           (`ipaexg`, 1.0, 0.0)
+        |> set-font HanIdeographic (`ipaexg`, 1.0, 0.0)
         |> set-font-size fsize
-        |> set-paragraph-margin (fsize *' 0.6) (fsize *' 0.6)
+        |> set-paragraph-margin (fsize *' 0.65) (fsize *' 0.65)
         |> set-leading (fsize *' 1.4)
+        |> set-code-text-command (command \Code.code)
 
-      val normal ctx = ctx |> set-fonts 18pt
-      val slide-title ctx = ctx |> set-fonts 30pt
-      val frame-title ctx = ctx |> set-fonts 25pt
-      val emph ctx = ctx |> set-text-color Color.red
+      val normal = set-fonts 20pt
+      val slide-title = set-fonts 36pt
+      val slide-author = set-fonts 24pt
+      val slide-date = set-fonts 20pt
+      val section-title = set-fonts 28pt
+      val frame-title = set-fonts 28pt
+      val pagenum = set-fonts 12pt
+
+      val emph = set-text-color Color.red
     end
+
     module Color = struct
       val fg = Color.black
+      val bg = Color.gray 0.8
     end
+
     module Length = struct
       val margin-bot-frame-title = 20pt
     end
   end
 
-  module DefaultTheme = PlainTemplate DefaultConfig
-  module DefaultClass = Slydifi.Make DefaultTheme
+  module DefaultClass = Make DefaultConfig
 
-  module FancyConfig :> Config = struct
-    module Font = struct
-      val set-fonts fsize ctx = ctx
-        |> set-font Latin          (`system:IBMPlexSansJP`, 1.0, 0.0)
-        |> set-font Kana           (`system:IBMPlexSansJP`, 1.0, 0.0)
-        |> set-font HanIdeographic (`system:IBMPlexSansJP`, 1.0, 0.0)
-        |> set-font-size fsize
-        |> set-paragraph-margin (fsize *' 0.6) (fsize *' 0.6)
-        |> set-leading (fsize *' 1.4)
-
-      val normal ctx = ctx |> set-fonts 22pt
-      val slide-title ctx = ctx |> set-fonts 40pt
-      val frame-title ctx = ctx |> set-fonts 36pt
-
-      val emph ctx = ctx
-        |> set-text-color Color.red
-        |> set-font-size (get-font-size ctx *' 1.5)
-    end
-    module Color = struct
-      val fg = Color.gray 0.7
-    end
-    module Length = struct
-      val margin-bot-frame-title = 20pt
-    end
-  end
-
-  module FancyTheme = PlainTemplate FancyConfig
-  module FancyClass = Slydifi.Make FancyTheme
+  % module FancyConfig :> Config = struct
+  %   module Font = struct
+  %     val set-fonts fsize ctx = ctx
+  %       |> set-font Latin          (`system:IBMPlexSansJP`, 1.0, 0.0)
+  %       |> set-font Kana           (`system:IBMPlexSansJP`, 1.0, 0.0)
+  %       |> set-font HanIdeographic (`system:IBMPlexSansJP`, 1.0, 0.0)
+  %       |> set-font-size fsize
+  %       |> set-paragraph-margin (fsize *' 0.6) (fsize *' 0.6)
+  %       |> set-leading (fsize *' 1.4)
+  % 
+  %     val normal ctx = ctx |> set-fonts 22pt
+  %     val slide-title ctx = ctx |> set-fonts 40pt
+  %     val frame-title ctx = ctx |> set-fonts 36pt
+  % 
+  %     val emph ctx = ctx
+  %       |> set-text-color Color.red
+  %       |> set-font-size (get-font-size ctx *' 1.5)
+  %   end
+  %   module Color = struct
+  %     val fg = Color.gray 0.7
+  %   end
+  %   module Length = struct
+  %     val margin-bot-frame-title = 20pt
+  %   end
+  % end
+  % 
+  % module FancyTheme = PlainTemplate FancyConfig
+  % module FancyClass = Slydifi.Make FancyTheme
 
 end

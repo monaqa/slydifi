@@ -1,0 +1,34 @@
+%SATySFi v0.1.0
+@require: list
+
+module Frame = struct
+
+  type element =
+  | Gr of graphics
+  | GrLazy of (unit -> graphics)
+
+  type frame 'content = context -> 'content -> (list element) * block-boxes * (list element)
+
+  val gr grlst = Gr grlst
+  val gr-lazy grlstf = GrLazy grlstf
+
+  val element-to-ib e =
+    match e with
+      | Gr (grlst) ->
+        % line-break false false ctx (inline-graphics 0pt 0pt 0pt (fun _ -> grlst) ++ inline-fil)
+        inline-graphics 0pt 0pt 0pt (fun _ -> grlst)
+      | GrLazy (grlstf) ->
+        let hookf pbinfo _ =
+          % register-header pbinfo#page-number (grf pbinfo#page-number)
+          ()
+        in
+        hook-page-break hookf
+    end
+
+  val elements-to-bb ctx elst =
+    let ib = 
+      elst |> List.map element-to-ib |> List.fold-left (++) inline-nil
+    in
+    line-break false false ctx (ib ++ inline-fil)
+
+end

@@ -1,6 +1,9 @@
+%SATySFi v0.1.0
 @import: ../src/slydifi
+@import: ../src/overlay
 @import: ../src/theme/plain
 @require: code
+@require: color
 
 let inline \jugem = {
   寿限無、寿限無、五劫のすりきれ、
@@ -21,17 +24,25 @@ document '<
 
   +frame{適当なタイトル}<
     +p{
-      適当な本文。\emph{強調} できるし、
-      一部だけ\FancyClass.emph{ファンシーな強調} もできる。
+      適当な本文。\emph{強調} できる。
     }
     +p{\jugem;}
   >
 
-  +FancyClass.frame{適当なタイトル}<
+  +frame?(n-layer = 3)({適当なタイトル})<
     +p{
-      適当な本文。\emph{強調} できるし、
-      一部だけ\FancyClass.emph{ファンシーな強調} もできる。
+      適当な本文。\emph?(cond = Overlay.Cond.only 2)({強調}); できる。
+      \text-color(Color.red){foo}
     }
     +p{\jugem;}
   >
+
+  +frame-dummy{適当なタイトル}<
+    +p{
+      適当な本文。\emph?(cond = Overlay.Cond.only 2)({強調}); できる。
+      \text-color(Color.red){foo}
+    }
+    +p{\jugem;}
+  >
+
 >

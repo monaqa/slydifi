@@ -1,0 +1,66 @@
+%SATySFi v0.1.0
+@require: list
+@require: gr
+
+module Overlay = struct
+
+  type condition = int -> bool
+
+  val mutable layer <- 0
+
+  val rec range n1 n2 =
+    let rec aux min max =
+      if min == max  then [min] else min :: (aux (min + 1) max)
+    in
+    if n1 < n2 then (aux n1 n2) else (aux n2 n1)
+
+  val multiframe n-layer bbf =
+    let () = layer <- 0 in
+    let func n =
+      let () = layer <- n in
+      bbf ()
+    in
+    range 1 n-layer |> List.map func |> List.fold-left (+++) block-nil
+
+  module Cmd = struct
+    val inline \ghost cond it = if (cond !layer) then it else {}
+    val block +ghost cond bt = if (cond !layer) then bt else '<>
+
+    val inline ctx \phantom cond it =
+      let ib = read-inline ctx it in
+      if (cond !layer) then
+        ib
+      else
+        let (wid, ht, dp) = get-natural-metrics ib in
+        inline-graphics wid ht dp (fun (x, y) -> Gr.empty)
+
+    val block ctx +phantom cond bt =
+      let bb = read-block ctx bt in
+      if (cond !layer) then
+        bb
+      else
+        let ht = get-natural-length bb in
+        block-skip ht
+  end
+
+  module Func = struct
+    val select candidatef = candidatef (!layer)
+    val select-from-two cond t-clause f-clause =
+      if (cond !layer) then t-clause else f-clause
+    val unwrap-cond-or-default = Option.from (fun _ -> true)
+  end
+
+  module Cond = struct
+    val non _ = false
+    val only n n-layer = (n-layer == n)
+    val until n n-layer = (n-layer <= n)
+    val from n n-layer = (n-layer >= n)
+    val between m n n-layer = (n-layer >= m) && (n-layer <= n)
+    val on-slides nlst n-layer =
+      nlst
+        |> List.map (fun n -> n-layer == n)
+        |> List.fold-left ( || ) false
+  end
+
+end
+

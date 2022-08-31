@@ -1,6 +1,13 @@
+%SATySFi v0.1.0
+@require: list
+@import: overlay
+@import: frame
+
 module Slydifi = struct
 
-  type frame 'content = context -> 'content -> list graphics * block-boxes * list graphics
+  val bg-graphic-box-offset = 100pt
+
+  % type frame 'content = context -> 'content -> list graphics * block-boxes * list graphics
   type layout = (|
     paper-width: length,
     paper-height: length,
@@ -16,10 +23,10 @@ module Slydifi = struct
     val layout: layout
     val init-ctxf: context -> context
 
-    val frame-normal:  frame (| title: inline-text, body: block-text |)
-    val frame-title:  frame title-content
-    val \emph: inline [inline-text]
-
+    val frame-normal: Frame.frame (| title: inline-text, body: block-text |)
+    val frame-title: Frame.frame title-content
+    % val +section: block [inline-text, block-text]
+    val \emph: inline [?(cond: Overlay.condition) inline-text]
   end
 
   % 2ページ以降のときに改ページを入れる．
@@ -32,24 +39,51 @@ module Slydifi = struct
       | false -> clear-page
     end
 
+  % ページ番号を管理する変数。
+  val mutable page-num <- 0
+
+  val increment-page-num n = page-num <- !page-num + n
+
+  val register-totalpage () =
+    register-cross-reference `slydifi:pagecount` (arabic !page-num)
+
+  % TODO: 文字列をパースして整数で取得する
+  val get-totalpage () =
+    let str-total = get-cross-reference `slydifi:pagecount` |> Option.from ` ` in
+    str-total
+
+  % Theme に左右されない共通のコマンド。
+  module Common = struct
+    val block ctx +p it =
+      let ib = read-inline ctx it in
+      line-break false false ctx (ib ++ inline-fil)
+
+    val inline ctx \text-color clr it =
+      let ctx = ctx |> set-text-color clr in
+      read-inline ctx it
+  end
+
   module Make = fun (T: Theme) -> struct
-    val bg-graphic-box-offset = 100pt
 
     %% frame 型の値を block-boxes に直す関数。
     val frame-to-bb ctx frame content =
-      let (grlst-bg, bb-inner, grlst-fg) = frame ctx content in
+      let (elemlst-bg, bb-inner, elemlst-fg) = frame ctx content in
       let box-inner =
         let ib-inner = embed-block-top ctx T.layout#text-width (fun _ -> bb-inner) in
         line-break false false ctx ib-inner
       in
-      let bb-gr =
+      let bb-bg =
         let spacing-bg-gr = T.layout#text-vertical-margin +' bg-graphic-box-offset in
         let ctx-bg-gr = ctx |> set-paragraph-margin 0pt spacing-bg-gr in
-        line-break true false ctx-bg-gr (inline-graphics 0pt 0pt 0pt (fun _ -> grlst-bg) ++ inline-fil)
+        % line-break true false ctx-bg-gr (inline-graphics 0pt 0pt 0pt (fun _ -> elemlst-bg) ++ inline-fil)
+        Frame.elements-to-bb ctx-bg-gr elemlst-bg
       in
-      (clear-page-or-nil is-first-page) +++ bb-gr +++ box-inner
+      let bb-fg =
+        Frame.elements-to-bb ctx elemlst-fg
+      in
+      (clear-page-or-nil is-first-page) +++ bb-bg +++ box-inner +++ bb-fg
 
-    val inline ctx \math fml = script-guard Latin (embed-math ctx fml)
+    val inline ctx \math fml = script-guard Latin (embed-math ctx (read-math ctx fml))
 
     % standard な context を設定
     val get-standard-context wid =
@@ -62,8 +96,7 @@ module Slydifi = struct
         |> set-hyphen-penalty 100
 
     val document bt =
-      let page = UserDefinedPaper (T.layout#paper-width, T.layout#paper-height) in
-
+      let page = (T.layout#paper-width, T.layout#paper-height) in
       let pagecontf _ =
         (|
           text-origin = (T.layout#text-horizontal-margin, 0pt -' bg-graphic-box-offset),
@@ -78,31 +111,37 @@ module Slydifi = struct
           footer-content = block-nil,
         |)
       in
-
       let bb =
         let ctx = get-standard-context T.layout#text-width in
         read-block ctx bt
       in
+      let hook =
+        let hookf _ _ = register-totalpage () in
+        line-break false false (get-standard-context 0pt) (hook-page-break hookf)
+      in
 
-      page-break page pagecontf pagepartsf bb
+      page-break page pagecontf pagepartsf (bb +++ hook)
 
     % frame 'content 型の値と 'content 型のコンテンツを指定してフレームを作成する。
-    val block ctx +genframe frame content =
+    val block ctx +genframe n-layer frame content =
       let ctx = T.init-ctxf ctx in
-      frame-to-bb ctx frame content
+      let bbf () = frame-to-bb ctx frame content in
+      Overlay.multiframe n-layer bbf
 
     % frame-normal に基づいてフレームを作成する。
-    val block +frame it-title bt-body = '<
-      +genframe(T.frame-normal)(|title = it-title, body = bt-body|);
-    >
+    val block +frame ?(n-layer = n-layer-opt) it-title bt-body =
+      let n-layer = n-layer-opt |> Option.from 1 in
+      let () = increment-page-num 1 in
+      '<
+        +genframe(n-layer)(T.frame-normal)(|title = it-title, body = bt-body|);
+      >
 
     val block +make-title content = '<
-      +genframe(T.frame-title)(content);
+      +genframe(1)(T.frame-title)(content);
     >
 
-    val block ctx +p inner =
-      let ib = read-inline ctx inner in
-      line-break false false ctx (ib ++ inline-fil)
+    % Common に入っているコマンド群が使えるようにする
+    include Common
 
     % T に入っているコマンド群が使えるようにする
     include T

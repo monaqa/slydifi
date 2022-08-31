@@ -1,0 +1,12 @@
+%SATySFi v0.1.0
+module Header = struct
+
+  % n ページ目のヘッダに入れる list graphics を n 番目の要素に格納したリスト。
+  % type t = list (list graphics)
+  val mutable headers <- []
+
+  % val register pagenum grlst =
+  %   let nth = headers |> List.nth pagenum in
+  %   ()
+
+end

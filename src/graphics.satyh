@@ -1,0 +1,48 @@
+%SATySFi v0.1.0
+module SlydifiGraphics = struct
+
+  val put-texts config (x, y) iblst =
+    let max a b = if a >' b then a else b in
+    let min a b = if a <' b then a else b in
+    let (info, grlst) =
+      % ib: 次に配置したいインラインボックス列。
+      % prev-info: それまでに積まれたグラフィックスの情報。
+      % grlst: それまでに積まれたグラフィックスのリスト
+      let aux ib (prev-info, grlst) =
+        let (w, _, _) = get-natural-metrics ib in
+        let x = w *' (0. -. config#text-align) in
+        let y = prev-info#baseline in
+        let gr = draw-text (x, y) ib in
+        let new-info =
+          let ((xmin, ymin), (xmax, ymax)) = get-graphics-bbox gr in
+          let ((xmin-old, ymin-old), (xmax-old, ymax-old)) = prev-info#bbox in
+          (|
+          baseline = y +' config#leading,
+          bbox = (
+            (min xmin-old xmin, min ymin-old ymin),
+            (max xmax-old xmax, max ymax-old ymax)
+          ),
+        |)
+        in
+        (new-info, gr :: grlst)
+      in
+      iblst |> List.fold-right aux ((| baseline = 0pt, bbox = ((0pt, 0pt), (0pt, 0pt)) |), [])
+    in
+    let (xadj, yadj) =
+      let ((xmin, ymin), (xmax, ymax)) = info#bbox in
+      let (xalign, yalign) = config#align in
+      (xmin *' (1. -. xalign) +' xmax *' xalign,
+       ymin *' (1. -. yalign) +' ymax *' yalign)
+    in
+    grlst |> List.map (shift-graphics (x -' xadj, y -' yadj))
+
+  val put-text align pos ib =
+    let config = (|
+      align = align,
+      text-align = 0.,
+      leading = 0pt,
+    |)
+    in
+    put-texts config pos [ib]
+
+end
